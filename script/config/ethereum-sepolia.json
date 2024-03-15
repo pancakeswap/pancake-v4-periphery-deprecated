@@ -1,0 +1,12 @@
+{
+    "weth": "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
+    "vault": "0x2779106e4F4A8A28d77A24c18283651a2AE22D1C",
+    "clPoolManager": "0x753c9e006aE841e11c7f166eeFD0AD7c8590575c",
+    "binPoolManager": "0xE9343fA2cc79c7B4aD083017eC2567E274DBEff4",
+    "nonFungibleTokenPositionDescriptorOffChain": "0x",
+    "NFTPositionDescriptorProxyAdmin": "0x",
+    "nonFungiblePositionManager": "0x",
+    "clSwapRouter": "0x",
+    "binFungiblePositionManager": "0x",
+    "binSwapRouter": "0x"
+}
