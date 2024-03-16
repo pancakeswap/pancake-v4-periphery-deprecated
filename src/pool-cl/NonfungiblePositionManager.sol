@@ -18,20 +18,17 @@ import {INonfungibleTokenPositionDescriptor} from "./interfaces/INonfungibleToke
 import {ERC721Permit} from "./base/ERC721Permit.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {PeripheryValidation} from "../base/PeripheryValidation.sol";
 import {SelfPermit} from "./base/SelfPermit.sol";
 import {LiquidityManagement} from "./base/LiquidityManagement.sol";
 import {CLPeripheryImmutableState} from "./base/CLPeripheryImmutableState.sol";
 import {Multicall} from "../base/Multicall.sol";
-import {ICLMasterChefV4} from "./interfaces/ICLMasterChefV4.sol";
 
 /// @title NFT positions
 /// @notice Wraps Pancake V4 positions in the ERC721 non-fungible token interface
 contract NonfungiblePositionManager is
     INonfungiblePositionManager,
-    Ownable,
     ERC721Permit,
     PeripheryValidation,
     LiquidityManagement,
@@ -46,8 +43,6 @@ contract NonfungiblePositionManager is
 
     /// @dev Pool keys by poolIds, so we don't save the same poolKey multiple times
     mapping(PoolId pooId => PoolKey) private _poolIdToPoolKey;
-
-    ICLMasterChefV4 public masterChef;
 
     /// @dev The token ID position data
     mapping(uint256 tokenId => Position) private _positions;
@@ -122,9 +117,6 @@ contract NonfungiblePositionManager is
             (uint256, uint128, uint256, uint256)
         );
 
-        if (address(masterChef) != address(0)) {
-            masterChef.onPositionUpdate(tokenId, _positions[tokenId], params.recipient);
-        }
         emit IncreaseLiquidity(tokenId, liquidity, amount0, amount1);
     }
 
@@ -140,10 +132,6 @@ contract NonfungiblePositionManager is
             vault.lock(abi.encode(CallbackData(msg.sender, CallbackDataType.IncreaseLiquidity, abi.encode(params)))),
             (uint128, uint256, uint256)
         );
-
-        if (address(masterChef) != address(0)) {
-            masterChef.onPositionUpdate(params.tokenId, _positions[params.tokenId], ownerOf(params.tokenId));
-        }
 
         emit IncreaseLiquidity(params.tokenId, liquidity, amount0, amount1);
     }
@@ -164,10 +152,6 @@ contract NonfungiblePositionManager is
             vault.lock(abi.encode(CallbackData(msg.sender, CallbackDataType.DecreaseLiquidity, abi.encode(params)))),
             (uint256, uint256)
         );
-
-        if (address(masterChef) != address(0)) {
-            masterChef.onPositionUpdate(params.tokenId, _positions[params.tokenId], ownerOf(params.tokenId));
-        }
 
         emit DecreaseLiquidity(params.tokenId, params.liquidity, amount0, amount1);
     }
@@ -200,10 +184,6 @@ contract NonfungiblePositionManager is
             vault.lock(abi.encode(CallbackData(msg.sender, CallbackDataType.Collect, abi.encode(params)))),
             (uint256, uint256)
         );
-
-        if (address(masterChef) != address(0)) {
-            masterChef.onPositionUpdate(params.tokenId, _positions[params.tokenId], ownerOf(params.tokenId));
-        }
 
         emit Collect(params.tokenId, params.recipient, amount0, amount1);
     }
@@ -488,18 +468,5 @@ contract NonfungiblePositionManager is
         // Clear approvals from the previous owner
         _positions[tokenId].operator = address(0);
         super._transfer(from, to, tokenId);
-    }
-
-    // @dev Overrides _afterTokenTransfer to update the farming info
-    function _afterTokenTransfer(address from, address to, uint256 tokenId, uint256) internal override {
-        if (address(masterChef) != address(0) && from != address(0) && to != address(0)) {
-            masterChef.onPositionUpdate(tokenId, _positions[tokenId], to);
-        }
-    }
-
-    /// @inheritdoc INonfungiblePositionManager
-    function setMasterChef(address _masterChef) external onlyOwner {
-        masterChef = ICLMasterChefV4(_masterChef);
-        emit SetMasterChef(_masterChef);
     }
 }

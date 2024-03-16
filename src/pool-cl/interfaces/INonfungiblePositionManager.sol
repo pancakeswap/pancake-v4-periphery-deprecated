@@ -200,11 +200,4 @@ interface INonfungiblePositionManager is
     /// must be collected first.
     /// @param tokenId The ID of the token that is being burned
     function burn(uint256 tokenId) external payable;
-
-    /// @return the address masterChef
-    function masterChef() external view returns (ICLMasterChefV4);
-
-    /// @notice Set masterChef associated with nfp to kickstart farming incentives
-    /// @dev Once farming incentives is on longer reqired, set masterChef as address(0)
-    function setMasterChef(address masterChef) external;
 }
