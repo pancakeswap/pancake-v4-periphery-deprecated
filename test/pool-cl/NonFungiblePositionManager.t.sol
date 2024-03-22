@@ -30,8 +30,6 @@ import {NonfungiblePositionManager} from "../../src/pool-cl/NonfungiblePositionM
 import {INonfungiblePositionManager} from "../../src/pool-cl/interfaces/INonfungiblePositionManager.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
 import {LiquidityManagement} from "../../src/pool-cl/base/LiquidityManagement.sol";
-import {ICLMasterChefV4} from "../../src/pool-cl/interfaces/ICLMasterChefV4.sol";
-import {MockCLMasterChef} from "./helpers/MockCLMasterChef.sol";
 // import {console2} from "forge-std/console2.sol";
 
 contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
@@ -42,7 +40,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     event DecreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
-    event SetMasterChef(address masterChef);
 
     IVault public vault;
     ICLPoolManager public poolManager;

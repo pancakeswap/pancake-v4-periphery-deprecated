@@ -2,7 +2,6 @@
 // Copyright (C) 2024 PancakeSwap
 pragma solidity ^0.8.19;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
@@ -21,12 +20,10 @@ import {PeripheryPayments} from "../base/PeripheryPayments.sol";
 import {PeripheryValidation} from "../base/PeripheryValidation.sol";
 import {PeripheryImmutableState} from "../base/PeripheryImmutableState.sol";
 import {BinTokenLibrary} from "./libraries/BinTokenLibrary.sol";
-import {IBinMasterChefV4} from "./interfaces/IBinMasterChefV4.sol";
 
 contract BinFungiblePositionManager is
     ILockCallback,
     IBinFungiblePositionManager,
-    Ownable,
     BinFungibleToken,
     PeripheryPayments,
     PeripheryValidation
@@ -42,7 +39,6 @@ contract BinFungiblePositionManager is
 
     IVault public immutable override vault;
     IBinPoolManager public immutable override poolManager;
-    IBinMasterChefV4 public override masterChef;
 
     struct TokenPosition {
         PoolId poolId;
@@ -58,12 +54,6 @@ contract BinFungiblePositionManager is
     constructor(IVault _vault, IBinPoolManager _poolManager, address _WETH9) PeripheryImmutableState(_WETH9) {
         vault = _vault;
         poolManager = _poolManager;
-    }
-
-    /// @inheritdoc IBinFungiblePositionManager
-    function setMasterChef(address _masterChef) external override onlyOwner {
-        masterChef = IBinMasterChefV4(_masterChef);
-        emit SetMasterChef(_masterChef);
     }
 
     function positions(uint256 tokenId)
@@ -199,10 +189,6 @@ contract BinFungiblePositionManager is
                 }
             }
 
-            if (address(masterChef) != address(0)) {
-                masterChef.onDeposit(poolId, params.to, mintArray.ids, mintArray.liquidityMinted);
-            }
-
             return abi.encode(delta.amount0(), delta.amount1(), tokenIds, mintArray.liquidityMinted);
         } else if (data.callbackDataType == CallbackDataType.RemoveLiquidity) {
             RemoveLiquidityParams memory params = abi.decode(data.params, (RemoveLiquidityParams));
@@ -232,30 +218,7 @@ contract BinFungiblePositionManager is
                 }
             }
 
-            if (address(masterChef) != address(0)) {
-                masterChef.onWithdraw(poolId, params.from, params.ids, params.amounts);
-            }
-
             return abi.encode(uint128(-delta.amount0()), uint128(-delta.amount1()), tokenIds);
-        }
-    }
-
-    /// @dev this is only called after NFT transfer between users, not when user is adding (mint) or removing liquidity (burn)
-    function _afterTokenTransfer(address, address from, address to, uint256[] memory tokenIds, uint256[] memory amounts)
-        internal
-        override
-    {
-        if (address(masterChef) == address(0)) {
-            return;
-        }
-
-        for (uint256 i; i < tokenIds.length;) {
-            TokenPosition memory position = _positions[tokenIds[i]];
-            masterChef.onAfterTokenTransfer(position.poolId, from, to, position.binId, amounts[i]);
-
-            unchecked {
-                ++i;
-            }
         }
     }
 

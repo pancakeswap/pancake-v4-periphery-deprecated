@@ -11,7 +11,6 @@ import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/I
 import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IERC721Permit} from "./IERC721Permit.sol";
 import {ICLPeripheryImmutableState} from "./ICLPeripheryImmutableState.sol";
-import {ICLMasterChefV4} from "./ICLMasterChefV4.sol";
 
 /// @title Non-fungible token for positions
 /// @notice Wraps PancakeSwap V4 positions in a non-fungible token interface which allows for them to be transferred
@@ -67,9 +66,6 @@ interface INonfungiblePositionManager is
     /// @param amount0 The amount of token0 owed to the position that was collected
     /// @param amount1 The amount of token1 owed to the position that was collected
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
-
-    /// @notice Emitted when a new masterchef is set
-    event SetMasterChef(address masterChef);
 
     /// @dev details about the pancake position
     struct Position {

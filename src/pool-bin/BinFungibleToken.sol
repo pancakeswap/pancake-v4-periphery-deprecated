@@ -99,8 +99,6 @@ abstract contract BinFungibleToken is IBinFungibleToken {
             }
         }
 
-        _afterTokenTransfer(msg.sender, from, to, ids, amounts);
-
         emit TransferBatch(msg.sender, from, to, ids, amounts);
     }
 
@@ -124,12 +122,4 @@ abstract contract BinFungibleToken is IBinFungibleToken {
             balanceOf[from][id] -= amount;
         }
     }
-
-    function _afterTokenTransfer(
-        address operator,
-        address from,
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts
-    ) internal virtual {}
 }
