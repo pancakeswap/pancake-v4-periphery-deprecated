@@ -28,13 +28,17 @@ contract DeployNftDescriptorOffChainScript is BaseScript {
         NonfungibleTokenPositionDescriptorOffChain NFTPositionDescriptorContract =
             new NonfungibleTokenPositionDescriptorOffChain();
         ProxyAdmin proxyAdminContract = new ProxyAdmin();
+        emit log_named_address("NFTPositionDescriptorProxyAdmin", address(proxyAdminContract));
 
         string memory baseTokenURI = string.concat("https://nft.pancakeswap.com/v4/", block.chainid.toString(), "/");
-        new TransparentUpgradeableProxy(
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(NFTPositionDescriptorContract),
             address(proxyAdminContract),
             abi.encodeCall(NonfungibleTokenPositionDescriptorOffChain.initialize, (baseTokenURI))
         );
+
+        // save the proxy address to the config, not the implementation address
+        emit log_named_address("nonFungibleTokenPositionDescriptorOffChain", address(proxy));
 
         vm.stopBroadcast();
     }
@@ -50,9 +54,6 @@ contract DeployNftDescriptorOffChainScript is BaseScript {
 contract UpgradeNftDescriptorOffChainScript is BaseScript {
     using Strings for uint256;
 
-    error InvalidProxyAddress();
-    error InvalidProxyAdminAddress();
-
     function run() public {
         // Please use the ProxyAdmin owner's key to run this script
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -63,12 +64,7 @@ contract UpgradeNftDescriptorOffChainScript is BaseScript {
 
         address NFTPositionDescriptorProxy = getAddressFromConfig("nonFungibleTokenPositionDescriptorOffChain");
         address NFTPositionDescriptorProxyAdmin = getAddressFromConfig("NFTPositionDescriptorProxyAdmin");
-        if (NFTPositionDescriptorProxy == address(0)) {
-            revert InvalidProxyAddress();
-        }
-        if (NFTPositionDescriptorProxyAdmin == address(0)) {
-            revert InvalidProxyAdminAddress();
-        }
+
         ProxyAdmin(NFTPositionDescriptorProxyAdmin).upgrade(
             ITransparentUpgradeableProxy(NFTPositionDescriptorProxy), address(newNFTPositionDescriptorContract)
         );
