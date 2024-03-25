@@ -538,4 +538,41 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             deadline: block.timestamp + 600
         });
     }
+
+    function testSettleAndMintRefund() public {
+        // transfer excess token to vault
+        uint256 excessTokenAmount = 1 ether;
+        address hacker = address(1);
+        token0.mint(hacker, excessTokenAmount);
+        vm.startPrank(hacker);
+        token0.transfer(address(vault), excessTokenAmount);
+        vm.stopPrank();
+
+        // pre-test, verify alice has 1e18 token0 and token1
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+        assertEq(token0.balanceOf(alice), 1 ether);
+        assertEq(token1.balanceOf(alice), 1 ether);
+
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+        IBinFungiblePositionManager.AddLiquidityParams memory params;
+        params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
+        (,, uint256[] memory tokenIds,) = binFungiblePositionManager.addLiquidity(params);
+
+        for (uint256 i; i < tokenIds.length; i++) {
+            (Currency curr0, Currency curr1, uint24 fee, uint24 binId) =
+                binFungiblePositionManager.positions(tokenIds[i]);
+            assertEq(Currency.unwrap(curr0), Currency.unwrap(key1.currency0));
+            assertEq(Currency.unwrap(curr1), Currency.unwrap(key1.currency1));
+            assertEq(fee, key1.fee);
+            assertEq(binId, binIds[i]);
+        }
+
+        // check currency balance in vault
+        {
+            uint256 currency0Balance = vault.balanceOf(alice, currency0);
+            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
+        }
+    }
 }

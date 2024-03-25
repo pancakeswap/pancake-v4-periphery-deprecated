@@ -227,14 +227,14 @@ contract BinFungiblePositionManager is
     function _settleDeltas(address user, PoolKey memory poolKey, BalanceDelta delta) internal {
         if (delta.amount0() > 0) {
             pay(poolKey.currency0, user, address(vault), uint256(int256(delta.amount0())));
-            vault.settle(poolKey.currency0);
+            vault.settleAndMintRefund(poolKey.currency0, user);
         } else if (delta.amount0() < 0) {
             vault.take(poolKey.currency0, user, uint128(-delta.amount0()));
         }
 
         if (delta.amount1() > 0) {
             pay(poolKey.currency1, user, address(vault), uint256(int256(delta.amount1())));
-            vault.settle(poolKey.currency1);
+            vault.settleAndMintRefund(poolKey.currency1, user);
         } else if (delta.amount1() < 0) {
             vault.take(poolKey.currency1, user, uint128(-delta.amount1()));
         }

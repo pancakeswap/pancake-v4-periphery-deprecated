@@ -10,7 +10,7 @@
     "test": "forge test",
     "dev": "forge test -vvv -w",
     "snapshot": "rm -fr .forge-snapshots && forge test",
-    "prettier": "forge fmt contracts/ && forge fmt test/ && forge fmt script/",
+    "prettier": "forge fmt src/ && forge fmt test/ && forge fmt script/",
     "prettier-check": "forge fmt --check"
   }
 }

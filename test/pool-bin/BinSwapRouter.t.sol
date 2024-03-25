@@ -766,6 +766,47 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token0.balanceOf(alice), abi.decode(result[0], (uint256)));
     }
 
+    function testSettleAndMintRefund() public {
+        // transfer excess token to vault
+        uint256 excessTokenAmount = 1 ether;
+        address hacker = address(1);
+        token0.mint(hacker, excessTokenAmount);
+        vm.startPrank(hacker);
+        token0.transfer(address(vault), excessTokenAmount);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        token0.mint(alice, 1 ether);
+
+        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
+        path[0] = ISwapRouterBase.PathKey({
+            intermediateCurrency: Currency.wrap(address(token1)),
+            fee: key.fee,
+            hooks: key.hooks,
+            hookData: new bytes(0),
+            poolManager: key.poolManager,
+            parameters: key.parameters
+        });
+
+        uint256 amountOut = router.exactInput(
+            IBinSwapRouterBase.V4BinExactInputParams({
+                currencyIn: Currency.wrap(address(token0)),
+                path: path,
+                recipient: alice,
+                amountIn: 1 ether,
+                amountOutMinimum: 0
+            }),
+            block.timestamp + 60
+        );
+        assertEq(token1.balanceOf(alice), amountOut);
+
+        // check currency balance in vault
+        {
+            uint256 currency0Balance = vault.balanceOf(alice, Currency.wrap(address(token0)));
+            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
+        }
+    }
+
     // function testExactOutput_InsufficientAmountOut() public {
     //     //todo: in order to simulate this error, require
     //     // 1. hooks at beforeSwap do something funny on the pool resulting in actual amountOut lesser
