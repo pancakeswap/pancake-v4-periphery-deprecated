@@ -10,7 +10,6 @@ import {FullMath} from "pancake-v4-core/src/pool-cl/libraries/FullMath.sol";
 import {CLPosition} from "pancake-v4-core/src/pool-cl/libraries/CLPosition.sol";
 import {BalanceDelta, toBalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {FixedPoint128} from "pancake-v4-core/src/pool-cl/libraries/FixedPoint128.sol";
-import {SafeCast} from "pancake-v4-core/src/libraries/SafeCast.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 
 import {INonfungiblePositionManager} from "./interfaces/INonfungiblePositionManager.sol";
@@ -36,7 +35,6 @@ contract NonfungiblePositionManager is
     Multicall
 {
     using PoolIdLibrary for PoolKey;
-    using SafeCast for uint256;
 
     /// @dev The ID of the next token that will be minted. Skips 0
     uint256 private _nextId = 1;
