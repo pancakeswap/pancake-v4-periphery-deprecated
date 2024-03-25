@@ -10,7 +10,6 @@ import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {PoolId} from "pancake-v4-core/src/types/PoolId.sol";
 import {IBinFungibleToken} from "./IBinFungibleToken.sol";
-import {IBinMasterChefV4} from "./IBinMasterChefV4.sol";
 
 interface IBinFungiblePositionManager is IBinFungibleToken {
     error OnlyVaultCaller();
@@ -22,8 +21,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken {
     error OutputAmountSlippage();
     error IncorrectOutputAmount();
     error InvalidTokenID();
-
-    event SetMasterChef(address masterChef);
 
     /// @notice AddLiquidityParams
     /// - amount0: Amount to send for token0
@@ -88,9 +85,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken {
     /// @return the address of vault
     function vault() external view returns (IVault);
 
-    /// @return the address masterChef
-    function masterChef() external view returns (IBinMasterChefV4);
-
     /// @notice Return the position information associated with a given tokenId
     /// @dev Revert if non-existent tokenId
     /// @param tokenId Id of the token that represent position
@@ -98,10 +92,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken {
         external
         view
         returns (Currency currency0, Currency currency1, uint24 fee, uint24 binId);
-
-    /// @notice Set masterChef associated with nfp to kickstart farming incentives
-    /// @dev Once farming incentives is on longer reqired, set masterChef as address(0)
-    function setMasterChef(address masterChef) external;
 
     /// @notice Add liquidity, user will receive ERC1155 tokens as receipt of bin share ownership.
     /// @dev The ID of the ERC11155 token is keccak256(abi.encode(poolkey.toId, binId))
