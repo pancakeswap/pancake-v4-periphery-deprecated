@@ -93,6 +93,13 @@ interface IBinFungiblePositionManager is IBinFungibleToken {
         view
         returns (Currency currency0, Currency currency1, uint24 fee, uint24 binId);
 
+    /// @notice Initialize a new pool
+    /// @dev Call this when the pool does not exist and is not initialized
+    /// @param poolKey The pool key
+    /// @param activeId The active id of the pool
+    /// @param hookData Hook data for the pool
+    function initialize(PoolKey memory poolKey, uint24 activeId, bytes calldata hookData) external;
+
     /// @notice Add liquidity, user will receive ERC1155 tokens as receipt of bin share ownership.
     /// @dev The ID of the ERC11155 token is keccak256(abi.encode(poolkey.toId, binId))
     /// @return amount0 Amount of token0 added

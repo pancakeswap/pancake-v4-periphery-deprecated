@@ -80,6 +80,11 @@ contract BinFungiblePositionManager is
     }
 
     /// @inheritdoc IBinFungiblePositionManager
+    function initialize(PoolKey memory poolKey, uint24 activeId, bytes calldata hookData) external override {
+        poolManager.initialize(poolKey, activeId, hookData);
+    }
+
+    /// @inheritdoc IBinFungiblePositionManager
     function addLiquidity(AddLiquidityParams calldata params)
         external
         payable
