@@ -1,12 +1,12 @@
 {
     "weth": "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
-    "vault": "0x2779106e4F4A8A28d77A24c18283651a2AE22D1C",
-    "clPoolManager": "0x753c9e006aE841e11c7f166eeFD0AD7c8590575c",
-    "binPoolManager": "0xE9343fA2cc79c7B4aD083017eC2567E274DBEff4",
-    "nonFungibleTokenPositionDescriptorOffChain": "0x",
-    "NFTPositionDescriptorProxyAdmin": "0x",
-    "nonFungiblePositionManager": "0x",
-    "clSwapRouter": "0x",
-    "binFungiblePositionManager": "0x",
-    "binSwapRouter": "0x"
+    "vault": "0x42A228A7fB040033Dc49FdD5ed909F2cA742271D",
+    "clPoolManager": "0xC6A2Db661D5a5690172d8eB0a7DEA2d3008665A3",
+    "binPoolManager": "0xFCa69D6639293799A650dB7D273bc688bAF71FA7",
+    "nonFungibleTokenPositionDescriptorOffChain": "0x9372dAFFB1018a82Ff7bAe6f50666bc21A2De5d1",
+    "NFTPositionDescriptorProxyAdmin": "0x40a081a39e9638fa6e2463b92a4eff4bdf877179",
+    "nonFungiblePositionManager": "0xa757029D3f3273F920765C8eDaC16703FCc86653",
+    "clSwapRouter": "0x1A96e1bEFec4666B75DFEe48Ed2C4b7F6E728488",
+    "binFungiblePositionManager": "0x6E6B30d65D605DAa4CaC65eB270100Ecca36b140",
+    "binSwapRouter": "0x6B59181eBD1a3C864AfA41233445B7972f6C1A9e"
 }
