@@ -2624,4 +2624,98 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(tokenOwed1, 1000000000000000000, "Unexpected tokenOwed1");
         }
     }
+
+    function testSettleAndMintRefund() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        int24 tickLower = 46053;
+        int24 tickUpper = 46055;
+        uint256 amount0Desired = 1 ether;
+        uint256 amount1Desired = 2 ether;
+
+        // transfer excess token to vault
+        uint256 excessTokenAmount = 1 ether;
+        IERC20(Currency.unwrap(currency0)).transfer(address(vault), excessTokenAmount);
+
+        {
+            uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+            uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
+                amount0Desired,
+                amount1Desired
+            );
+
+            vm.expectEmit(true, true, true, false);
+            emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
+        }
+
+        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = nonfungiblePoolManager.mint(
+            INonfungiblePositionManager.MintParams({
+                poolKey: key,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                amount0Desired: amount0Desired,
+                amount1Desired: amount1Desired,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: address(this),
+                deadline: type(uint256).max
+            })
+        );
+
+        // token consumed
+        {
+            uint256 token0Left = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
+            uint256 token1Left = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
+            // 1.982e16 roughly 0.02 ether, need to add 1 ether which is unexpected currency0 amount
+            assertEq(1000 ether - token0Left - excessTokenAmount, 19824513708386292, "Unexpected currency0 consumed");
+            assertEq(amount0, 19824513708386292, "Actual consumed currency0 mismatch");
+            // 1e18 i.e. 2 ether, make sense because price is 100
+            assertEq(1000 ether - token1Left, 2000000000000000000, "Unexpected currency1 consumed");
+            assertEq(amount1, 2000000000000000000, "Actual consumed currency1 mismatch");
+        }
+
+        // check currency balance in vault
+        {
+            uint256 currency0Balance = vault.balanceOf(address(this), currency0);
+            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
+        }
+
+        // tick lower and tick upper
+        {
+            (,,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
+            assertEq(_tickLower, tickLower, "Unexpected tickLower");
+            assertEq(_tickUpper, tickUpper, "Unexpected tickUpper");
+        }
+
+        // token id starts from 1
+        assertEq(tokenId, 1, "Unexpected tokenId");
+
+        assertEq(liquidity, 3982750054135827175977, "Liquidity from mint and liquidity from raw calculation mismatch");
+        assertEq(poolManager.getLiquidity(key.toId()), 3982750054135827175977, "Unexpected liquidity for the pool");
+        assertEq(
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            3982750054135827175977,
+            "Unexpected liquidity for current position"
+        );
+
+        assertEq(
+            nonfungiblePoolManager.balanceOf(address(this)), 1, "Unexpected balance of the position owner after mint"
+        );
+
+        assertEq(nonfungiblePoolManager.ownerOf(tokenId), address(this), "Unexpected owner of the position");
+    }
 }
