@@ -90,8 +90,10 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             parameters: poolParam.setBinStep(10) // binStep
         });
 
-        poolManager.initialize(key1, activeId, ZERO_BYTES);
-        poolManager.initialize(key2, activeId, ZERO_BYTES);
+        // poolManager.initialize(key1, activeId, ZERO_BYTES);
+        binFungiblePositionManager.initialize(key1, activeId, ZERO_BYTES);
+        // poolManager.initialize(key2, activeId, ZERO_BYTES);
+        binFungiblePositionManager.initialize(key2, activeId, ZERO_BYTES);
 
         vm.startPrank(alice);
         token0.approve(address(binFungiblePositionManager), 1000 ether);

@@ -108,6 +108,17 @@ interface INonfungiblePositionManager is
             uint128 tokensOwed1
         );
 
+    /// @notice Initialize the pool state for a given pool ID.
+    /// @dev Call this when the pool does not exist and is not initialized.
+    /// @param poolKey The pool key
+    /// @param sqrtPriceX96 The initial sqrt price of the pool
+    /// @param hookData Hook data for the pool
+    /// @return tick Pool tick
+    function initialize(PoolKey memory poolKey, uint160 sqrtPriceX96, bytes calldata hookData)
+        external
+        payable
+        returns (int24 tick);
+
     struct MintParams {
         PoolKey poolKey;
         int24 tickLower;

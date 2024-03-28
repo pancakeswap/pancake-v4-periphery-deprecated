@@ -102,7 +102,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             });
 
             uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
-            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+            // poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+            nonfungiblePoolManager.initialize(key, sqrtPriceX96, new bytes(0));
             // (, int24 tick,,,) = poolManager.getSlot0(key.toId());
             // price = 100 i.e. tick 46054
             // console2.log("tick", tick);
