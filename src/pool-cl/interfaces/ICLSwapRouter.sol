@@ -5,8 +5,6 @@ pragma solidity ^0.8.19;
 import {ICLSwapRouterBase} from "./ICLSwapRouterBase.sol";
 
 interface ICLSwapRouter is ICLSwapRouterBase {
-    error DeadlineExceeded(uint256 deladline, uint256 now);
-
     enum SwapType {
         ExactInput,
         ExactInputSingle,

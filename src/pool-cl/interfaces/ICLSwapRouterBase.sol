@@ -8,10 +8,6 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {ISwapRouterBase} from "../../interfaces/ISwapRouterBase.sol";
 
 interface ICLSwapRouterBase is ISwapRouterBase {
-    error InvalidSwapType();
-    error TooLittleReceived();
-    error TooMuchRequested();
-
     struct V4CLExactInputSingleParams {
         PoolKey poolKey;
         bool zeroForOne;

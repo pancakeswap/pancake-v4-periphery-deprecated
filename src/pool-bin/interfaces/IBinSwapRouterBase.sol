@@ -7,10 +7,6 @@ import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {ISwapRouterBase} from "../../interfaces/ISwapRouterBase.sol";
 
 interface IBinSwapRouterBase is ISwapRouterBase {
-    error TooLittleReceived();
-    error MaxAmountInExceeded();
-    error InsufficientAmountOut();
-
     struct V4BinExactInputSingleParams {
         PoolKey poolKey;
         bool swapForY;

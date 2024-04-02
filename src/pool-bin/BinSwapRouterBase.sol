@@ -98,13 +98,13 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     ) internal returns (uint256 amountIn) {
         (uint128 amtIn,,) = binPoolManager.getSwapIn(params.poolKey, params.swapForY, params.amountOut);
 
-        if (amtIn > params.amountInMaximum) revert MaxAmountInExceeded();
+        if (amtIn > params.amountInMaximum) revert TooMuchRequested();
 
         uint128 amountOutReal = _swapExactPrivate(
             params.poolKey, params.swapForY, msgSender, params.recipient, amtIn, settle, take, params.hookData
         );
 
-        if (amountOutReal < params.amountOut) revert InsufficientAmountOut();
+        if (amountOutReal < params.amountOut) revert TooLittleReceived();
 
         amountIn = uint256(amtIn);
     }
@@ -145,7 +145,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
 
             /// @dev only check amountOut for the last path since thats what the user cares
             if (i == state.pathLength) {
-                if (state.amountOut < params.amountOut) revert InsufficientAmountOut();
+                if (state.amountOut < params.amountOut) revert TooLittleReceived();
             }
 
             params.amountOut = state.amountIn;
@@ -156,7 +156,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
             }
         }
 
-        if (state.amountIn > params.amountInMaximum) revert MaxAmountInExceeded();
+        if (state.amountIn > params.amountInMaximum) revert TooMuchRequested();
         amountIn = uint256(state.amountIn);
     }
 

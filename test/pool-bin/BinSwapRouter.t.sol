@@ -312,7 +312,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         token0.mint(alice, 1 ether);
 
-        vm.expectRevert(IBinSwapRouterBase.TooLittleReceived.selector);
+        vm.expectRevert(ISwapRouterBase.TooLittleReceived.selector);
         router.exactInputSingle(
             IBinSwapRouterBase.V4BinExactInputSingleParams({
                 poolKey: key,
@@ -480,7 +480,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
 
-        vm.expectRevert(IBinSwapRouterBase.TooLittleReceived.selector);
+        vm.expectRevert(ISwapRouterBase.TooLittleReceived.selector);
         router.exactInput(
             IBinSwapRouterBase.V4BinExactInputParams({
                 currencyIn: Currency.wrap(address(token0)),
@@ -582,7 +582,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         token0.mint(alice, 1 ether);
 
-        vm.expectRevert(abi.encodeWithSelector(IBinSwapRouterBase.MaxAmountInExceeded.selector));
+        vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
         router.exactOutputSingle(
             IBinSwapRouterBase.V4ExactOutputSingleParams({
                 poolKey: key,
@@ -596,7 +596,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
     }
 
-    function testExactOutputSingle_InsufficientAmountOut() public {
+    function testExactOutputSingle_TooLittleReceived() public {
         //todo: in order to simulate this error, require
         //     // 1. hooks at beforeSwap do something funny on the pool resulting in actual amountOut lesser
     }
@@ -707,7 +707,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
     }
 
-    function testExactOutput_MaxAmountInExceeded() public {
+    function testExactOutput_TooMuchRequested() public {
         vm.startPrank(alice);
         token0.mint(alice, 2 ether);
 
@@ -721,7 +721,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
 
-        vm.expectRevert(abi.encodeWithSelector(IBinSwapRouterBase.MaxAmountInExceeded.selector));
+        vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
         router.exactOutput(
             IBinSwapRouterBase.V4ExactOutputParams({
                 currencyOut: Currency.wrap(address(token1)),
@@ -806,9 +806,4 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
             assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
         }
     }
-
-    // function testExactOutput_InsufficientAmountOut() public {
-    //     //todo: in order to simulate this error, require
-    //     // 1. hooks at beforeSwap do something funny on the pool resulting in actual amountOut lesser
-    // }
 }

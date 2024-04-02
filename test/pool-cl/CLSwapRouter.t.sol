@@ -263,7 +263,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
     }
 
     function testExactInputSingle_amountOutLessThanExpected() external {
-        vm.expectRevert(ICLSwapRouterBase.TooLittleReceived.selector);
+        vm.expectRevert(ISwapRouterBase.TooLittleReceived.selector);
         router.exactInputSingle(
             ICLSwapRouterBase.V4CLExactInputSingleParams({
                 poolKey: poolKey0,
@@ -366,7 +366,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
     }
 
     function testExactInput_amountOutLessThanExpected() external {
-        vm.expectRevert(ICLSwapRouterBase.TooLittleReceived.selector);
+        vm.expectRevert(ISwapRouterBase.TooLittleReceived.selector);
         ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
         path[0] = ISwapRouterBase.PathKey({
             intermediateCurrency: currency1,
@@ -514,7 +514,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
     }
 
     function testExactOutputSingle_amountOutLessThanExpected() external {
-        vm.expectRevert(ICLSwapRouterBase.TooMuchRequested.selector);
+        vm.expectRevert(ISwapRouterBase.TooMuchRequested.selector);
 
         router.exactOutputSingle(
             ICLSwapRouterBase.V4CLExactOutputSingleParams({
@@ -624,7 +624,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
     }
 
     function testExactOutput_amountInMoreThanExpected() external {
-        vm.expectRevert(ICLSwapRouterBase.TooMuchRequested.selector);
+        vm.expectRevert(ISwapRouterBase.TooMuchRequested.selector);
 
         ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
         path[0] = ISwapRouterBase.PathKey({

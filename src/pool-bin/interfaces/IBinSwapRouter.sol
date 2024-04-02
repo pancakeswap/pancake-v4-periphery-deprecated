@@ -5,9 +5,6 @@ pragma solidity ^0.8.19;
 import {IBinSwapRouterBase} from "./IBinSwapRouterBase.sol";
 
 interface IBinSwapRouter is IBinSwapRouterBase {
-    error DeadlineExceeded(uint256, uint256);
-    error InvalidSwapType();
-
     enum SwapType {
         ExactInput,
         ExactInputSingle,
