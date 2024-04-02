@@ -64,7 +64,7 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         // router and position manager
         binFungiblePositionManager =
             new BinFungiblePositionManager(IVault(address(vault)), IBinPoolManager(address(poolManager)), address(weth));
-        router = new BinSwapRouter(poolManager, vault, address(weth));
+        router = new BinSwapRouter(vault, poolManager, address(weth));
 
         bytes32 poolParam;
         poolKey = PoolKey({

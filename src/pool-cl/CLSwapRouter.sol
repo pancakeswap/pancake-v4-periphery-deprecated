@@ -25,9 +25,9 @@ contract CLSwapRouter is
 {
     using CurrencyLibrary for Currency;
 
-    constructor(IVault _vault, ICLPoolManager _poolManager, address _WETH9)
+    constructor(IVault _vault, ICLPoolManager _clPoolManager, address _WETH9)
         SwapRouterBase(_vault)
-        CLSwapRouterBase(_poolManager)
+        CLSwapRouterBase(_clPoolManager)
         PeripheryImmutableState(_WETH9)
     {}
 
