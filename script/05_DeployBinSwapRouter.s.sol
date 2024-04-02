@@ -28,7 +28,7 @@ contract DeployBinSwapRouterScript is BaseScript {
         address weth = getAddressFromConfig("weth");
         emit log_named_address("WETH", weth);
 
-        BinSwapRouter binSwapRouter = new BinSwapRouter(IBinPoolManager(binPoolManager), IVault(vault), weth);
+        BinSwapRouter binSwapRouter = new BinSwapRouter(IVault(vault), IBinPoolManager(binPoolManager), weth);
         emit log_named_address("BinSwapRouter", address(binSwapRouter));
 
         vm.stopBroadcast();

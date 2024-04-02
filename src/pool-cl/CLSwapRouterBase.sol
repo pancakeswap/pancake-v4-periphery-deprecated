@@ -14,10 +14,10 @@ import {SwapRouterBase} from "../SwapRouterBase.sol";
 abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
     using CurrencyLibrary for Currency;
 
-    ICLPoolManager public immutable poolManager;
+    ICLPoolManager public immutable clPoolManager;
 
-    constructor(ICLPoolManager _poolManager) {
-        poolManager = _poolManager;
+    constructor(ICLPoolManager _clPoolManager) {
+        clPoolManager = _clPoolManager;
     }
 
     function _v4CLSwapExactInputSingle(
@@ -156,7 +156,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         bool take,
         bytes memory hookData
     ) private returns (int128 reciprocalAmount) {
-        BalanceDelta delta = poolManager.swap(
+        BalanceDelta delta = clPoolManager.swap(
             poolKey,
             ICLPoolManager.SwapParams(
                 zeroForOne,

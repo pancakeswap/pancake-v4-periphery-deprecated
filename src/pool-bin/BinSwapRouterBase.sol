@@ -13,7 +13,7 @@ import {IBinSwapRouterBase} from "./interfaces/IBinSwapRouterBase.sol";
 abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     using CurrencyLibrary for Currency;
 
-    IBinPoolManager immutable binPoolManager;
+    IBinPoolManager public immutable binPoolManager;
 
     constructor(IBinPoolManager _binPoolManager) {
         binPoolManager = _binPoolManager;

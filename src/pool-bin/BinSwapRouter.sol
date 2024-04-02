@@ -26,9 +26,9 @@ contract BinSwapRouter is
 {
     using CurrencyLibrary for Currency;
 
-    constructor(IBinPoolManager _binPoolManager, IVault _vault, address _WETH9)
-        BinSwapRouterBase(_binPoolManager)
+    constructor(IVault _vault, IBinPoolManager _binPoolManager, address _WETH9)
         SwapRouterBase(_vault)
+        BinSwapRouterBase(_binPoolManager)
         PeripheryImmutableState(_WETH9)
     {}
 
