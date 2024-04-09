@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {SafeCast} from '../../libraries/SafeCast.sol';
-import {IPancakeV3Pool} from '../../interfaces/pancakeswap-v3-interfaces/IPancakeV3Pool.sol';
-import {IPancakeV3SwapCallback} from '../../interfaces/pancakeswap-v3-interfaces/callback/IPancakeV3SwapCallback.sol';
-import {BytesLib} from '../../libraries/BytesLib.sol';
-import {Constants} from '../../libraries/Constants.sol';
-import {UniversalRouterHelper} from '../../libraries/UniversalRouterHelper.sol';
-import {RouterImmutables} from '../../base/RouterImmutables.sol';
-import {Permit2Payments} from '../Permit2Payments.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {SafeCast} from "../../libraries/SafeCast.sol";
+import {IPancakeV3Pool} from "../../interfaces/pancakeswap-v3-interfaces/IPancakeV3Pool.sol";
+import {IPancakeV3SwapCallback} from "../../interfaces/pancakeswap-v3-interfaces/callback/IPancakeV3SwapCallback.sol";
+import {BytesLib} from "../../libraries/BytesLib.sol";
+import {Constants} from "../../libraries/Constants.sol";
+import {UniversalRouterHelper} from "../../libraries/UniversalRouterHelper.sol";
+import {RouterImmutables} from "../../base/RouterImmutables.sol";
+import {Permit2Payments} from "../Permit2Payments.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /// @title Router for PancakeSwap v3 Trades
 abstract contract V3SwapRouter is RouterImmutables, Permit2Payments, IPancakeV3SwapCallback {
@@ -44,7 +44,11 @@ abstract contract V3SwapRouter is RouterImmutables, Permit2Payments, IPancakeV3S
         // because exact output swaps are executed in reverse order, in this case tokenOut is actually tokenIn
         (address tokenIn, uint24 fee, address tokenOut) = path.decodeFirstPool();
 
-        if (UniversalRouterHelper.computePoolAddress(PANCAKESWAP_V3_DEPLOYER, PANCAKESWAP_V3_POOL_INIT_CODE_HASH, tokenIn, tokenOut, fee) != msg.sender) revert V3InvalidCaller();
+        if (
+            UniversalRouterHelper.computePoolAddress(
+                PANCAKESWAP_V3_DEPLOYER, PANCAKESWAP_V3_POOL_INIT_CODE_HASH, tokenIn, tokenOut, fee
+            ) != msg.sender
+        ) revert V3InvalidCaller();
 
         (bool isExactInput, uint256 amountToPay) =
             amount0Delta > 0 ? (tokenIn < tokenOut, uint256(amount0Delta)) : (tokenOut < tokenIn, uint256(amount1Delta));
@@ -147,7 +151,11 @@ abstract contract V3SwapRouter is RouterImmutables, Permit2Payments, IPancakeV3S
 
         zeroForOne = isExactIn ? tokenIn < tokenOut : tokenOut < tokenIn;
 
-        (amount0Delta, amount1Delta) = IPancakeV3Pool(UniversalRouterHelper.computePoolAddress(PANCAKESWAP_V3_DEPLOYER, PANCAKESWAP_V3_POOL_INIT_CODE_HASH, tokenIn, tokenOut, fee)).swap(
+        (amount0Delta, amount1Delta) = IPancakeV3Pool(
+            UniversalRouterHelper.computePoolAddress(
+                PANCAKESWAP_V3_DEPLOYER, PANCAKESWAP_V3_POOL_INIT_CODE_HASH, tokenIn, tokenOut, fee
+            )
+        ).swap(
             recipient,
             zeroForOne,
             amount,

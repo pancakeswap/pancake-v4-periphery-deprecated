@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {IAllowanceTransfer} from '../permit2/src/interfaces/IAllowanceTransfer.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {IWETH9} from '../interfaces/IWETH9.sol';
+import {IAllowanceTransfer} from "../permit2/src/interfaces/IAllowanceTransfer.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {IWETH9} from "../interfaces/IWETH9.sol";
 
 struct RouterParameters {
     address permit2;

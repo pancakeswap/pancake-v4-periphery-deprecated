@@ -20,14 +20,10 @@ interface IStableSwapFactory {
     // solium-disable-next-line mixedcase
     function pairLength() external view returns (uint256);
 
-    function getPairInfo(address _tokenA, address _tokenB) 
-        external 
-        view 
-        returns (StableSwapPairInfo memory info);
+    function getPairInfo(address _tokenA, address _tokenB) external view returns (StableSwapPairInfo memory info);
 
     function getThreePoolPairInfo(address _tokenA, address _tokenB)
         external
         view
         returns (StableSwapThreePoolPairInfo memory info);
-        
 }

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {IUniswapV2Pair} from 'uniswap-v2-core/contracts/interfaces/IUniswapV2Pair.sol';
-import {RouterImmutables} from '../../base/RouterImmutables.sol';
-import {Payments} from '../Payments.sol';
-import {Permit2Payments} from '../Permit2Payments.sol';
-import {Constants} from '../../libraries/Constants.sol';
-import {UniversalRouterHelper} from '../../libraries/UniversalRouterHelper.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
+import {IUniswapV2Pair} from "uniswap-v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import {RouterImmutables} from "../../base/RouterImmutables.sol";
+import {Payments} from "../Payments.sol";
+import {Permit2Payments} from "../Permit2Payments.sol";
+import {Constants} from "../../libraries/Constants.sol";
+import {UniversalRouterHelper} from "../../libraries/UniversalRouterHelper.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
 
 /// @title Router for PancakeSwap v2 Trades
 abstract contract V2SwapRouter is RouterImmutables, Permit2Payments {
@@ -87,8 +87,9 @@ abstract contract V2SwapRouter is RouterImmutables, Permit2Payments {
         address[] calldata path,
         address payer
     ) internal {
-        (uint256 amountIn, address firstPair) =
-            UniversalRouterHelper.getAmountInMultihop(PANCAKESWAP_V2_FACTORY, PANCAKESWAP_V2_PAIR_INIT_CODE_HASH, amountOut, path);
+        (uint256 amountIn, address firstPair) = UniversalRouterHelper.getAmountInMultihop(
+            PANCAKESWAP_V2_FACTORY, PANCAKESWAP_V2_PAIR_INIT_CODE_HASH, amountOut, path
+        );
         if (amountIn > amountInMaximum) revert V2TooMuchRequested();
 
         payOrPermit2Transfer(path[0], payer, firstPair, amountIn);

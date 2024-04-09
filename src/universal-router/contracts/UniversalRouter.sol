@@ -2,21 +2,21 @@
 pragma solidity ^0.8.19;
 
 // Command implementations
-import {Dispatcher} from './base/Dispatcher.sol';
-import {RewardsCollector} from './base/RewardsCollector.sol';
-import {RouterParameters, RouterImmutables} from './base/RouterImmutables.sol';
-import {Commands} from './libraries/Commands.sol';
-import {Constants} from './libraries/Constants.sol';
-import {IUniversalRouter} from './interfaces/IUniversalRouter.sol';
-import {StableSwapRouter} from './modules/pancakeswap/StableSwapRouter.sol';
-import {Pausable} from '@openzeppelin/contracts/security/Pausable.sol';
-import {SwapRouterBase} from '../../SwapRouterBase.sol';
-import {BinSwapRouterBase} from '../../pool-bin/BinSwapRouterBase.sol';
-import {CLSwapRouterBase} from '../../pool-cl/CLSwapRouterBase.sol';
-import {IBinPoolManager} from 'pancake-v4-core/src/pool-bin/interfaces/IBinPoolManager.sol';
-import {ICLPoolManager} from 'pancake-v4-core/src/pool-cl/interfaces/ICLPoolManager.sol';
-import {IVault} from 'pancake-v4-core/src/interfaces/IVault.sol';
-import {BytesLib} from './libraries/BytesLib.sol';
+import {Dispatcher} from "./base/Dispatcher.sol";
+import {RewardsCollector} from "./base/RewardsCollector.sol";
+import {RouterParameters, RouterImmutables} from "./base/RouterImmutables.sol";
+import {Commands} from "./libraries/Commands.sol";
+import {Constants} from "./libraries/Constants.sol";
+import {IUniversalRouter} from "./interfaces/IUniversalRouter.sol";
+import {StableSwapRouter} from "./modules/pancakeswap/StableSwapRouter.sol";
+import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {SwapRouterBase} from "../../SwapRouterBase.sol";
+import {BinSwapRouterBase} from "../../pool-bin/BinSwapRouterBase.sol";
+import {CLSwapRouterBase} from "../../pool-cl/CLSwapRouterBase.sol";
+import {IBinPoolManager} from "pancake-v4-core/src/pool-bin/interfaces/IBinPoolManager.sol";
+import {ICLPoolManager} from "pancake-v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
+import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
+import {BytesLib} from "./libraries/BytesLib.sol";
 import {Currency, CurrencyLibrary} from "pancake-v4-core/src/types/Currency.sol";
 import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
@@ -31,11 +31,11 @@ contract UniversalRouter is RouterImmutables, IUniversalRouter, Dispatcher, Rewa
         _;
     }
 
-    constructor(RouterParameters memory params) 
-        RouterImmutables(params) 
-        StableSwapRouter(params.stableFactory, params.stableInfo) 
+    constructor(RouterParameters memory params)
+        RouterImmutables(params)
+        StableSwapRouter(params.stableFactory, params.stableInfo)
         BinSwapRouterBase(IBinPoolManager(params.binPoolManager))
-        CLSwapRouterBase(ICLPoolManager(params.clPoolManager)) 
+        CLSwapRouterBase(ICLPoolManager(params.clPoolManager))
         SwapRouterBase(IVault(params.vault))
     {}
 
@@ -50,12 +50,12 @@ contract UniversalRouter is RouterImmutables, IUniversalRouter, Dispatcher, Rewa
     }
 
     /// @inheritdoc Dispatcher
-    function execute(bytes calldata commands, bytes[] calldata inputs) 
-        public 
-        payable 
-        override 
-        isNotLocked 
-        whenNotPaused 
+    function execute(bytes calldata commands, bytes[] calldata inputs)
+        public
+        payable
+        override
+        isNotLocked
+        whenNotPaused
     {
         bool success;
         bytes memory output;

@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {RouterImmutables} from '../../base/RouterImmutables.sol';
-import {Payments} from '../Payments.sol';
-import {Permit2Payments} from '../Permit2Payments.sol';
-import {Constants} from '../../libraries/Constants.sol';
-import {UniversalRouterHelper} from '../../libraries/UniversalRouterHelper.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {IStableSwap} from '../../interfaces/IStableSwap.sol';
-
+import {RouterImmutables} from "../../base/RouterImmutables.sol";
+import {Payments} from "../Payments.sol";
+import {Permit2Payments} from "../Permit2Payments.sol";
+import {Constants} from "../../libraries/Constants.sol";
+import {UniversalRouterHelper} from "../../libraries/UniversalRouterHelper.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IStableSwap} from "../../interfaces/IStableSwap.sol";
 
 /// @title Router for PancakeSwap Stable Trades
 abstract contract StableSwapRouter is RouterImmutables, Permit2Payments, Ownable {
@@ -26,10 +25,7 @@ abstract contract StableSwapRouter is RouterImmutables, Permit2Payments, Ownable
 
     event SetStableSwap(address indexed factory, address indexed info);
 
-    constructor(
-        address _stableSwapFactory,
-        address _stableSwapInfo
-    ) {
+    constructor(address _stableSwapFactory, address _stableSwapInfo) {
         stableSwapFactory = _stableSwapFactory;
         stableSwapInfo = _stableSwapInfo;
     }
@@ -38,10 +34,7 @@ abstract contract StableSwapRouter is RouterImmutables, Permit2Payments, Ownable
      * @notice Set Pancake Stable Swap Factory and Info
      * @dev Only callable by contract owner
      */
-    function setStableSwap(
-        address _factory,
-        address _info
-    ) external onlyOwner {
+    function setStableSwap(address _factory, address _info) external onlyOwner {
         require(_factory != address(0) && _info != address(0));
 
         stableSwapFactory = _factory;
@@ -50,16 +43,13 @@ abstract contract StableSwapRouter is RouterImmutables, Permit2Payments, Ownable
         emit SetStableSwap(stableSwapFactory, stableSwapInfo);
     }
 
-    function _stableSwap(
-        address[] calldata path,
-        uint256[] calldata flag
-    ) private {
+    function _stableSwap(address[] calldata path, uint256[] calldata flag) private {
         unchecked {
             if (path.length - 1 != flag.length) revert StableInvalidPath();
 
             for (uint256 i; i < flag.length; i++) {
                 (address input, address output) = (path[i], path[i + 1]);
-                (uint256 k, uint256 j, address swapContract) = stableSwapFactory.getStableInfo(input, output, flag[i]); 
+                (uint256 k, uint256 j, address swapContract) = stableSwapFactory.getStableInfo(input, output, flag[i]);
                 uint256 amountIn = ERC20(input).balanceOf(address(this));
                 ERC20(input).safeApprove(swapContract, amountIn);
                 IStableSwap(swapContract).exchange(k, j, amountIn, 0);
@@ -82,15 +72,13 @@ abstract contract StableSwapRouter is RouterImmutables, Permit2Payments, Ownable
         uint256[] calldata flag,
         address payer
     ) internal {
-        if (
-            amountIn != Constants.ALREADY_PAID && amountIn != Constants.CONTRACT_BALANCE
-        ) {
+        if (amountIn != Constants.ALREADY_PAID && amountIn != Constants.CONTRACT_BALANCE) {
             payOrPermit2Transfer(path[0], payer, address(this), amountIn);
         }
 
         ERC20 tokenOut = ERC20(path[path.length - 1]);
 
-        _stableSwap(path, flag); 
+        _stableSwap(path, flag);
 
         uint256 amountOut = tokenOut.balanceOf(address(this));
         if (amountOut < amountOutMinimum) revert StableTooLittleReceived();
@@ -119,7 +107,7 @@ abstract contract StableSwapRouter is RouterImmutables, Permit2Payments, Ownable
 
         payOrPermit2Transfer(path[0], payer, address(this), amountIn);
 
-        _stableSwap(path, flag); 
+        _stableSwap(path, flag);
 
         if (recipient != address(this)) pay(path[path.length - 1], recipient, amountOut);
     }

@@ -105,8 +105,7 @@ interface IPancakeV3PoolEvents {
     /// @param observationCardinalityNextOld The previous value of the next observation cardinality
     /// @param observationCardinalityNextNew The updated value of the next observation cardinality
     event IncreaseObservationCardinalityNext(
-        uint16 observationCardinalityNextOld,
-        uint16 observationCardinalityNextNew
+        uint16 observationCardinalityNextOld, uint16 observationCardinalityNextNew
     );
 
     /// @notice Emitted when the protocol fee is changed by the pool
@@ -115,10 +114,7 @@ interface IPancakeV3PoolEvents {
     /// @param feeProtocol0New The updated value of the token0 protocol fee
     /// @param feeProtocol1New The updated value of the token1 protocol fee
     event SetFeeProtocol(
-        uint32 feeProtocol0Old,
-        uint32 feeProtocol1Old,
-        uint32 feeProtocol0New,
-        uint32 feeProtocol1New
+        uint32 feeProtocol0Old, uint32 feeProtocol1Old, uint32 feeProtocol0New, uint32 feeProtocol1New
     );
 
     /// @notice Emitted when the collected protocol fees are withdrawn by the factory owner

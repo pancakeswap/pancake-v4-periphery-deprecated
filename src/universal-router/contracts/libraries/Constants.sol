@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {IWETH9} from '../interfaces/IWETH9.sol';
+import {IWETH9} from "../interfaces/IWETH9.sol";
 
 /// @title Constant state
 /// @notice Constant state used by the Universal Router

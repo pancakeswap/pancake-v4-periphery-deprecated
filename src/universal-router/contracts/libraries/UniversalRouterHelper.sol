@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity >=0.8.0;
 
-import {IUniswapV2Pair} from 'uniswap-v2-core/contracts/interfaces/IUniswapV2Pair.sol';
-import {IPancakeV3Pool} from '../interfaces/pancakeswap-v3-interfaces/IPancakeV3Pool.sol';
-import {IStableSwapFactory} from '../interfaces/IStableSwapFactory.sol';
-import {IStableSwapInfo} from '../interfaces/IStableSwapInfo.sol';
-import {BytesLib} from './BytesLib.sol';
-import {Constants} from './Constants.sol';
+import {IUniswapV2Pair} from "uniswap-v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import {IPancakeV3Pool} from "../interfaces/pancakeswap-v3-interfaces/IPancakeV3Pool.sol";
+import {IStableSwapFactory} from "../interfaces/IStableSwapFactory.sol";
+import {IStableSwapInfo} from "../interfaces/IStableSwapInfo.sol";
+import {BytesLib} from "./BytesLib.sol";
+import {Constants} from "./Constants.sol";
 
 library UniversalRouterHelper {
     using BytesLib for bytes;
@@ -16,22 +16,25 @@ library UniversalRouterHelper {
     error InvalidReserves();
     error InvalidPath();
 
-    /************************************************** Stable **************************************************/
+    /**
+     * Stable *************************************************
+     */
 
     // get the pool info in stable swap
-    function getStableInfo(
-        address stableSwapFactory,
-        address input,
-        address output,
-        uint256 flag
-    ) internal view returns (uint256 i, uint256 j, address swapContract) {
+    function getStableInfo(address stableSwapFactory, address input, address output, uint256 flag)
+        internal
+        view
+        returns (uint256 i, uint256 j, address swapContract)
+    {
         if (flag == 2) {
-            IStableSwapFactory.StableSwapPairInfo memory info = IStableSwapFactory(stableSwapFactory).getPairInfo(input, output);
+            IStableSwapFactory.StableSwapPairInfo memory info =
+                IStableSwapFactory(stableSwapFactory).getPairInfo(input, output);
             i = input == info.token0 ? 0 : 1;
             j = (i == 0) ? 1 : 0;
             swapContract = info.swapContract;
         } else if (flag == 3) {
-            IStableSwapFactory.StableSwapThreePoolPairInfo memory info = IStableSwapFactory(stableSwapFactory).getThreePoolPairInfo(input, output);
+            IStableSwapFactory.StableSwapThreePoolPairInfo memory info =
+                IStableSwapFactory(stableSwapFactory).getThreePoolPairInfo(input, output);
 
             if (input == info.token0) i = 0;
             else if (input == info.token1) i = 1;
@@ -62,14 +65,15 @@ library UniversalRouterHelper {
 
         for (uint256 i = length - 1; i > 0; i--) {
             uint256 last = i - 1;
-            (uint256 k, uint256 j, address swapContract) = getStableInfo(stableSwapFactory, path[last], path[i], flag[last]);
+            (uint256 k, uint256 j, address swapContract) =
+                getStableInfo(stableSwapFactory, path[last], path[i], flag[last]);
             amounts[last] = IStableSwapInfo(stableSwapInfo).get_dx(swapContract, k, j, amounts[i], type(uint256).max);
         }
     }
 
-
-
-    /************************************************** V2 **************************************************/
+    /**
+     * V2 *************************************************
+     */
     /// @notice Sorts two tokens to return token0 and token1
     /// @param tokenA The first token to sort
     /// @param tokenB The other token to sort
@@ -78,7 +82,6 @@ library UniversalRouterHelper {
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
     }
-
 
     /// @notice Calculates the v2 address for a pair assuming the input tokens are pre-sorted
     /// @param factory The address of the v2 factory
@@ -95,15 +98,12 @@ library UniversalRouterHelper {
             uint160(
                 uint256(
                     keccak256(
-                        abi.encodePacked(hex'ff', factory, keccak256(abi.encodePacked(token0, token1)), initCodeHash)
+                        abi.encodePacked(hex"ff", factory, keccak256(abi.encodePacked(token0, token1)), initCodeHash)
                     )
                 )
             )
         );
-
-
     }
-
 
     /// @notice Calculates the v2 address for a pair without making any external calls
     /// @param factory The address of the v2 factory
@@ -119,7 +119,6 @@ library UniversalRouterHelper {
         (address token0, address token1) = sortTokens(tokenA, tokenB);
         pair = pairForPreSorted(factory, initCodeHash, token0, token1);
     }
-
 
     /// @notice Calculates the v2 address for a pair and the pair's token0
     /// @param factory The address of the v2 factory
@@ -137,8 +136,6 @@ library UniversalRouterHelper {
         (token0, token1) = sortTokens(tokenA, tokenB);
         pair = pairForPreSorted(factory, initCodeHash, token0, token1);
     }
-
-
 
     /// @notice Calculates the v2 address for a pair and fetches the reserves for each token
     /// @param factory The address of the v2 factory
@@ -158,8 +155,6 @@ library UniversalRouterHelper {
         (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(pair).getReserves();
         (reserveA, reserveB) = tokenA == token0 ? (reserve0, reserve1) : (reserve1, reserve0);
     }
-
-
 
     /// @notice Given an input asset amount returns the maximum output amount of the other asset
     /// @param amountIn The token input amount
@@ -194,7 +189,6 @@ library UniversalRouterHelper {
         amountIn = (numerator / denominator) + 1;
     }
 
-
     /// @notice Returns the input amount needed for a desired output amount in a multi-hop trade
     /// @param factory The address of the v2 factory
     /// @param initCodeHash The hash of the pair initcode
@@ -218,14 +212,9 @@ library UniversalRouterHelper {
         }
     }
 
-
-
-
-
-
-
-
-    /************************************************** V3 **************************************************/
+    /**
+     * V3 *************************************************
+     */
     /// @notice Returns true iff the path contains two or more pools
     /// @param path The encoded swap path
     /// @return True if path contains two or more pools, otherwise false
@@ -259,24 +248,17 @@ library UniversalRouterHelper {
         return path[Constants.NEXT_V3_POOL_OFFSET:];
     }
 
-    function computePoolAddress(
-        address deployer, 
-        bytes32 initCodeHash, 
-        address tokenA, 
-        address tokenB, 
-        uint24 fee
-    ) internal pure returns (address pool) {
+    function computePoolAddress(address deployer, bytes32 initCodeHash, address tokenA, address tokenB, uint24 fee)
+        internal
+        pure
+        returns (address pool)
+    {
         if (tokenA > tokenB) (tokenA, tokenB) = (tokenB, tokenA);
         pool = address(
             uint160(
                 uint256(
                     keccak256(
-                        abi.encodePacked(
-                            hex'ff',
-                            deployer,
-                            keccak256(abi.encode(tokenA, tokenB, fee)),
-                            initCodeHash
-                        )
+                        abi.encodePacked(hex"ff", deployer, keccak256(abi.encode(tokenA, tokenB, fee)), initCodeHash)
                     )
                 )
             )

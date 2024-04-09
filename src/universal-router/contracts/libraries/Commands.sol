@@ -72,6 +72,6 @@ library Commands {
     uint256 constant V4_CL_SWAP_EXACT_IN = 0x27;
     uint256 constant V4_BIN_SWAP_EXACT_OUT = 0x28;
     uint256 constant V4_CL_SWAP_EXACT_OUT = 0x29;
-    
+
     // COMMAND_PLACEHOLDER for 0x2a-0x3f (all unused)
 }

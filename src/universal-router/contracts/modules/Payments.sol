@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {Constants} from '../libraries/Constants.sol';
-import {RouterImmutables} from '../base/RouterImmutables.sol';
-import {SafeTransferLib} from 'solmate/utils/SafeTransferLib.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {ERC721} from 'solmate/tokens/ERC721.sol';
-import {ERC1155} from 'solmate/tokens/ERC1155.sol';
+import {Constants} from "../libraries/Constants.sol";
+import {RouterImmutables} from "../base/RouterImmutables.sol";
+import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {ERC721} from "solmate/tokens/ERC721.sol";
+import {ERC1155} from "solmate/tokens/ERC1155.sol";
 
 /// @title Payments contract
 /// @notice Performs various operations around the payment of ETH and tokens
@@ -101,7 +101,7 @@ abstract contract Payments is RouterImmutables {
     function sweepERC1155(address token, address recipient, uint256 id, uint256 amountMinimum) internal {
         uint256 balance = ERC1155(token).balanceOf(address(this), id);
         if (balance < amountMinimum) revert InsufficientToken();
-        ERC1155(token).safeTransferFrom(address(this), recipient, id, balance, bytes(''));
+        ERC1155(token).safeTransferFrom(address(this), recipient, id, balance, bytes(""));
     }
 
     /// @notice Wraps an amount of ETH into WETH

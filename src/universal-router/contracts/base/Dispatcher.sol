@@ -1,26 +1,35 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.19;
 
-import {V2SwapRouter} from '../modules/pancakeswap/V2SwapRouter.sol';
-import {V3SwapRouter} from '../modules/pancakeswap/V3SwapRouter.sol';
-import {StableSwapRouter} from '../modules/pancakeswap/StableSwapRouter.sol';
-import {BinSwapRouterBase} from '../../../pool-bin/BinSwapRouterBase.sol';
-import {CLSwapRouterBase} from '../../../pool-cl/CLSwapRouterBase.sol';
-import {Payments} from '../modules/Payments.sol';
-import {RouterImmutables} from '../base/RouterImmutables.sol';
-import {Callbacks} from '../base/Callbacks.sol';
-import {BytesLib} from '../libraries/BytesLib.sol';
-import {Commands} from '../libraries/Commands.sol';
-import {LockAndMsgSender} from './LockAndMsgSender.sol';
-import {ERC721} from 'solmate/tokens/ERC721.sol';
-import {ERC1155} from 'solmate/tokens/ERC1155.sol';
-import {ERC20} from 'solmate/tokens/ERC20.sol';
-import {IAllowanceTransfer} from '../permit2/src/interfaces/IAllowanceTransfer.sol';
-import {IPancakeNFTMarket} from '../interfaces/IPancakeNFTMarket.sol';
+import {V2SwapRouter} from "../modules/pancakeswap/V2SwapRouter.sol";
+import {V3SwapRouter} from "../modules/pancakeswap/V3SwapRouter.sol";
+import {StableSwapRouter} from "../modules/pancakeswap/StableSwapRouter.sol";
+import {BinSwapRouterBase} from "../../../pool-bin/BinSwapRouterBase.sol";
+import {CLSwapRouterBase} from "../../../pool-cl/CLSwapRouterBase.sol";
+import {Payments} from "../modules/Payments.sol";
+import {RouterImmutables} from "../base/RouterImmutables.sol";
+import {Callbacks} from "../base/Callbacks.sol";
+import {BytesLib} from "../libraries/BytesLib.sol";
+import {Commands} from "../libraries/Commands.sol";
+import {LockAndMsgSender} from "./LockAndMsgSender.sol";
+import {ERC721} from "solmate/tokens/ERC721.sol";
+import {ERC1155} from "solmate/tokens/ERC1155.sol";
+import {ERC20} from "solmate/tokens/ERC20.sol";
+import {IAllowanceTransfer} from "../permit2/src/interfaces/IAllowanceTransfer.sol";
+import {IPancakeNFTMarket} from "../interfaces/IPancakeNFTMarket.sol";
 
 /// @title Decodes and Executes Commands
 /// @notice Called by the UniversalRouter contract to efficiently decode and execute a singular command
-abstract contract Dispatcher is Payments, V2SwapRouter, V3SwapRouter, StableSwapRouter, BinSwapRouterBase, CLSwapRouterBase, Callbacks, LockAndMsgSender {
+abstract contract Dispatcher is
+    Payments,
+    V2SwapRouter,
+    V3SwapRouter,
+    StableSwapRouter,
+    BinSwapRouterBase,
+    CLSwapRouterBase,
+    Callbacks,
+    LockAndMsgSender
+{
     using BytesLib for bytes;
 
     error InvalidCommandType(uint256 commandType);
@@ -315,7 +324,7 @@ abstract contract Dispatcher is Payments, V2SwapRouter, V3SwapRouter, StableSwap
                 bytes calldata _commands = inputs.toBytes(0);
                 bytes[] calldata _inputs = inputs.toBytesArray(1);
                 (success, output) =
-                    (address(this)).call(abi.encodeWithSelector(Dispatcher.execute.selector, _commands, _inputs));                
+                    (address(this)).call(abi.encodeWithSelector(Dispatcher.execute.selector, _commands, _inputs));
             } else if (command == Commands.APPROVE_ERC20) {
                 ERC20 token;
                 RouterImmutables.Spenders spender;
@@ -390,7 +399,7 @@ abstract contract Dispatcher is Payments, V2SwapRouter, V3SwapRouter, StableSwap
                     msgSender := calldataload(add(inputs.offset, 0x20))
                 }
                 V4BinExactInputParams memory params = abi.decode(inputs.toBytes(0), (V4BinExactInputParams));
-                _v4BinSwapExactInput(params, msgSender, true, true);            
+                _v4BinSwapExactInput(params, msgSender, true, true);
             } else if (command == Commands.V4_CL_SWAP_EXACT_IN) {
                 // equivalent: abi.decode(inputs, (V4CLExactInputParams, address, bool, bool))
                 address msgSender;
@@ -398,7 +407,7 @@ abstract contract Dispatcher is Payments, V2SwapRouter, V3SwapRouter, StableSwap
                     msgSender := calldataload(add(inputs.offset, 0x20))
                 }
                 V4CLExactInputParams memory params = abi.decode(inputs.toBytes(0), (V4CLExactInputParams));
-                _v4CLSwapExactInput(params, msgSender, true, true);    
+                _v4CLSwapExactInput(params, msgSender, true, true);
             } else if (command == Commands.V4_BIN_SWAP_EXACT_OUT) {
                 // equivalent: abi.decode(inputs, (V4ExactOutputParams, address, bool, bool))
                 address msgSender;

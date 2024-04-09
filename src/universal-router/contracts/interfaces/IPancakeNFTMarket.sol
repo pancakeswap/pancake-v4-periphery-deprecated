@@ -8,10 +8,7 @@ interface IPancakeNFTMarket {
      * @param _collection: contract address of the NFT
      * @param _tokenId: tokenId of the NFT purchased
      */
-    function buyTokenUsingBNB(
-        address _collection, 
-        uint256 _tokenId
-    ) external payable;
+    function buyTokenUsingBNB(address _collection, uint256 _tokenId) external payable;
 
     /**
      * @notice Buy token with WBNB by matching the price of an existing ask order
@@ -19,9 +16,5 @@ interface IPancakeNFTMarket {
      * @param _tokenId: tokenId of the NFT purchased
      * @param _price: price (must be equal to the askPrice set by the seller)
      */
-    function buyTokenUsingWBNB(
-        address _collection,
-        uint256 _tokenId,
-        uint256 _price
-    ) external;
+    function buyTokenUsingWBNB(address _collection, uint256 _tokenId, uint256 _price) external;
 }

@@ -3,7 +3,7 @@
 /// @title Library for Bytes Manipulation
 pragma solidity ^0.8.0;
 
-import {Constants} from './Constants.sol';
+import {Constants} from "./Constants.sol";
 
 library BytesLib {
     error SliceOutOfBounds();
@@ -95,7 +95,7 @@ library BytesLib {
     /// @notice Decode the `_arg`-th element in `_bytes` as `uint[]`
     /// @param _bytes The input bytes string to extract an uint array from
     /// @param _arg The index of the argument to extract
-    function toUintArray(bytes calldata _bytes, uint256 _arg) internal pure returns (uint[] calldata res) {
+    function toUintArray(bytes calldata _bytes, uint256 _arg) internal pure returns (uint256[] calldata res) {
         (uint256 length, uint256 offset) = toLengthOffset(_bytes, _arg);
         assembly {
             res.length := length
