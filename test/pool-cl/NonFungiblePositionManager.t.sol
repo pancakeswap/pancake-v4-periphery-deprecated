@@ -30,6 +30,8 @@ import {NonfungiblePositionManager} from "../../src/pool-cl/NonfungiblePositionM
 import {INonfungiblePositionManager} from "../../src/pool-cl/interfaces/INonfungiblePositionManager.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
 import {LiquidityManagement} from "../../src/pool-cl/base/LiquidityManagement.sol";
+import {ICLMasterChefV4} from "../../src/pool-cl/interfaces/ICLMasterChefV4.sol";
+import {MockCLMasterChef} from "./helpers/MockCLMasterChef.sol";
 // import {console2} from "forge-std/console2.sol";
 
 contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
@@ -40,6 +42,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     event DecreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
+    event SetMasterChef(address masterChef);
 
     IVault public vault;
     ICLPoolManager public poolManager;
@@ -331,6 +334,61 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
 
         assertEq(nonfungiblePoolManager.ownerOf(tokenId), address(this), "Unexpected owner of the position");
+
+        // check masterChef callback
+        {
+            router.donate(key, 1 ether, 1 ether, "");
+
+            // touch the position i.e. addLiquidity 0
+            nonfungiblePoolManager.increaseLiquidity(
+                INonfungiblePositionManager.IncreaseLiquidityParams({
+                    tokenId: tokenId,
+                    amount0Desired: 0,
+                    amount1Desired: 0,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: type(uint256).max
+                })
+            );
+
+            // set masterChef
+            MockCLMasterChef masterChef = new MockCLMasterChef();
+            nonfungiblePoolManager.setMasterChef(address(masterChef));
+
+            nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyB"), tokenId);
+
+            // counter should be increased
+            assertEq(masterChef.counter(), 1, "Unexpected counter");
+            assertEq(nonfungiblePoolManager.ownerOf(tokenId), makeAddr("buddyB"), "Unexpected owner of the position");
+
+            // buddyA should have nothing
+            assertEq(nonfungiblePoolManager.balanceOf(address(this)), 0, "Unexpected balance of current contract");
+
+            // position info should remain the same
+            (
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                uint128 _liquidity,
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint128 tokensOwed0,
+                uint128 tokensOwed1
+            ) = nonfungiblePoolManager.positions(tokenId);
+            assertEq(_liquidity, liquidity, "Unexpected liquidity");
+            assertEq(
+                feeGrowthInside0LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside0LastX128"
+            );
+            assertEq(
+                feeGrowthInside1LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside1LastX128"
+            );
+            assertEq(tokensOwed0, 999999999999999999, "Unexpected feesOwed0");
+            assertEq(tokensOwed1, 999999999999999999, "Unexpected feesOwed1");
+        }
     }
 
     function testMint_gas() external {
@@ -691,6 +749,43 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
             assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
         }
+
+        // check masterChef callback
+        {
+            // set masterChef
+            MockCLMasterChef masterChef = new MockCLMasterChef();
+            nonfungiblePoolManager.setMasterChef(address(masterChef));
+
+            nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyB"), 1);
+
+            // counter should be increased
+            assertEq(masterChef.counter(), 1, "Unexpected counter");
+            assertEq(nonfungiblePoolManager.ownerOf(1), makeAddr("buddyB"), "Unexpected owner of the position");
+
+            // buddyA should have nothing
+            assertEq(nonfungiblePoolManager.balanceOf(address(this)), 0, "Unexpected balance of current contract");
+
+            // position info should remain the same
+            (
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                uint128 _liquidity,
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint128 tokensOwed0,
+                uint128 tokensOwed1
+            ) = nonfungiblePoolManager.positions(1);
+            assertEq(_liquidity, 2 * 1991375027067913587988, "Unexpected liquidity");
+            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
+            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
+            assertEq(tokensOwed0, 0, "Unexpected feesOwed0");
+            assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
+        }
     }
 
     function testIncreaseLiquidity_gas() external {
@@ -1044,6 +1139,59 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
         assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
+
+        // check masterChef callback
+        {
+            // increaseLiquidity, donate and then decreaseLiquidity
+            (uint128 liquidity,,) = nonfungiblePoolManager.increaseLiquidity(
+                INonfungiblePositionManager.IncreaseLiquidityParams({
+                    tokenId: 1,
+                    amount0Desired: 1 ether,
+                    amount1Desired: 1 ether,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: type(uint256).max
+                })
+            );
+
+            router.donate(key, 1 ether, 1 ether, "");
+
+            nonfungiblePoolManager.decreaseLiquidity(
+                INonfungiblePositionManager.DecreaseLiquidityParams({
+                    tokenId: 1,
+                    liquidity: liquidity,
+                    amount0Min: 0,
+                    amount1Min: 0,
+                    deadline: type(uint256).max
+                })
+            );
+
+            // set masterChef
+            MockCLMasterChef masterChef = new MockCLMasterChef();
+            nonfungiblePoolManager.setMasterChef(address(masterChef));
+
+            nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyB"), 1);
+
+            // counter should be increased
+            assertEq(masterChef.counter(), 1, "Unexpected counter");
+            assertEq(nonfungiblePoolManager.ownerOf(1), makeAddr("buddyB"), "Unexpected owner of the position");
+
+            // buddyA should have nothing
+            assertEq(nonfungiblePoolManager.balanceOf(address(this)), 0, "Unexpected balance of current contract");
+
+            // position info should remain the same
+            (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+                nonfungiblePoolManager.positions(1);
+            assertEq(_liquidity, 0, "Unexpected liquidity");
+            assertEq(
+                feeGrowthInside0LastX128, 170878092923545294145335173946080448, "Unexpected feeGrowthInside0LastX128"
+            );
+            assertEq(
+                feeGrowthInside1LastX128, 170878092923545294145335173946080448, "Unexpected feeGrowthInside1LastX128"
+            );
+            assertEq(tokensOwed0, 999999999999999999, "Unexpected feesOwed0");
+            assertEq(tokensOwed1, 999999999999999999, "Unexpected feesOwed1");
+        }
     }
 
     function testDecreaseLiquidity_gas() external {
@@ -2299,6 +2447,140 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         (,,,,,,, uint128 _liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
+    }
+
+    function testMasterChef() external {
+        ICLMasterChefV4 masterChef = nonfungiblePoolManager.masterChef();
+        assertEq(address(masterChef), address(0), "Unexpected masterChef address");
+
+        // set non-zero
+        vm.expectEmit(true, true, true, true);
+        emit SetMasterChef(address(0x1));
+
+        nonfungiblePoolManager.setMasterChef(address(0x1));
+        assertEq(address(nonfungiblePoolManager.masterChef()), address(0x1), "Unexpected masterChef address");
+
+        // non nfp owner
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(makeAddr("someone"));
+        nonfungiblePoolManager.setMasterChef(address(0x2));
+
+        // reset to zero
+        vm.expectEmit(true, true, true, true);
+        emit SetMasterChef(address(0x0));
+
+        nonfungiblePoolManager.setMasterChef(address(0x0));
+        assertEq(address(nonfungiblePoolManager.masterChef()), address(0x0), "Unexpected masterChef address");
+    }
+
+    function testTokenTransfer_withMasterChefSet() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        int24 tickLower = 46053;
+        int24 tickUpper = 46055;
+        uint256 amount0Desired = 1 ether;
+        uint256 amount1Desired = 2 ether;
+
+        {
+            uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+            uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+                sqrtPriceX96,
+                TickMath.getSqrtRatioAtTick(tickLower),
+                TickMath.getSqrtRatioAtTick(tickUpper),
+                amount0Desired,
+                amount1Desired
+            );
+
+            vm.expectEmit(true, true, true, false);
+            emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
+        }
+
+        (uint256 tokenId, uint128 liquidity,,) = nonfungiblePoolManager.mint(
+            INonfungiblePositionManager.MintParams({
+                poolKey: key,
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                amount0Desired: amount0Desired,
+                amount1Desired: amount1Desired,
+                amount0Min: 0,
+                amount1Min: 0,
+                recipient: address(this),
+                deadline: type(uint256).max
+            })
+        );
+
+        router.donate(key, 1 ether, 1 ether, "");
+
+        // touch the position i.e. addLiquidity 0
+        nonfungiblePoolManager.increaseLiquidity(
+            INonfungiblePositionManager.IncreaseLiquidityParams({
+                tokenId: tokenId,
+                amount0Desired: 0,
+                amount1Desired: 0,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: type(uint256).max
+            })
+        );
+
+        assertEq(nonfungiblePoolManager.ownerOf(tokenId), address(this), "Unexpected owner of the position");
+        nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyA"), tokenId);
+        assertEq(nonfungiblePoolManager.ownerOf(tokenId), makeAddr("buddyA"), "Unexpected owner of the position");
+
+        // check liqudity unchanged
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint128 _liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1
+        ) = nonfungiblePoolManager.positions(tokenId);
+        assertEq(_liquidity, liquidity, "Unexpected liquidity");
+        assertEq(feeGrowthInside0LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside0LastX128");
+        assertEq(feeGrowthInside1LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside1LastX128");
+        assertEq(tokensOwed0, 999999999999999999, "Unexpected feesOwed0");
+        assertEq(tokensOwed1, 999999999999999999, "Unexpected feesOwed1");
+
+        // set masterChef
+        MockCLMasterChef masterChef = new MockCLMasterChef();
+        nonfungiblePoolManager.setMasterChef(address(masterChef));
+
+        vm.prank(makeAddr("buddyA"));
+        nonfungiblePoolManager.safeTransferFrom(makeAddr("buddyA"), makeAddr("buddyB"), tokenId);
+
+        // counter should be increased
+        assertEq(masterChef.counter(), 1, "Unexpected counter");
+        assertEq(nonfungiblePoolManager.ownerOf(tokenId), makeAddr("buddyB"), "Unexpected owner of the position");
+
+        // buddyA should have nothing
+        assertEq(nonfungiblePoolManager.balanceOf(makeAddr("buddyA")), 0, "Unexpected balance of buddyA");
+
+        // position info should remain the same
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+            nonfungiblePoolManager.positions(tokenId);
+        assertEq(_liquidity, liquidity, "Unexpected liquidity");
+        assertEq(feeGrowthInside0LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside0LastX128");
+        assertEq(feeGrowthInside1LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside1LastX128");
+        assertEq(tokensOwed0, 999999999999999999, "Unexpected feesOwed0");
+        assertEq(tokensOwed1, 999999999999999999, "Unexpected feesOwed1");
     }
 
     function testFeeGrowthInsideOnverflow_whenAddLiquidityBackToEmptyPosition() external {

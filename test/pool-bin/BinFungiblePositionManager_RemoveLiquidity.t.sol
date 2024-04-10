@@ -24,6 +24,7 @@ import {BeforeMintSwapHook} from "./helpers/BeforeMintSwapHook.sol";
 import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 import {BinTokenLibrary} from "../../src/pool-bin/libraries/BinTokenLibrary.sol";
 import {IBinFungibleToken} from "../../src/pool-bin/interfaces/IBinFungibleToken.sol";
+import {MockBinMasterChef} from "./helpers/MockBinMasterChef.sol";
 
 contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, LiquidityParamsHelper {
     using BinPoolParametersHelper for bytes32;
@@ -460,6 +461,34 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
             assertEq(token1.balanceOf(user), amt);
             vm.stopPrank();
         }
+    }
+
+    function testRemoveLiquidity_WithMasterChef() public {
+        // pre-req set masterChef
+        MockBinMasterChef mockBinMasterChef = new MockBinMasterChef();
+        binFungiblePositionManager.setMasterChef(address(mockBinMasterChef));
+
+        // pre-req: mint
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+        IBinFungiblePositionManager.AddLiquidityParams memory params;
+        params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
+        (,,, uint256[] memory liquidityMinted) = binFungiblePositionManager.addLiquidity(params);
+
+        // verify
+        uint256[] memory expectedBinIds = new uint256[](binIds.length);
+        for (uint256 i; i < binIds.length; i++) {
+            expectedBinIds[i] = binIds[i];
+        }
+
+        removeParams = _getRemoveParams(key1, binIds, liquidityMinted);
+        vm.expectEmit();
+        emit OnWithdraw(key1.toId(), alice, expectedBinIds, liquidityMinted);
+        snapStart("BinFungiblePositionManager_RemoveLiquidityTest#testRemoveLiquidity_WithMasterChef");
+        binFungiblePositionManager.removeLiquidity(removeParams);
+        snapEnd();
     }
 
     function _getRemoveParams(PoolKey memory _key, uint24[] memory binIds, uint256[] memory amounts)

@@ -24,6 +24,7 @@ import {LiquidityParamsHelper} from "./helpers/LiquidityParamsHelper.sol";
 import {BeforeMintSwapHook} from "./helpers/BeforeMintSwapHook.sol";
 import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 import {BinTokenLibrary} from "../../src/pool-bin/libraries/BinTokenLibrary.sol";
+import {MockBinMasterChef} from "./helpers/MockBinMasterChef.sol";
 
 contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, LiquidityParamsHelper {
     using BinPoolParametersHelper for bytes32;
@@ -54,6 +55,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
 
     event OnDeposit(PoolId id, address user, uint256[] binIds, uint256[] amounts);
     event OnAfterTokenTransfer(PoolId id, address from, address to, uint256 binId, uint256 amount);
+    event SetMasterChef(address masterChef);
 
     function setUp() public {
         WETH weth = new WETH();
@@ -248,6 +250,33 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             uint256 balance2 = binFungiblePositionManager.balanceOf(alice, key2.toId().toTokenId(binIds[i])); // key2.toBinToken(binIds[i]));
             assertEq(balance2, _liquidityMinted2[i]);
         }
+    }
+
+    function testAddLiquidity_WithMasterChef() public {
+        // pre-req set masterChef
+        MockBinMasterChef mockBinMasterChef = new MockBinMasterChef();
+        binFungiblePositionManager.setMasterChef(address(mockBinMasterChef));
+
+        // mint alice required token
+        token0.mint(alice, 2 ether);
+        token1.mint(alice, 2 ether);
+
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+        IBinFungiblePositionManager.AddLiquidityParams memory params;
+        params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId);
+
+        (,,, uint256[] memory liquidityMinted) = binFungiblePositionManager.addLiquidity(params);
+
+        uint256[] memory expectedBinIds = new uint256[](binIds.length);
+        for (uint256 i; i < binIds.length; i++) {
+            expectedBinIds[i] = binIds[i];
+        }
+        vm.expectEmit();
+        emit OnDeposit(key1.toId(), alice, expectedBinIds, liquidityMinted);
+        snapStart("BinFungiblePositionManager_AddLiquidityTest#testAddLiquidity_WithMasterChef");
+        binFungiblePositionManager.addLiquidity(params);
+        snapEnd();
     }
 
     function testPositions_InvalidTokenId(uint256 tokenId) public {
@@ -499,6 +528,43 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             assertEq(aliceTokenIds[i], bobTokenIds[i]);
             assertEq(aliceLiquidityMinted[i], bobLiquidityMinted[i]);
         }
+    }
+
+    function testSetMasterChef() public {
+        address masterChef = makeAddr("masterChef");
+
+        vm.prank(alice);
+        vm.expectRevert("Ownable: caller is not the owner");
+        binFungiblePositionManager.setMasterChef(masterChef);
+
+        vm.expectEmit();
+        emit SetMasterChef(masterChef);
+        binFungiblePositionManager.setMasterChef(masterChef);
+
+        assertEq(address(binFungiblePositionManager.masterChef()), masterChef);
+    }
+
+    function testAfterTokenTransfer() public {
+        // pre-req set masterChef
+        MockBinMasterChef mockBinMasterChef = new MockBinMasterChef();
+        binFungiblePositionManager.setMasterChef(address(mockBinMasterChef));
+
+        // mint alice required token
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 1);
+        IBinFungiblePositionManager.AddLiquidityParams memory params;
+        params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId);
+        (,, uint256[] memory tokenIds, uint256[] memory liquidityMinted) =
+            binFungiblePositionManager.addLiquidity(params);
+
+        vm.expectEmit();
+        emit OnAfterTokenTransfer(key1.toId(), alice, bob, uint256(binIds[0]), liquidityMinted[0]);
+        snapStart("BinFungiblePositionManager_AddLiquidityTest#testAfterTokenTransfer");
+        binFungiblePositionManager.batchTransferFrom(alice, bob, tokenIds, liquidityMinted);
+        snapEnd();
     }
 
     function _getAddParams(
