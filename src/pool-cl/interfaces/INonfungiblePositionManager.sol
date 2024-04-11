@@ -32,8 +32,6 @@ interface INonfungiblePositionManager is
     error OnlyVaultCaller();
     error InvalidCalldataType();
 
-    error NonexistentToken();
-
     enum CallbackDataType {
         Mint,
         IncreaseLiquidity,
@@ -69,15 +67,12 @@ interface INonfungiblePositionManager is
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
 
     /// @notice Emitted when a new masterchef is set
-    event SetMasterChef(address masterChef);
+    event MasterChefUpdated(address masterChef);
 
     /// @dev details about the pancake position
     struct Position {
         // the nonce for permits
         uint96 nonce;
-        // TODO: confirm if this is still needed
-        // the address that is approved for spending this token
-        address operator;
         // the hashed poolKey of the pool with which this token is connected
         PoolId poolId;
         // the tick range of the position
@@ -99,7 +94,6 @@ interface INonfungiblePositionManager is
         view
         returns (
             uint96 nonce,
-            address operator,
             Currency currency0,
             Currency currency1,
             uint24 fee,
@@ -111,17 +105,6 @@ interface INonfungiblePositionManager is
             uint128 tokensOwed0,
             uint128 tokensOwed1
         );
-
-    /// @notice Initialize the pool state for a given pool ID.
-    /// @dev Call this when the pool does not exist and is not initialized.
-    /// @param poolKey The pool key
-    /// @param sqrtPriceX96 The initial sqrt price of the pool
-    /// @param hookData Hook data for the pool
-    /// @return tick Pool tick
-    function initialize(PoolKey memory poolKey, uint160 sqrtPriceX96, bytes calldata hookData)
-        external
-        payable
-        returns (int24 tick);
 
     struct MintParams {
         PoolKey poolKey;
@@ -215,7 +198,7 @@ interface INonfungiblePositionManager is
     /// @return the address masterChef
     function masterChef() external view returns (ICLMasterChefV4);
 
-    /// @notice Set masterChef associated with nfp to kickstart farming incentives
+    /// @notice sync masterChef from poolManager
     /// @dev Once farming incentives is on longer reqired, set masterChef as address(0)
-    function setMasterChef(address masterChef) external;
+    function syncMasterChef() external;
 }

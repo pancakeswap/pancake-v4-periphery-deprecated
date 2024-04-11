@@ -9,6 +9,8 @@ import "./interfaces/INonfungibleTokenPositionDescriptor.sol";
 contract NonfungibleTokenPositionDescriptorOffChain is INonfungibleTokenPositionDescriptor {
     using Strings for uint256;
 
+    error NonexistentToken();
+
     string private _baseTokenURI;
 
     function initialize(string calldata baseTokenURI) external {
@@ -22,6 +24,9 @@ contract NonfungibleTokenPositionDescriptorOffChain is INonfungibleTokenPosition
         override
         returns (string memory)
     {
+        if (positionManager.ownerOf(tokenId) == address(0)) {
+            revert NonexistentToken();
+        }
         return bytes(_baseTokenURI).length > 0 ? string.concat(_baseTokenURI, tokenId.toString()) : "";
     }
 }

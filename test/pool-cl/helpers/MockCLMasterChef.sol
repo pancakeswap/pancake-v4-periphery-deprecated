@@ -22,7 +22,6 @@ contract MockCLMasterChef is ICLMasterChefV4 {
         // compare each field
         (
             uint96 nonce,
-            address operator,
             ,
             ,
             ,
@@ -36,7 +35,6 @@ contract MockCLMasterChef is ICLMasterChefV4 {
         ) = INonfungiblePositionManager(msg.sender).positions(tokenId);
 
         require(nonce == positionTokenInfo.nonce);
-        require(operator == positionTokenInfo.operator);
         require(tickLower == positionTokenInfo.tickLower);
         require(tickUpper == positionTokenInfo.tickUpper);
         require(liquidity == positionTokenInfo.liquidity);

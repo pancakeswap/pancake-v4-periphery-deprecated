@@ -11,31 +11,29 @@ import {CLPosition} from "pancake-v4-core/src/pool-cl/libraries/CLPosition.sol";
 import {BalanceDelta, toBalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {FixedPoint128} from "pancake-v4-core/src/pool-cl/libraries/FixedPoint128.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-
 import {INonfungiblePositionManager} from "./interfaces/INonfungiblePositionManager.sol";
 import {INonfungibleTokenPositionDescriptor} from "./interfaces/INonfungibleTokenPositionDescriptor.sol";
 import {ERC721Permit} from "./base/ERC721Permit.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {PeripheryValidation} from "../base/PeripheryValidation.sol";
 import {SelfPermit} from "./base/SelfPermit.sol";
 import {LiquidityManagement} from "./base/LiquidityManagement.sol";
 import {CLPeripheryImmutableState} from "./base/CLPeripheryImmutableState.sol";
-import {Multicall} from "../base/Multicall.sol";
 import {ICLMasterChefV4} from "./interfaces/ICLMasterChefV4.sol";
+import {IMulticall} from "../interfaces/IMulticall.sol";
+import {MulticallLib} from "./libraries/MulticallLib.sol";
+import {PositionGetter} from "./libraries/PositionGetter.sol";
 
 /// @title NFT positions
 /// @notice Wraps Pancake V4 positions in the ERC721 non-fungible token interface
 contract NonfungiblePositionManager is
     INonfungiblePositionManager,
-    Ownable,
+    IMulticall,
     ERC721Permit,
     PeripheryValidation,
     LiquidityManagement,
-    SelfPermit,
-    Multicall
+    SelfPermit
 {
     using PoolIdLibrary for PoolKey;
 
@@ -74,7 +72,6 @@ contract NonfungiblePositionManager is
         override
         returns (
             uint96 nonce,
-            address operator,
             Currency currency0,
             Currency currency1,
             uint24 fee,
@@ -87,33 +84,7 @@ contract NonfungiblePositionManager is
             uint128 tokensOwed1
         )
     {
-        Position memory position = _positions[tokenId];
-        if (PoolId.unwrap(position.poolId) == 0) revert InvalidTokenID();
-        PoolKey memory poolKey = _poolIdToPoolKey[position.poolId];
-        return (
-            position.nonce,
-            position.operator,
-            poolKey.currency0,
-            poolKey.currency1,
-            poolKey.fee,
-            position.tickLower,
-            position.tickUpper,
-            position.liquidity,
-            position.feeGrowthInside0LastX128,
-            position.feeGrowthInside1LastX128,
-            position.tokensOwed0,
-            position.tokensOwed1
-        );
-    }
-
-    /// @inheritdoc INonfungiblePositionManager
-    function initialize(PoolKey memory poolKey, uint160 sqrtPriceX96, bytes calldata hookData)
-        external
-        payable
-        override
-        returns (int24 tick)
-    {
-        (tick) = poolManager.initialize(poolKey, sqrtPriceX96, hookData);
+        return PositionGetter.positions(_positions, _poolIdToPoolKey, tokenId);
     }
 
     /// @inheritdoc INonfungiblePositionManager
@@ -258,7 +229,6 @@ contract NonfungiblePositionManager is
             poolManager.getPosition(params.poolKey.toId(), address(this), params.tickLower, params.tickUpper);
         _positions[tokenId] = Position({
             nonce: 0,
-            operator: address(0),
             poolId: params.poolKey.toId(),
             tickLower: params.tickLower,
             tickUpper: params.tickUpper,
@@ -464,10 +434,6 @@ contract NonfungiblePositionManager is
     }
 
     function tokenURI(uint256 tokenId) public view override(ERC721, IERC721Metadata) returns (string memory) {
-        if (!_exists(tokenId)) {
-            revert NonexistentToken();
-        }
-
         return INonfungibleTokenPositionDescriptor(_tokenDescriptor).tokenURI(this, tokenId);
     }
 
@@ -475,27 +441,6 @@ contract NonfungiblePositionManager is
     // Different oz version might have different inner implementation for approving part
     function _getAndIncrementNonce(uint256 tokenId) internal override returns (uint256) {
         return uint256(_positions[tokenId].nonce++);
-    }
-
-    /// @inheritdoc IERC721
-    function getApproved(uint256 tokenId) public view override(ERC721, IERC721) returns (address) {
-        if (!_exists(tokenId)) {
-            revert NonexistentToken();
-        }
-
-        return _positions[tokenId].operator;
-    }
-
-    /// @dev Overrides _approve to use the operator in the position, which is packed with the position permit nonce
-    function _approve(address to, uint256 tokenId) internal override(ERC721) {
-        _positions[tokenId].operator = to;
-        emit Approval(ownerOf(tokenId), to, tokenId);
-    }
-
-    function _transfer(address from, address to, uint256 tokenId) internal override(ERC721) {
-        // Clear approvals from the previous owner
-        _positions[tokenId].operator = address(0);
-        super._transfer(from, to, tokenId);
     }
 
     // @dev Overrides _afterTokenTransfer to update the farming info
@@ -506,8 +451,12 @@ contract NonfungiblePositionManager is
     }
 
     /// @inheritdoc INonfungiblePositionManager
-    function setMasterChef(address _masterChef) external onlyOwner {
-        masterChef = ICLMasterChefV4(_masterChef);
-        emit SetMasterChef(_masterChef);
+    function syncMasterChef() external {
+        masterChef = ICLMasterChefV4(poolManager.masterChef());
+        emit MasterChefUpdated(address(masterChef));
+    }
+
+    function multicall(bytes[] calldata data) public payable override returns (bytes[] memory results) {
+        return MulticallLib.multicall(data);
     }
 }

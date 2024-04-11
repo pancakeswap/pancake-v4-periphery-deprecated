@@ -42,7 +42,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     event DecreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
-    event SetMasterChef(address masterChef);
+    event MasterChefUpdated(address masterChef);
 
     IVault public vault;
     ICLPoolManager public poolManager;
@@ -72,6 +72,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         nonfungiblePoolManager =
             new NonfungiblePositionManager(vault, poolManager, address(NFTDescriptorProxy), address(0));
+
+        snapSize("NonfungiblePositionManager#size", address(nonfungiblePoolManager));
         vm.label(Currency.unwrap(currency0), "currency0");
         vm.label(Currency.unwrap(currency1), "currency1");
 
@@ -105,8 +107,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             });
 
             uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
-            // poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-            nonfungiblePoolManager.initialize(key, sqrtPriceX96, new bytes(0));
+            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+            // nonfungiblePoolManager.initialize(key, sqrtPriceX96, new bytes(0));
             // (, int24 tick,,,) = poolManager.getSlot0(key.toId());
             // price = 100 i.e. tick 46054
             // console2.log("tick", tick);
@@ -124,7 +126,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         {
             (
                 uint96 nonce,
-                address operator,
                 Currency _currency0,
                 Currency _currency1,
                 uint24 fee,
@@ -137,7 +138,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint128 tokensOwed1
             ) = nonfungiblePoolManager.positions(1);
             assertEq(nonce, 0, "Unexpected nonce");
-            assertEq(operator, address(0), "Unexpected operator");
             assertEq(Currency.unwrap(_currency0), Currency.unwrap(currency0), "Unexpected currency0");
             assertEq(Currency.unwrap(_currency1), Currency.unwrap(currency1), "Unexpected currency1");
             assertEq(fee, 3000, "Unexpected fee");
@@ -156,7 +156,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         {
             (
                 uint96 nonce,
-                address operator,
                 Currency _currency0,
                 Currency _currency1,
                 uint24 fee,
@@ -169,7 +168,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint128 tokensOwed1
             ) = nonfungiblePoolManager.positions(2);
             assertEq(nonce, 0, "Unexpected nonce");
-            assertEq(operator, address(0), "Unexpected operator");
             assertEq(Currency.unwrap(_currency0), Currency.unwrap(currency0), "Unexpected currency0");
             assertEq(Currency.unwrap(_currency1), Currency.unwrap(currency1), "Unexpected currency1");
             assertEq(fee, 3000, "Unexpected fee");
@@ -203,7 +201,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         {
             (
                 uint96 nonce,
-                address operator,
                 Currency _currency0,
                 Currency _currency1,
                 uint24 fee,
@@ -216,7 +213,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint128 tokensOwed1
             ) = nonfungiblePoolManager.positions(1);
             assertEq(nonce, 0, "Unexpected nonce");
-            assertEq(operator, address(0), "Unexpected operator");
             assertEq(Currency.unwrap(_currency0), Currency.unwrap(currency0), "Unexpected currency0");
             assertEq(Currency.unwrap(_currency1), Currency.unwrap(currency1), "Unexpected currency1");
             assertEq(fee, 3000, "Unexpected fee");
@@ -313,7 +309,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // tick lower and tick upper
         {
-            (,,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
+            (,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
             assertEq(_tickLower, tickLower, "Unexpected tickLower");
             assertEq(_tickUpper, tickUpper, "Unexpected tickUpper");
         }
@@ -353,7 +349,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             // set masterChef
             MockCLMasterChef masterChef = new MockCLMasterChef();
-            nonfungiblePoolManager.setMasterChef(address(masterChef));
+            nonfungiblePoolManager.poolManager().setMasterChef(address(masterChef));
+            nonfungiblePoolManager.syncMasterChef();
 
             nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyB"), tokenId);
 
@@ -366,7 +363,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             // position info should remain the same
             (
-                ,
                 ,
                 ,
                 ,
@@ -604,7 +600,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -617,7 +612,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
         assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(2);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -657,7 +652,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         {
             (
-                ,
                 ,
                 ,
                 ,
@@ -736,7 +730,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 ,
                 ,
                 ,
-                ,
                 uint128 _liquidity,
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
@@ -754,7 +747,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         {
             // set masterChef
             MockCLMasterChef masterChef = new MockCLMasterChef();
-            nonfungiblePoolManager.setMasterChef(address(masterChef));
+            nonfungiblePoolManager.poolManager().setMasterChef(address(masterChef));
+            nonfungiblePoolManager.syncMasterChef();
 
             nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyB"), 1);
 
@@ -767,7 +761,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             // position info should remain the same
             (
-                ,
                 ,
                 ,
                 ,
@@ -866,7 +859,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 ,
                 ,
                 ,
-                ,
                 uint128 _liquidity,
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
@@ -934,7 +926,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         {
             (
-                ,
                 ,
                 ,
                 ,
@@ -1082,7 +1073,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -1133,7 +1123,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1168,7 +1158,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             // set masterChef
             MockCLMasterChef masterChef = new MockCLMasterChef();
-            nonfungiblePoolManager.setMasterChef(address(masterChef));
+            nonfungiblePoolManager.poolManager().setMasterChef(address(masterChef));
+            nonfungiblePoolManager.syncMasterChef();
 
             nonfungiblePoolManager.safeTransferFrom(address(this), makeAddr("buddyB"), 1);
 
@@ -1180,7 +1171,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(nonfungiblePoolManager.balanceOf(address(this)), 0, "Unexpected balance of current contract");
 
             // position info should remain the same
-            (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+            (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
                 nonfungiblePoolManager.positions(1);
             assertEq(_liquidity, 0, "Unexpected liquidity");
             assertEq(
@@ -1394,7 +1385,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -1446,7 +1436,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1498,7 +1488,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         vm.expectEmit();
         emit Transfer(address(this), address(0), 1);
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 0, "Unexpected liquidity");
 
         nonfungiblePoolManager.burn(1);
@@ -1595,7 +1585,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 0, "Unexpected liquidity");
         nonfungiblePoolManager.burn(1);
 
@@ -1693,7 +1683,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 1, "Unexpected liquidity");
 
         vm.expectRevert(INonfungiblePositionManager.NonEmptyPosition.selector);
@@ -1742,7 +1732,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 0, "Unexpected liquidity");
 
         vm.expectRevert(INonfungiblePositionManager.NonEmptyPosition.selector);
@@ -1787,7 +1777,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         router.donate(key, 1 ether, 1 ether, "");
 
         (
-            ,
             ,
             ,
             ,
@@ -1843,7 +1832,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1892,7 +1881,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -1916,7 +1904,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, _liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,, _liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
 
         {
@@ -1950,7 +1938,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2042,7 +2030,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -2104,7 +2091,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -2153,7 +2139,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2196,7 +2182,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         router.donate(key, 1 ether, 1 ether, "");
 
         (
-            ,
             ,
             ,
             ,
@@ -2248,7 +2233,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2288,7 +2273,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         router.donate(key, 1 ether, 1 ether, "");
 
         (
-            ,
             ,
             ,
             ,
@@ -2350,7 +2334,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             "Unexpected liquidity for current position"
         );
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2445,7 +2429,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 _liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,, uint128 _liquidity,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
     }
 
@@ -2454,22 +2438,19 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(address(masterChef), address(0), "Unexpected masterChef address");
 
         // set non-zero
+        nonfungiblePoolManager.poolManager().setMasterChef(address(0x01));
         vm.expectEmit(true, true, true, true);
-        emit SetMasterChef(address(0x1));
+        emit MasterChefUpdated(address(0x1));
 
-        nonfungiblePoolManager.setMasterChef(address(0x1));
+        nonfungiblePoolManager.syncMasterChef();
         assertEq(address(nonfungiblePoolManager.masterChef()), address(0x1), "Unexpected masterChef address");
 
-        // non nfp owner
-        vm.expectRevert("Ownable: caller is not the owner");
-        vm.prank(makeAddr("someone"));
-        nonfungiblePoolManager.setMasterChef(address(0x2));
-
         // reset to zero
+        nonfungiblePoolManager.poolManager().setMasterChef(address(0x00));
         vm.expectEmit(true, true, true, true);
-        emit SetMasterChef(address(0x0));
+        emit MasterChefUpdated(address(0x0));
 
-        nonfungiblePoolManager.setMasterChef(address(0x0));
+        nonfungiblePoolManager.syncMasterChef();
         assertEq(address(nonfungiblePoolManager.masterChef()), address(0x0), "Unexpected masterChef address");
     }
 
@@ -2546,7 +2527,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             ,
             ,
             ,
-            ,
             uint128 _liquidity,
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
@@ -2561,7 +2541,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // set masterChef
         MockCLMasterChef masterChef = new MockCLMasterChef();
-        nonfungiblePoolManager.setMasterChef(address(masterChef));
+        nonfungiblePoolManager.poolManager().setMasterChef(address(masterChef));
+        nonfungiblePoolManager.syncMasterChef();
 
         vm.prank(makeAddr("buddyA"));
         nonfungiblePoolManager.safeTransferFrom(makeAddr("buddyA"), makeAddr("buddyB"), tokenId);
@@ -2574,7 +2555,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(nonfungiblePoolManager.balanceOf(makeAddr("buddyA")), 0, "Unexpected balance of buddyA");
 
         // position info should remain the same
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
             nonfungiblePoolManager.positions(tokenId);
         assertEq(_liquidity, liquidity, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 85439046461772647072646134698782378, "Unexpected feeGrowthInside0LastX128");
@@ -2666,7 +2647,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 ,
                 ,
                 ,
-                ,
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokenOwed0,
@@ -2700,7 +2680,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             // positionInfo from nonfungiblePoolManager has been synced
             (
-                ,
                 ,
                 ,
                 ,
@@ -2894,7 +2873,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 ,
                 ,
                 ,
-                ,
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokenOwed0,
@@ -2979,7 +2957,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // tick lower and tick upper
         {
-            (,,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
+            (,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
             assertEq(_tickLower, tickLower, "Unexpected tickLower");
             assertEq(_tickUpper, tickUpper, "Unexpected tickUpper");
         }
