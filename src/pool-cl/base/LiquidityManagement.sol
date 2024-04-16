@@ -53,11 +53,11 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
                 poolManager.modifyLiquidity(poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0), "");
 
             if (delta.amount0() < 0) {
-                vault.mint(poolKey.currency0, address(this), uint256(int256(-delta.amount0())));
+                vault.mint(address(this), poolKey.currency0, uint256(int256(-delta.amount0())));
             }
 
             if (delta.amount1() < 0) {
-                vault.mint(poolKey.currency1, address(this), uint256(int256(-delta.amount1())));
+                vault.mint(address(this), poolKey.currency1, uint256(int256(-delta.amount1())));
             }
         }
     }
@@ -106,7 +106,7 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
     }
 
     function burnAndTake(Currency currency, address to, uint256 amount) internal {
-        vault.burn(currency, amount);
+        vault.burn(address(this), currency, amount);
         vault.take(currency, to, amount);
     }
 
