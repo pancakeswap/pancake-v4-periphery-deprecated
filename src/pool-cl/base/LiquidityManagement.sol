@@ -9,7 +9,7 @@ import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {CLPosition} from "pancake-v4-core/src/pool-cl/libraries/CLPosition.sol";
 import {TickMath} from "pancake-v4-core/src/pool-cl/libraries/TickMath.sol";
-import {PoolId, PoolIdLibrary} from "pancake-v4-core/src/types/PoolId.sol";
+import {PoolIdLibrary} from "pancake-v4-core/src/types/PoolId.sol";
 import {PeripheryPayments} from "../../base/PeripheryPayments.sol";
 
 import {CLPeripheryImmutableState} from "./CLPeripheryImmutableState.sol";
@@ -19,16 +19,6 @@ import {LiquidityAmounts} from "../libraries/LiquidityAmounts.sol";
 /// @notice Internal functions for safely managing liquidity in PancakeSwap V4
 abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPayments {
     using PoolIdLibrary for PoolKey;
-
-    /// @dev The LP fee accumulated for given (poolId, tickLower, tickUpper)
-    /// i.e. the total fee accmulated for all the LPs in the same pool and with same price range
-    /// this is used to track the actual fee accumulated for LPs to alleviate precision loss issue
-    struct FeeAccumulated {
-        uint256 amount0;
-        uint256 amount1;
-    }
-
-    mapping(bytes32 => FeeAccumulated) internal feesAccumulated;
 
     error PriceSlippageCheckFailed();
 
@@ -54,35 +44,26 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
     /// @dev Since in v4 `modifyLiquidity` accumulated fee are claimed and
     // resynced by default, which can mixup with user's actual settlement
     // for update liquidity, we claim the fee before further action to avoid this.
-    function syncAccumulatedFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper)
-        internal
-        returns (FeeAccumulated storage feeAccumulated)
-    {
-        PoolId poolId = poolKey.toId();
+    function resetAccumulatedFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper) internal {
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolId, address(this), tickLower, tickUpper);
+            poolManager.getPosition(poolKey.toId(), address(this), tickLower, tickUpper);
 
-        feeAccumulated = feesAccumulated[keccak256(abi.encodePacked(poolId, tickLower, tickUpper))];
         if (poolManagerPositionInfo.liquidity > 0) {
             BalanceDelta delta =
                 poolManager.modifyLiquidity(poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0), "");
 
             if (delta.amount0() < 0) {
-                uint256 amount0 = uint256(int256(-delta.amount0()));
-                vault.mint(address(this), poolKey.currency0, amount0);
-                feeAccumulated.amount0 += amount0;
+                vault.mint(address(this), poolKey.currency0, uint256(int256(-delta.amount0())));
             }
 
             if (delta.amount1() < 0) {
-                uint256 amount1 = uint256(int256(-delta.amount1()));
-                vault.mint(address(this), poolKey.currency1, amount1);
-                feeAccumulated.amount1 += amount1;
+                vault.mint(address(this), poolKey.currency1, uint256(int256(-delta.amount1())));
             }
         }
     }
 
     function addLiquidity(AddLiquidityParams memory params) internal returns (uint128 liquidity, BalanceDelta delta) {
-        syncAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
+        resetAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
 
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(params.poolKey.toId());
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(params.tickLower);
@@ -107,7 +88,7 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
     }
 
     function removeLiquidity(RemoveLiquidityParams memory params) internal returns (BalanceDelta delta) {
-        syncAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
+        resetAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
 
         delta = poolManager.modifyLiquidity(
             params.poolKey,
