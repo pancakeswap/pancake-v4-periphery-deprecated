@@ -291,20 +291,23 @@ contract NonfungiblePositionManager is
         ///     that's won't cause any issue because existingLiquility = 0
         ///     unchecked is needed to avoid overflow error
         unchecked {
-            nftPosition.tokensOwed0 += uint128(
+            uint128 tokensOwed0 = uint128(
                 FullMath.mulDiv(
                     poolManagerPositionInfo.feeGrowthInside0LastX128 - nftPosition.feeGrowthInside0LastX128,
                     existingLiquility,
                     FixedPoint128.Q128
                 )
             );
-            nftPosition.tokensOwed1 += uint128(
+            uint128 tokensOwed1 = uint128(
                 FullMath.mulDiv(
                     poolManagerPositionInfo.feeGrowthInside1LastX128 - nftPosition.feeGrowthInside1LastX128,
                     existingLiquility,
                     FixedPoint128.Q128
                 )
             );
+            emit TokensOwed(params.tokenId, tokensOwed0, tokensOwed1);
+            nftPosition.tokensOwed0 += tokensOwed0;
+            nftPosition.tokensOwed1 += tokensOwed1;
         }
 
         nftPosition.feeGrowthInside0LastX128 = poolManagerPositionInfo.feeGrowthInside0LastX128;
@@ -353,21 +356,23 @@ contract NonfungiblePositionManager is
         ///     that's won't cause any issue because existingLiquility = 0
         ///     unchecked is needed to avoid overflow error
         unchecked {
-            nftPosition.tokensOwed0 += uint128(
+            uint128 tokensOwed0 = uint128(
                 FullMath.mulDiv(
                     poolManagerPositionInfo.feeGrowthInside0LastX128 - nftPosition.feeGrowthInside0LastX128,
                     liquidity,
                     FixedPoint128.Q128
                 )
             );
-
-            nftPosition.tokensOwed1 += uint128(
+            uint128 tokensOwed1 = uint128(
                 FullMath.mulDiv(
                     poolManagerPositionInfo.feeGrowthInside1LastX128 - nftPosition.feeGrowthInside1LastX128,
                     liquidity,
                     FixedPoint128.Q128
                 )
             );
+            emit TokensOwed(params.tokenId, tokensOwed0, tokensOwed1);
+            nftPosition.tokensOwed0 += tokensOwed0;
+            nftPosition.tokensOwed1 += tokensOwed1;
         }
 
         nftPosition.feeGrowthInside0LastX128 = poolManagerPositionInfo.feeGrowthInside0LastX128;
@@ -407,20 +412,23 @@ contract NonfungiblePositionManager is
             ///     that's won't cause any issue because existingLiquility = 0
             ///     unchecked is needed to avoid overflow error
             unchecked {
-                tokensOwed0 += uint128(
+                uint128 to0 = uint128(
                     FullMath.mulDiv(
                         poolManagerPositionInfo.feeGrowthInside0LastX128 - nftPositionCache.feeGrowthInside0LastX128,
                         nftPositionCache.liquidity,
                         FixedPoint128.Q128
                     )
                 );
-                tokensOwed1 += uint128(
+                uint128 to1 = uint128(
                     FullMath.mulDiv(
                         poolManagerPositionInfo.feeGrowthInside1LastX128 - nftPositionCache.feeGrowthInside1LastX128,
                         nftPositionCache.liquidity,
                         FixedPoint128.Q128
                     )
                 );
+                emit TokensOwed(params.tokenId, to0, to1);
+                tokensOwed0 += to0;
+                tokensOwed1 += to1;
             }
 
             nftPosition.feeGrowthInside0LastX128 = poolManagerPositionInfo.feeGrowthInside0LastX128;
