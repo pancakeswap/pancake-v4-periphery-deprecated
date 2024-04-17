@@ -281,15 +281,17 @@ contract NonfungiblePositionManager is
         CLPosition.Info memory poolManagerPositionInfo =
             poolManager.getPosition(poolId, address(this), tickLower, tickUpper);
 
-        /// @dev This can be overflow in following cases:
-        /// 1. feeGrowthInside0LastX128 is overflow
-        /// 2. when we add liquidity to a empty position:
-        ///     poolManagerPositionInfo.feeGrowthInside0LastX128 = 0
-        ///     however nftPosition.feeGrowthInside0LastX128 could be greater than 0
-        ///     because clPoolManager will reset ticks if liquidity is back to 0
-        ///     but feeGrowthInside0LastX128 will not be reset
-        ///     that's won't cause any issue because existingLiquility = 0
-        ///     unchecked is needed to avoid overflow error
+        /// @dev This can be overflow in following two cases:
+        /// 1. poolManagerPositionInfo.feeGrowthInside0LastX128 constantly increases over time
+        ///     but it's ok as long as the distance between two value is unchanged
+        /// 2. when adding liquidity to position with zero liquidity that used to be non-zero
+        ///     after modifyLiquidity is called i.e. it will refresh the poolManagerPositionInfo
+        ///     hence poolManagerPositionInfo.feeGrowthInside0LastX128 could be 0
+        ///     but nftPosition.feeGrowthInside0LastX128 could be greater than 0 since it hasn't be reset
+        ///     but that won't cause any issue as well because existingLiquility = 0
+        /// For both cases unchecked is needed to skip the built-in overflow check
+
+        /// @notice However, tokensOwed0 and tokensOwed1can still go overflow so user should be aware of that
         unchecked {
             nftPosition.tokensOwed0 += uint128(
                 FullMath.mulDiv(
@@ -343,15 +345,17 @@ contract NonfungiblePositionManager is
         CLPosition.Info memory poolManagerPositionInfo =
             poolManager.getPosition(poolId, address(this), tickLower, tickUpper);
 
-        /// @dev This can be overflow in following cases:
-        /// 1. feeGrowthInside0LastX128 is overflow
-        /// 2. when we add liquidity to a empty position:
-        ///     poolManagerPositionInfo.feeGrowthInside0LastX128 = 0
-        ///     however nftPosition.feeGrowthInside0LastX128 could be greater than 0
-        ///     because clPoolManager will reset ticks if liquidity is back to 0
-        ///     but feeGrowthInside0LastX128 will not be reset
-        ///     that's won't cause any issue because existingLiquility = 0
-        ///     unchecked is needed to avoid overflow error
+        /// @dev This can be overflow in following two cases:
+        /// 1. poolManagerPositionInfo.feeGrowthInside0LastX128 constantly increases over time
+        ///     but it's ok as long as the distance between two value is unchanged
+        /// 2. when adding liquidity to position with zero liquidity that used to be non-zero
+        ///     after modifyLiquidity is called i.e. it will refresh the poolManagerPositionInfo
+        ///     hence poolManagerPositionInfo.feeGrowthInside0LastX128 could be 0
+        ///     but nftPosition.feeGrowthInside0LastX128 could be greater than 0 since it hasn't be reset
+        ///     but that won't cause any issue as well because existingLiquility = 0
+        /// For both cases unchecked is needed to skip the built-in overflow check
+
+        /// @notice However, tokensOwed0 and tokensOwed1can still go overflow so user should be aware of that
         unchecked {
             nftPosition.tokensOwed0 += uint128(
                 FullMath.mulDiv(
@@ -391,21 +395,23 @@ contract NonfungiblePositionManager is
         uint128 tokensOwed0 = nftPositionCache.tokensOwed0;
         uint128 tokensOwed1 = nftPositionCache.tokensOwed1;
 
+        FeeAccumulated storage feeAccumulated =
+            syncAccumulatedFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper);
         if (nftPositionCache.liquidity > 0) {
-            resetAccumulatedFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper);
-
             CLPosition.Info memory poolManagerPositionInfo =
                 poolManager.getPosition(poolId, address(this), nftPositionCache.tickLower, nftPositionCache.tickUpper);
 
-            /// @dev This can be overflow in following cases:
-            /// 1. feeGrowthInside0LastX128 is overflow
-            /// 2. when we add liquidity to a empty position:
-            ///     poolManagerPositionInfo.feeGrowthInside0LastX128 = 0
-            ///     however nftPosition.feeGrowthInside0LastX128 could be greater than 0
-            ///     because clPoolManager will reset ticks if liquidity is back to 0
-            ///     but feeGrowthInside0LastX128 will not be reset
-            ///     that's won't cause any issue because existingLiquility = 0
-            ///     unchecked is needed to avoid overflow error
+            /// @dev This can be overflow in following two cases:
+            /// 1. poolManagerPositionInfo.feeGrowthInside0LastX128 increases over time and goes overflow
+            ///     but it's ok as long as the distance between two value is unchanged
+            /// 2. when adding liquidity to position with zero liquidity that used to be non-zero
+            ///     after modifyLiquidity is called i.e. it will refresh the poolManagerPositionInfo
+            ///     hence poolManagerPositionInfo.feeGrowthInside0LastX128 could be 0
+            ///     but nftPosition.feeGrowthInside0LastX128 could be greater than 0 since it hasn't be reset
+            ///     but that won't cause any issue as well because existingLiquility = 0
+            /// For both cases unchecked is needed to skip the built-in overflow check
+
+            /// @notice However, tokensOwed0 and tokensOwed1can still go overflow so user should be aware of that
             unchecked {
                 tokensOwed0 += uint128(
                     FullMath.mulDiv(
@@ -436,16 +442,19 @@ contract NonfungiblePositionManager is
         nftPosition.tokensOwed0 = tokensOwed0 - amount0Collect;
         nftPosition.tokensOwed1 = tokensOwed1 - amount1Collect;
 
+        /// @dev This will probably be bigger than uin128 hence uint256 is used
+        (uint256 actualFee0Left, uint256 actualFee1Left) = (feeAccumulated.amount0, feeAccumulated.amount1);
+
         /// @dev due to rounding down calculation in FullMath, some wei might be loss if the fee is too small
         /// if that happen we need to ignore the loss part and take the rest of the fee otherwise it will revert whole tx
-        uint128 actualFee0Left = uint128(vault.balanceOf(address(this), poolKey.currency0));
-        uint128 actualFee1Left = uint128(vault.balanceOf(address(this), poolKey.currency1));
         (amount0Collect, amount1Collect) = (
-            actualFee0Left > amount0Collect ? amount0Collect : actualFee0Left,
-            actualFee1Left > amount1Collect ? amount1Collect : actualFee1Left
+            actualFee0Left > amount0Collect ? amount0Collect : uint128(actualFee0Left),
+            actualFee1Left > amount1Collect ? amount1Collect : uint128(actualFee1Left)
         );
 
         // cash out from vault
+        feeAccumulated.amount0 -= amount0Collect;
+        feeAccumulated.amount1 -= amount1Collect;
         burnAndTake(poolKey.currency0, params.recipient, amount0Collect);
         burnAndTake(poolKey.currency1, params.recipient, amount1Collect);
 
@@ -460,8 +469,8 @@ contract NonfungiblePositionManager is
         return INonfungibleTokenPositionDescriptor(_tokenDescriptor).tokenURI(this, tokenId);
     }
 
-    // TODO: double check when update solidity version & oz version
-    // Different oz version might have different inner implementation for approving part
+    /// @dev double check when update solidity version & oz version
+    /// Different oz version might have different inner implementation for approving part
     function _getAndIncrementNonce(uint256 tokenId) internal override returns (uint256) {
         return uint256(_positions[tokenId].nonce++);
     }
