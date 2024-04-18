@@ -305,7 +305,13 @@ contract NonfungiblePositionManager is
                     FixedPoint128.Q128
                 )
             );
-            emit TokensOwed(params.tokenId, tokensOwed0, tokensOwed1);
+            emit SwapFees(
+                params.tokenId,
+                tokensOwed0,
+                tokensOwed1,
+                poolManagerPositionInfo.feeGrowthInside0LastX128,
+                poolManagerPositionInfo.feeGrowthInside1LastX128
+            );
             nftPosition.tokensOwed0 += tokensOwed0;
             nftPosition.tokensOwed1 += tokensOwed1;
         }
@@ -370,7 +376,13 @@ contract NonfungiblePositionManager is
                     FixedPoint128.Q128
                 )
             );
-            emit TokensOwed(params.tokenId, tokensOwed0, tokensOwed1);
+            emit SwapFees(
+                params.tokenId,
+                tokensOwed0,
+                tokensOwed1,
+                poolManagerPositionInfo.feeGrowthInside0LastX128,
+                poolManagerPositionInfo.feeGrowthInside1LastX128
+            );
             nftPosition.tokensOwed0 += tokensOwed0;
             nftPosition.tokensOwed1 += tokensOwed1;
         }
@@ -426,7 +438,13 @@ contract NonfungiblePositionManager is
                         FixedPoint128.Q128
                     )
                 );
-                emit TokensOwed(params.tokenId, to0, to1);
+                emit SwapFees(
+                    params.tokenId,
+                    to0,
+                    to1,
+                    poolManagerPositionInfo.feeGrowthInside0LastX128,
+                    poolManagerPositionInfo.feeGrowthInside1LastX128
+                );
                 tokensOwed0 += to0;
                 tokensOwed1 += to1;
             }

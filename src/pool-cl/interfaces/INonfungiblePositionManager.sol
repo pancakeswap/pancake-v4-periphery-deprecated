@@ -68,7 +68,13 @@ interface INonfungiblePositionManager is
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
 
     /// @dev To track swap fees of a position for off-chain farming
-    event TokensOwed(uint256 indexed tokenId, uint128 amount0, uint128 amount1);
+    event SwapFees(
+        uint256 indexed tokenId,
+        uint128 tokensOwed0,
+        uint128 tokensOwed1,
+        uint256 feeGrowthInside0X128,
+        uint256 feeGrowthInside1X128
+    );
 
     /// @dev details about the pancake position
     struct Position {
