@@ -2558,7 +2558,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(info.liquidity, 1, "Unexpected liquidity");
         }
 
-        (, uint256 feeGrowthGlobal0X128Before, uint256 feeGrowthGlobal1X128Before,,) =
+        (, uint256 feeGrowthGlobal0X128Before, uint256 feeGrowthGlobal1X128Before,) =
             CLPoolManager(address(poolManager)).pools(poolKey.toId());
 
         assertEq(
@@ -2580,7 +2580,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         mint(type(uint128).max);
         router.donate(poolKey, 1 ether, 1 ether, "");
 
-        (, uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128,,) =
+        (, uint256 feeGrowthGlobal0X128, uint256 feeGrowthGlobal1X128,) =
             CLPoolManager(address(poolManager)).pools(poolKey.toId());
 
         // check overflow did happen
