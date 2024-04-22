@@ -436,6 +436,15 @@ contract NonfungiblePositionManager is
         nftPosition.tokensOwed0 = tokensOwed0 - amount0Collect;
         nftPosition.tokensOwed1 = tokensOwed1 - amount1Collect;
 
+        /// @dev due to rounding down calculation in FullMath, some wei might be loss if the fee is too small
+        /// if that happen we need to ignore the loss part and take the rest of the fee otherwise it will revert whole tx
+        uint128 actualFee0Left = uint128(vault.balanceOf(address(this), poolKey.currency0));
+        uint128 actualFee1Left = uint128(vault.balanceOf(address(this), poolKey.currency1));
+        (amount0Collect, amount1Collect) = (
+            actualFee0Left > amount0Collect ? amount0Collect : actualFee0Left,
+            actualFee1Left > amount1Collect ? amount1Collect : actualFee1Left
+        );
+
         // cash out from vault
         burnAndTake(poolKey.currency0, params.recipient, amount0Collect);
         burnAndTake(poolKey.currency1, params.recipient, amount1Collect);
