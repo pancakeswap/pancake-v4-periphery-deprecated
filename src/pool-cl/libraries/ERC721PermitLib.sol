@@ -37,7 +37,7 @@ library ERC721PermitLib {
         address owner,
         bytes32 DOMAIN_SEPARATOR_HASH,
         uint256 nonce
-    ) external {
+    ) external view {
         if (block.timestamp > deadline) {
             revert PermitExpired();
         }
