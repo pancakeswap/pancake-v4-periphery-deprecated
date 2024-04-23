@@ -35,7 +35,7 @@ library ERC721PermitLib {
         bytes32 r,
         bytes32 s,
         address owner,
-        bytes32 DOMAIN_SEPARATOR_HASH,
+        bytes32 domainSeparatorHash,
         uint256 nonce
     ) external view {
         if (block.timestamp > deadline) {
@@ -45,7 +45,7 @@ library ERC721PermitLib {
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                DOMAIN_SEPARATOR_HASH,
+                domainSeparatorHash,
                 keccak256(abi.encode(PERMIT_TYPEHASH, spender, tokenId, nonce, deadline))
             )
         );
