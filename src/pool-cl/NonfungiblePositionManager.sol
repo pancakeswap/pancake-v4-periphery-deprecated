@@ -19,7 +19,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {PeripheryValidation} from "../base/PeripheryValidation.sol";
-import {SelfPermit} from "./base/SelfPermit.sol";
+import {SelfPermit} from "../base/SelfPermit.sol";
 import {LiquidityManagement} from "./base/LiquidityManagement.sol";
 import {CLPeripheryImmutableState} from "./base/CLPeripheryImmutableState.sol";
 import {Multicall} from "../base/Multicall.sol";
