@@ -102,16 +102,6 @@ contract NonfungiblePositionManager is
     }
 
     /// @inheritdoc INonfungiblePositionManager
-    function initialize(PoolKey memory poolKey, uint160 sqrtPriceX96, bytes calldata hookData)
-        external
-        payable
-        override
-        returns (int24 tick)
-    {
-        (tick) = poolManager.initialize(poolKey, sqrtPriceX96, hookData);
-    }
-
-    /// @inheritdoc INonfungiblePositionManager
     function mint(MintParams calldata params)
         external
         payable

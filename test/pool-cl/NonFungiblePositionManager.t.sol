@@ -30,6 +30,7 @@ import {NonfungiblePositionManager} from "../../src/pool-cl/NonfungiblePositionM
 import {INonfungiblePositionManager} from "../../src/pool-cl/interfaces/INonfungiblePositionManager.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
 import {LiquidityManagement} from "../../src/pool-cl/base/LiquidityManagement.sol";
+
 // import {console2} from "forge-std/console2.sol";
 
 contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
@@ -69,6 +70,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         nonfungiblePoolManager =
             new NonfungiblePositionManager(vault, poolManager, address(NFTDescriptorProxy), address(0));
+        snapSize("NonfungiblePositionManager#size", address(nonfungiblePoolManager));
+
         vm.label(Currency.unwrap(currency0), "currency0");
         vm.label(Currency.unwrap(currency1), "currency1");
 
@@ -102,8 +105,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             });
 
             uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
-            // poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-            nonfungiblePoolManager.initialize(key, sqrtPriceX96, new bytes(0));
+            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
             // (, int24 tick,,,) = poolManager.getSlot0(key.toId());
             // price = 100 i.e. tick 46054
             // console2.log("tick", tick);
