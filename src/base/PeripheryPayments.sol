@@ -47,6 +47,7 @@ abstract contract PeripheryPayments is IPeripheryPayments, PeripheryImmutableSta
         }
     }
 
+    /// todo: function can be removed once all periphery contract uses permit2
     /// @dev If currency is native, assumed contract contains the ETH balance
     /// @param currency The currency to pay
     /// @param payer The entity that must pay

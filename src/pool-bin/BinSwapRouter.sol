@@ -10,7 +10,7 @@ import {IBinSwapRouter} from "./interfaces/IBinSwapRouter.sol";
 import {BinSwapRouterBase} from "./BinSwapRouterBase.sol";
 import {SwapRouterBase} from "../SwapRouterBase.sol";
 import {PeripheryImmutableState} from "../base/PeripheryImmutableState.sol";
-import {PeripheryPayments} from "../base/PeripheryPayments.sol";
+import {Permit2Payments} from "../base/Permit2Payments.sol";
 import {PeripheryValidation} from "../base/PeripheryValidation.sol";
 import {Multicall} from "../base/Multicall.sol";
 import {SelfPermit} from "../base/SelfPermit.sol";
@@ -19,17 +19,16 @@ contract BinSwapRouter is
     ILockCallback,
     IBinSwapRouter,
     BinSwapRouterBase,
-    PeripheryPayments,
+    Permit2Payments,
     PeripheryValidation,
-    Multicall,
-    SelfPermit
+    Multicall
 {
     using CurrencyLibrary for Currency;
 
-    constructor(IVault _vault, IBinPoolManager _binPoolManager, address _WETH9)
+    constructor(IVault _vault, IBinPoolManager _binPoolManager, address _WETH9, address _PERMIT2)
         SwapRouterBase(_vault)
         BinSwapRouterBase(_binPoolManager)
-        PeripheryImmutableState(_WETH9)
+        PeripheryImmutableState(_WETH9, _PERMIT2)
     {}
 
     function exactInputSingle(V4BinExactInputSingleParams calldata params, uint256 deadline)
@@ -108,6 +107,6 @@ contract BinSwapRouter is
     }
 
     function _pay(Currency currency, address payer, address recipient, uint256 amount) internal virtual override {
-        pay(currency, payer, recipient, amount);
+        payOrPermit2Transfer(currency, payer, recipient, amount);
     }
 }

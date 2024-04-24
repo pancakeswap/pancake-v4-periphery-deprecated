@@ -16,21 +16,21 @@ import {BinSwapRouter} from "../src/pool-bin/BinSwapRouter.sol";
  */
 contract DeployBinSwapRouterScript is BaseScript {
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        // uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        // vm.startBroadcast(deployerPrivateKey);
 
-        address vault = getAddressFromConfig("vault");
-        emit log_named_address("Vault", vault);
+        // address vault = getAddressFromConfig("vault");
+        // emit log_named_address("Vault", vault);
 
-        address binPoolManager = getAddressFromConfig("binPoolManager");
-        emit log_named_address("BinPoolManager", binPoolManager);
+        // address binPoolManager = getAddressFromConfig("binPoolManager");
+        // emit log_named_address("BinPoolManager", binPoolManager);
 
-        address weth = getAddressFromConfig("weth");
-        emit log_named_address("WETH", weth);
+        // address weth = getAddressFromConfig("weth");
+        // emit log_named_address("WETH", weth);
 
-        BinSwapRouter binSwapRouter = new BinSwapRouter(IVault(vault), IBinPoolManager(binPoolManager), weth);
-        emit log_named_address("BinSwapRouter", address(binSwapRouter));
+        // BinSwapRouter binSwapRouter = new BinSwapRouter(IVault(vault), IBinPoolManager(binPoolManager), weth);
+        // emit log_named_address("BinSwapRouter", address(binSwapRouter));
 
-        vm.stopBroadcast();
+        // vm.stopBroadcast();
     }
 }

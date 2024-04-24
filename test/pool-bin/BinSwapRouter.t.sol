@@ -30,6 +30,10 @@ import {SwapRouterBase} from "../../src/SwapRouterBase.sol";
 import {PeripheryPayments} from "../../src/base/PeripheryPayments.sol";
 import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 
+import {Permit2Payments} from "../../src/base/Permit2Payments.sol";
+import {Permit2} from "../helpers/permit2/Permit2.sol";
+import {IAllowanceTransfer} from "../helpers/permit2/interfaces/IAllowanceTransfer.sol";
+
 contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
     using BinPoolParametersHelper for bytes32;
     using SafeCast for uint256;
@@ -49,17 +53,23 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
     bytes32 poolParam;
     BinSwapRouter router;
     WETH weth;
+    Permit2 permit2;
 
-    address alice = makeAddr("alice");
+    // address alice = makeAddr("alice");
+    address alice;
+    uint256 aliceKey;
     address bob = makeAddr("bob");
     uint24 activeId = 2 ** 23; // where token0 and token1 price is the same
 
     function setUp() public {
+        (alice, aliceKey) = makeAddrAndKey("alice");
+
         weth = new WETH();
+        permit2 = new Permit2();
         vault = new Vault();
         poolManager = new BinPoolManager(IVault(address(vault)), 500000);
         vault.registerPoolManager(address(poolManager));
-        router = new BinSwapRouter(vault, poolManager, address(weth));
+        router = new BinSwapRouter(vault, poolManager, address(weth), address(permit2));
 
         binFungiblePositionManager =
             new BinFungiblePositionManager(IVault(address(vault)), IBinPoolManager(address(poolManager)), address(weth));
@@ -109,9 +119,9 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         token0.approve(address(binFungiblePositionManager), 1000 ether);
         token1.approve(address(binFungiblePositionManager), 1000 ether);
         token2.approve(address(binFungiblePositionManager), 1000 ether);
-        token0.approve(address(router), 1000 ether);
-        token1.approve(address(router), 1000 ether);
-        token2.approve(address(router), 1000 ether);
+        token0.approve(address(permit2), 1000 ether);
+        token1.approve(address(permit2), 1000 ether);
+        token2.approve(address(permit2), 1000 ether);
 
         // add liquidity, 10 ether across 3 bins for both pool
         token0.mint(alice, 10 ether);
@@ -131,246 +141,65 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         binFungiblePositionManager.addLiquidity{value: 10 ether}(addParams);
     }
 
-    function testLockAcquired_VaultOnly() public {
-        vm.expectRevert(SwapRouterBase.NotVault.selector);
-        router.lockAcquired(new bytes(0));
+    function defaultERC20PermitAllowance(address token0, uint160 amount, uint48 expiration, uint48 nonce)
+        internal
+        view
+        returns (IAllowanceTransfer.PermitSingle memory)
+    {
+        IAllowanceTransfer.PermitDetails memory details =
+            IAllowanceTransfer.PermitDetails({token: token0, amount: amount, expiration: expiration, nonce: nonce});
+        return IAllowanceTransfer.PermitSingle({
+            details: details,
+            spender: address(router),
+            sigDeadline: block.timestamp + 100
+        });
     }
 
-    function testSweepToken() public {
-        token0.mint(address(router), 1 ether);
-        assertEq(token0.balanceOf(address(router)), 1 ether);
-
-        vm.expectRevert(PeripheryPayments.InsufficientToken.selector);
-        router.sweepToken(Currency.wrap(address(token0)), 2 ether, alice);
-
-        // take
-        router.sweepToken(Currency.wrap(address(token0)), 0.5 ether, alice);
-        assertEq(token0.balanceOf(address(router)), 0 ether);
-        assertEq(token0.balanceOf(address(alice)), 1 ether);
+    function getPermitSignature(
+        IAllowanceTransfer.PermitSingle memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal pure returns (bytes memory sig) {
+        (uint8 v, bytes32 r, bytes32 s) = getPermitSignatureRaw(permit, privateKey, domainSeparator);
+        return bytes.concat(r, s, bytes1(v));
     }
 
-    function testUnwrapWETH9() public {
-        vm.startPrank(alice);
-
-        vm.deal(alice, 1 ether);
-        weth.deposit{value: 1 ether}();
-        weth.transfer(address(router), 1 ether);
-        assertEq(weth.balanceOf(address(router)), 1 ether);
-
-        // unwrap with amtMin > amount in router
-        vm.expectRevert(PeripheryPayments.InsufficientToken.selector);
-        router.unwrapWETH9(2 ether, alice);
-
-        // unwrap
-        assertEq(alice.balance, 0 ether);
-        router.unwrapWETH9(0.5 ether, alice);
-        assertEq(weth.balanceOf(address(router)), 0 ether);
-        assertEq(alice.balance, 1 ether);
-    }
-
-    function testExactInputSingle_EthPool_SwapEthForToken() public {
-        vm.startPrank(alice);
-
-        vm.deal(alice, 1 ether);
-        assertEq(alice.balance, 1 ether);
-        assertEq(token0.balanceOf(alice), 0 ether);
-
-        snapStart("BinSwapRouterTest#testExactInputSingle_EthPool_SwapEthForToken");
-        uint256 amountOut = router.exactInputSingle{value: 1 ether}(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key3,
-                swapForY: true, // swap ETH for token0
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
+    function getPermitSignatureRaw(
+        IAllowanceTransfer.PermitSingle memory permit,
+        uint256 privateKey,
+        bytes32 domainSeparator
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        bytes32 _PERMIT_SINGLE_TYPEHASH = keccak256(
+            "PermitSingle(PermitDetails details,address spender,uint256 sigDeadline)PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)"
         );
-        snapEnd();
+        bytes32 _PERMIT_DETAILS_TYPEHASH =
+            keccak256("PermitDetails(address token,uint160 amount,uint48 expiration,uint48 nonce)");
 
-        assertEq(alice.balance, 0 ether);
-        assertEq(token0.balanceOf(alice), amountOut);
-    }
+        bytes32 permitHash = keccak256(abi.encode(_PERMIT_DETAILS_TYPEHASH, permit.details));
 
-    function testExactInputSingle_EthPool_SwapEthForToken_RefundETH() public {
-        vm.startPrank(alice);
-
-        vm.deal(alice, 2 ether);
-        assertEq(alice.balance, 2 ether);
-        assertEq(token0.balanceOf(alice), 0 ether);
-
-        // provide 2 eth but swap only required 1
-        router.exactInputSingle{value: 2 ether}(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key3,
-                swapForY: true, // swap ETH for token0
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(abi.encode(_PERMIT_SINGLE_TYPEHASH, permitHash, permit.spender, permit.sigDeadline))
+            )
         );
 
-        // verify contract still have 1 eth
-        assertEq(alice.balance, 0 ether);
-        assertEq(address(router).balance, 1 ether);
-
-        // call router refund excess eth
-        router.refundETH();
-        assertEq(alice.balance, 1 ether);
-        assertEq(address(router).balance, 0 ether);
+        (v, r, s) = vm.sign(privateKey, msgHash);
     }
 
-    function testExactInputSingle_EthPool_SwapTokenForEth() public {
-        vm.startPrank(alice);
+    /// option 1: For end user. Assume user approve token to permit2 before hand
+    /// Flow: user sign a permit2 message and use multicall to swap in 1 txn
+    function testSwap_PermitOption1() public {
+        // code to generate the permit signature. done in metamask
+        bytes32 DOMAIN_SEPARATOR = permit2.DOMAIN_SEPARATOR();
+        uint160 defaultAmount = 1 ether;
+        uint48 defaultNonce = 0;
+        uint48 defaultExpiration = uint48(block.timestamp + 5);
+        IAllowanceTransfer.PermitSingle memory permit =
+            defaultERC20PermitAllowance(address(token0), defaultAmount, defaultExpiration, defaultNonce);
+        bytes memory sig = getPermitSignature(permit, aliceKey, DOMAIN_SEPARATOR);
 
-        token0.mint(alice, 1 ether);
-        assertEq(alice.balance, 0 ether);
-        assertEq(token0.balanceOf(alice), 1 ether);
-
-        snapStart("BinSwapRouterTest#testExactInputSingle_EthPool_SwapTokenForEth");
-        uint256 amountOut = router.exactInputSingle(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key3,
-                swapForY: false, // swap token0 for ETH
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        assertEq(alice.balance, amountOut);
-        assertEq(token0.balanceOf(alice), 0 ether);
-    }
-
-    function testExactInputSingle_EthPool_InsufficientETH() public {
-        vm.deal(alice, 1 ether);
-
-        vm.expectRevert(CurrencyLibrary.NativeTransferFailed.selector);
-        router.exactInputSingle{value: 0.5 ether}(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key3,
-                swapForY: true,
-                recipient: alice,
-                amountIn: 1 ether, // swap ETH for token0
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-    }
-
-    /// @param swapForY if true = swap token0 for token1
-    function testExactInputSingle_SwapForY(bool swapForY) public {
-        vm.startPrank(alice);
-
-        // before swap
-        if (swapForY) {
-            token0.mint(alice, 1 ether);
-            assertEq(token0.balanceOf(alice), 1 ether);
-            assertEq(token1.balanceOf(alice), 0 ether);
-        } else {
-            token1.mint(alice, 1 ether);
-            assertEq(token0.balanceOf(alice), 0 ether);
-            assertEq(token1.balanceOf(alice), 1 ether);
-        }
-
-        string memory gasSnapshotName = swapForY
-            ? "BinSwapRouterTest#testExactInputSingle_SwapForY_1"
-            : "BinSwapRouterTest#testExactInputSingle_SwapForY_2";
-
-        snapStart(gasSnapshotName);
-        uint256 amountOut = router.exactInputSingle(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key,
-                swapForY: swapForY,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        if (swapForY) {
-            assertEq(token0.balanceOf(alice), 0 ether);
-            assertEq(token1.balanceOf(alice), amountOut);
-        } else {
-            assertEq(token0.balanceOf(alice), amountOut);
-            assertEq(token1.balanceOf(alice), 0 ether);
-        }
-    }
-
-    function testExactInputSingle_AmountOutMin() public {
-        vm.startPrank(alice);
-
-        token0.mint(alice, 1 ether);
-
-        vm.expectRevert(ISwapRouterBase.TooLittleReceived.selector);
-        router.exactInputSingle(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key,
-                swapForY: true,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 1 ether, // activeId is 2**23, token price are same, so output is always lesser than 1 ether after fee/slippage
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-    }
-
-    function testExactInputSingle_Deadline() public {
-        vm.startPrank(alice);
-
-        token0.mint(alice, 1 ether);
-        vm.warp(1000); // set block.timestamp
-
-        vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
-        router.exactInputSingle(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key,
-                swapForY: true,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp - 100 // timestamp expired
-        );
-    }
-
-    function testExactInputSingle_DifferentRecipient() public {
-        vm.startPrank(alice);
-
-        token0.mint(alice, 1 ether);
-        vm.warp(1000); // set block.timestamp
-
-        snapStart("BinSwapRouterTest#testExactInputSingle_DifferentRecipient");
-        uint256 amountOut = router.exactInputSingle(
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key,
-                swapForY: true,
-                recipient: bob, // bob
-                amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        assertEq(token1.balanceOf(bob), amountOut);
-        assertEq(token1.balanceOf(alice), 0);
-    }
-
-    function testExactInput_SingleHop() public {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
 
@@ -384,399 +213,37 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
 
-        uint256 amountOut = router.exactInput(
-            IBinSwapRouterBase.V4BinExactInputParams({
-                currencyIn: Currency.wrap(address(token0)),
-                path: path,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0
-            }),
-            block.timestamp + 60
-        );
-        assertEq(token1.balanceOf(alice), amountOut);
-    }
-
-    function testExactInput_MultiHopDifferentRecipient() public {
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token1)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-        path[1] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token2)),
-            fee: key2.fee,
-            hooks: key2.hooks,
-            hookData: new bytes(0),
-            poolManager: key2.poolManager,
-            parameters: key2.parameters
-        });
-
-        snapStart("BinSwapRouterTest#testExactInput_MultiHopDifferentRecipient");
-        uint256 amountOut = router.exactInput(
-            IBinSwapRouterBase.V4BinExactInputParams({
-                currencyIn: Currency.wrap(address(token0)),
-                path: path,
-                recipient: bob,
-                amountIn: 1 ether,
-                amountOutMinimum: 0
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        // 1 ether * 0.997 * 0.997 (0.3% fee twice)
-        assertEq(amountOut, 994009000000000000);
-        assertEq(token2.balanceOf(alice), 0);
-        assertEq(token2.balanceOf(bob), amountOut);
-    }
-
-    function testExactInput_Deadline() public {
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-        vm.warp(1000); // set block.timestamp
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token1)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-
-        vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
-        router.exactInput(
-            IBinSwapRouterBase.V4BinExactInputParams({
-                currencyIn: Currency.wrap(address(token0)),
-                path: path,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0
-            }),
-            block.timestamp - 100 // timestamp expired
-        );
-    }
-
-    function testExactInput_AmountOutMin() public {
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token1)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-
-        vm.expectRevert(ISwapRouterBase.TooLittleReceived.selector);
-        router.exactInput(
-            IBinSwapRouterBase.V4BinExactInputParams({
-                currencyIn: Currency.wrap(address(token0)),
-                path: path,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 1 ether // min amount will only be 1 ether * 0.997
-            }),
-            block.timestamp + 60
-        );
-    }
-
-    function testExactOutputSingle_SwapForY(bool swapForY) public {
-        vm.startPrank(alice);
-
-        // before swap
-        if (swapForY) {
-            token0.mint(alice, 1 ether);
-            assertEq(token0.balanceOf(alice), 1 ether);
-            assertEq(token1.balanceOf(alice), 0 ether);
-        } else {
-            token1.mint(alice, 1 ether);
-            assertEq(token0.balanceOf(alice), 0 ether);
-            assertEq(token1.balanceOf(alice), 1 ether);
-        }
-
-        string memory gasSnapshotName = swapForY
-            ? "BinSwapRouterTest#testExactOutputSingle_SwapForY_1"
-            : "BinSwapRouterTest#testExactOutputSingle_SwapForY_2";
-
-        snapStart(gasSnapshotName);
-        uint256 amountIn = router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
-                poolKey: key,
-                swapForY: swapForY,
-                recipient: alice,
-                amountOut: 0.5 ether,
-                amountInMaximum: 1 ether,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        if (swapForY) {
-            assertEq(token0.balanceOf(alice), 1 ether - amountIn);
-            assertEq(token1.balanceOf(alice), 0.5 ether);
-        } else {
-            assertEq(token0.balanceOf(alice), 0.5 ether);
-            assertEq(token1.balanceOf(alice), 1 ether - amountIn);
-        }
-    }
-
-    function testExactOutputSingle_DifferentRecipient() public {
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-
-        snapStart("BinSwapRouterTest#testExactOutputSingle_DifferentRecipient");
-        uint256 amountIn = router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
-                poolKey: key,
-                swapForY: true,
-                recipient: bob,
-                amountOut: 0.5 ether,
-                amountInMaximum: 1 ether,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        assertEq(token0.balanceOf(alice), 1 ether - amountIn);
-        assertEq(token1.balanceOf(alice), 0 ether);
-        assertEq(token1.balanceOf(bob), 0.5 ether);
-    }
-
-    function testExactOutputSingle_Deadline() public {
-        vm.startPrank(alice);
-
-        token0.mint(alice, 1 ether);
-        vm.warp(1000); // set block.timestamp
-
-        vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
-        router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
-                poolKey: key,
-                swapForY: true,
-                recipient: bob,
-                amountOut: 0.5 ether,
-                amountInMaximum: 1 ether,
-                hookData: new bytes(0)
-            }),
-            block.timestamp - 100 // timestamp required
-        );
-    }
-
-    function testExactOutputSingle_AmountInMax() public {
-        vm.startPrank(alice);
-
-        token0.mint(alice, 1 ether);
-
-        vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
-        router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
-                poolKey: key,
-                swapForY: true,
-                recipient: bob,
-                amountOut: 1 ether,
-                amountInMaximum: 1 ether, // for 1 eth amountOut, amountIn would be > 1 ether
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 60
-        );
-    }
-
-    function testExactOutputSingle_TooLittleReceived() public {
-        //todo: in order to simulate this error, require
-        //     // 1. hooks at beforeSwap do something funny on the pool resulting in actual amountOut lesser
-    }
-
-    function testExactOutput_SingleHop() public {
-        // swap token0 input -> token1 output
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token0)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-
-        // before test validation
-        assertEq(token0.balanceOf(alice), 1 ether);
-        assertEq(token1.balanceOf(alice), 0);
-
-        snapStart("BinSwapRouterTest#testExactOutput_SingleHop");
-        uint256 amountIn = router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
-                currencyOut: Currency.wrap(address(token1)),
-                path: path,
-                recipient: alice,
-                amountOut: 0.5 ether,
-                amountInMaximum: 1 ether
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        // after test validation
-        assertEq(amountIn, 501504513540621866); // amt in should be greater than 0.5 eth
-        assertEq(token0.balanceOf(alice), 1 ether - amountIn);
-        assertEq(token1.balanceOf(alice), 0.5 ether);
-    }
-
-    function testExactOutput_MultiHopDifferentRecipient() public {
-        // swap token0 input -> token1 -> token2 output
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token0)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-        path[1] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token1)),
-            fee: key2.fee,
-            hooks: key2.hooks,
-            hookData: new bytes(0),
-            poolManager: key2.poolManager,
-            parameters: key2.parameters
-        });
-
-        // before test validation
-        assertEq(token0.balanceOf(alice), 1 ether);
-        assertEq(token1.balanceOf(alice), 0);
-        assertEq(token2.balanceOf(alice), 0);
-        assertEq(token2.balanceOf(bob), 0 ether);
-
-        snapStart("BinSwapRouterTest#testExactOutput_MultiHopDifferentRecipient");
-        uint256 amountIn = router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
-                currencyOut: Currency.wrap(address(token2)),
-                path: path,
-                recipient: bob,
-                amountOut: 0.5 ether,
-                amountInMaximum: 1 ether
-            }),
-            block.timestamp + 60
-        );
-        snapEnd();
-
-        // after test validation
-        // amt in should be greater than 0.5 eth + 0.3% fee twice (2 pool)
-        assertEq(amountIn, 503013554203231561);
-        assertEq(token0.balanceOf(alice), 1 ether - amountIn);
-        assertEq(token2.balanceOf(bob), 0.5 ether);
-    }
-
-    function testExactOutput_Deadline() public {
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-        vm.warp(1000); // set block.timestamp
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](0);
-        vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
-        router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
-                currencyOut: Currency.wrap(address(token1)),
-                path: path,
-                recipient: alice,
-                amountOut: 0.5 ether,
-                amountInMaximum: 1 ether
-            }),
-            block.timestamp - 100 // timestamp expired
-        );
-    }
-
-    function testExactOutput_TooMuchRequested() public {
-        vm.startPrank(alice);
-        token0.mint(alice, 2 ether);
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token0)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-
-        vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
-        router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
-                currencyOut: Currency.wrap(address(token1)),
-                path: path,
-                recipient: alice,
-                amountOut: 1 ether,
-                amountInMaximum: 1 ether // amountIn is insufficient to get 1 eth out
-            }),
-            block.timestamp + 60
-        );
-    }
-
-    function testMulticall_ExactInputRefundEth() public {
-        // swap ETH to token0 and refund left over ETH
-        vm.startPrank(alice);
-
-        vm.deal(alice, 2 ether);
-        assertEq(alice.balance, 2 ether);
-        assertEq(token0.balanceOf(alice), 0 ether);
-
-        // swap 1 ETH for token0 and call refundEth
         bytes[] memory data = new bytes[](2);
-        data[0] = abi.encodeWithSelector(
-            router.exactInputSingle.selector,
-            IBinSwapRouterBase.V4BinExactInputSingleParams({
-                poolKey: key3,
-                swapForY: true, // swap ETH for token0
+        data[0] = abi.encodeWithSelector(router.permit.selector, alice, permit, sig);
+        data[1] = abi.encodeWithSelector(
+            router.exactInput.selector,
+            IBinSwapRouterBase.V4BinExactInputParams({
+                currencyIn: Currency.wrap(address(token0)),
+                path: path,
                 recipient: alice,
                 amountIn: 1 ether,
-                amountOutMinimum: 0,
-                hookData: new bytes(0)
+                amountOutMinimum: 0
             }),
             block.timestamp + 60
         );
-        data[1] = abi.encodeWithSelector(router.refundETH.selector);
 
         bytes[] memory result = new bytes[](2);
-        result = router.multicall{value: 2 ether}(data);
+        result = router.multicall(data);
 
-        assertEq(alice.balance, 1 ether);
-        assertEq(address(router).balance, 0 ether);
-        assertEq(token0.balanceOf(alice), abi.decode(result[0], (uint256)));
+        assertEq(token1.balanceOf(alice), abi.decode(result[1], (uint256)));
     }
 
-    function testSettleAndMintRefund() public {
-        // transfer excess token to vault
-        uint256 excessTokenAmount = 1 ether;
-        address hacker = address(1);
-        token0.mint(hacker, excessTokenAmount);
-        vm.startPrank(hacker);
-        token0.transfer(address(vault), excessTokenAmount);
-        vm.stopPrank();
+    // option 2: for bot potentially
+    // -> pre-req: txn 1: call token.approve(permit2, type(uint256).max)
 
+    // -> in bot arb flow: 
+    // 1. call permit2.approve(token, router, amount, expiration)
+    // 2. call router.exactInput 
+    function testSwap_PermitOption2() public {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
+
+        permit2.approve(address(token0), address(router), 1 ether, uint48(block.timestamp + 5));
 
         ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
         path[0] = ISwapRouterBase.PathKey({
@@ -788,7 +255,9 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
 
-        uint256 amountOut = router.exactInput(
+        bytes[] memory data = new bytes[](1);
+        data[0] = abi.encodeWithSelector(
+            router.exactInput.selector,
             IBinSwapRouterBase.V4BinExactInputParams({
                 currencyIn: Currency.wrap(address(token0)),
                 path: path,
@@ -798,12 +267,10 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
             }),
             block.timestamp + 60
         );
-        assertEq(token1.balanceOf(alice), amountOut);
 
-        // check currency balance in vault
-        {
-            uint256 currency0Balance = vault.balanceOf(alice, Currency.wrap(address(token0)));
-            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
-        }
+        bytes[] memory result = new bytes[](2);
+        result = router.multicall(data);
+
+        assertEq(token1.balanceOf(alice), abi.decode(result[0], (uint256)));
     }
 }

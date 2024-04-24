@@ -51,7 +51,7 @@ contract BinFungiblePositionManager is
     /// @dev poolId => poolKey
     mapping(bytes32 => PoolKey) private _poolIdToPoolKey;
 
-    constructor(IVault _vault, IBinPoolManager _poolManager, address _WETH9) PeripheryImmutableState(_WETH9) {
+    constructor(IVault _vault, IBinPoolManager _poolManager, address _WETH9) PeripheryImmutableState(_WETH9, _WETH9) {
         vault = _vault;
         poolManager = _poolManager;
     }
