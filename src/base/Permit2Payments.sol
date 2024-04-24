@@ -38,35 +38,3 @@ abstract contract Permit2Payments is PeripheryPayments {
         else permit2TransferFrom(Currency.unwrap(currency), payer, recipient, amount.toUint160());
     }
 }
-
-// function testMulticall_ExactInputRefundEth() public {
-//     // swap ETH to token0 and refund left over ETH
-//     vm.startPrank(alice);
-
-//     vm.deal(alice, 2 ether);
-//     assertEq(alice.balance, 2 ether);
-//     assertEq(token0.balanceOf(alice), 0 ether);
-
-//     // swap 1 ETH for token0 and call refundEth
-//     bytes[] memory data = new bytes[](2);
-//     data[0] = abi.encodeWithSelector(
-//         router.exactInputSingle.selector,
-//         IBinSwapRouterBase.V4BinExactInputSingleParams({
-//             poolKey: key3,
-//             swapForY: true, // swap ETH for token0
-//             recipient: alice,
-//             amountIn: 1 ether,
-//             amountOutMinimum: 0,
-//             hookData: new bytes(0)
-//         }),
-//         block.timestamp + 60
-//     );
-//     data[1] = abi.encodeWithSelector(router.refundETH.selector);
-
-//     bytes[] memory result = new bytes[](2);
-//     result = router.multicall{value: 2 ether}(data);
-
-//     assertEq(alice.balance, 1 ether);
-//     assertEq(address(router).balance, 0 ether);
-//     assertEq(token0.balanceOf(alice), abi.decode(result[0], (uint256)));
-// }
