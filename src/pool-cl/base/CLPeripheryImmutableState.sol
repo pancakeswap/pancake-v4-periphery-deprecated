@@ -15,7 +15,7 @@ contract CLPeripheryImmutableState is ICLPeripheryImmutableState, PeripheryImmut
 
     ICLPoolManager public immutable poolManager;
 
-    constructor(IVault _vault, ICLPoolManager _poolManager, address _WETH9) PeripheryImmutableState(_WETH9) {
+    constructor(IVault _vault, ICLPoolManager _poolManager, address _WETH9) PeripheryImmutableState(_WETH9, _WETH9) {
         vault = _vault;
         poolManager = _poolManager;
     }

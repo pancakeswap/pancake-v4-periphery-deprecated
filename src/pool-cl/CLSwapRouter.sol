@@ -28,7 +28,7 @@ contract CLSwapRouter is
     constructor(IVault _vault, ICLPoolManager _clPoolManager, address _WETH9)
         SwapRouterBase(_vault)
         CLSwapRouterBase(_clPoolManager)
-        PeripheryImmutableState(_WETH9)
+        PeripheryImmutableState(_WETH9, _WETH9)
     {}
 
     function exactInputSingle(V4CLExactInputSingleParams calldata params, uint256 deadline)
