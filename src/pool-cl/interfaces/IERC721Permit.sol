@@ -7,11 +7,6 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 /// @title ERC721 with permit
 /// @notice Extension to ERC721 that includes a permit function for signature based approvals
 interface IERC721Permit is IERC721 {
-    error PermitExpired();
-    error ApproveToOneself();
-    error Unauthorized();
-    error InvalidSignature();
-
     /// @notice The permit typehash used in the permit signature
     /// @return The typehash for the permit
     function PERMIT_TYPEHASH() external pure returns (bytes32);
