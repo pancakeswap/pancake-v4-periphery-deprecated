@@ -24,4 +24,14 @@ interface ISwapRouterBase {
         IPoolManager poolManager;
         bytes32 parameters;
     }
+
+    /// @notice V4SettlementParams
+    /// - payer: Address of the payer
+    /// - settle: If true, transfer token from `payer` to Vault. If false, must perform the settle elsewhere
+    /// - take: If true, transfer token from Vault to `recipient`. If false, must perform the take elsewhere.
+    struct V4SettlementParams {
+        address payer;
+        bool settle;
+        bool take;
+    }
 }

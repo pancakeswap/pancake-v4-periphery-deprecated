@@ -82,24 +82,28 @@ contract BinSwapRouter is
     function lockAcquired(bytes calldata data) external override vaultOnly returns (bytes memory) {
         SwapInfo memory swapInfo = abi.decode(data, (SwapInfo));
 
+        /// @dev By default for SwapRouter, the payer will always be msg.sender and will perform take/settle after the swap.
+        V4SettlementParams memory settlementParams =
+            V4SettlementParams({payer: swapInfo.msgSender, settle: true, take: true});
+
         if (swapInfo.swapType == SwapType.ExactInputSingle) {
             V4BinExactInputSingleParams memory params = abi.decode(swapInfo.params, (V4BinExactInputSingleParams));
-            uint256 amountOut = _v4BinSwapExactInputSingle(params, swapInfo.msgSender, true, true);
+            uint256 amountOut = _v4BinSwapExactInputSingle(params, settlementParams);
 
             return abi.encode(amountOut);
         } else if (swapInfo.swapType == SwapType.ExactInput) {
             V4BinExactInputParams memory params = abi.decode(swapInfo.params, (V4BinExactInputParams));
-            uint256 amountOut = _v4BinSwapExactInput(params, swapInfo.msgSender, true, true);
+            uint256 amountOut = _v4BinSwapExactInput(params, settlementParams);
 
             return abi.encode(amountOut);
         } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
             V4ExactOutputSingleParams memory params = abi.decode(swapInfo.params, (V4ExactOutputSingleParams));
-            uint256 amountIn = _v4BinSwapExactOutputSingle(params, swapInfo.msgSender, true, true);
+            uint256 amountIn = _v4BinSwapExactOutputSingle(params, settlementParams);
 
             return abi.encode(amountIn);
         } else if (swapInfo.swapType == SwapType.ExactOutput) {
             V4ExactOutputParams memory params = abi.decode(swapInfo.params, (V4ExactOutputParams));
-            uint256 amountIn = _v4BinSwapExactOutput(params, swapInfo.msgSender, true, true);
+            uint256 amountIn = _v4BinSwapExactOutput(params, settlementParams);
 
             return abi.encode(amountIn);
         } else {
