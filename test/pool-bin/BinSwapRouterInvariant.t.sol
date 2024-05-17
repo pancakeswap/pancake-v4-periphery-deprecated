@@ -178,7 +178,7 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         uint256 value = isNativePool ? amtIn : 0;
         vm.prank(alice);
         router.exactOutputSingle{value: value}(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
+            IBinSwapRouterBase.V4BinExactOutputSingleParams({
                 poolKey: pk,
                 swapForY: true,
                 recipient: alice,
@@ -216,7 +216,7 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         // if native pool, have to ensure call method with value
         uint256 value = isNativePool ? amtIn : 0;
         router.exactOutput{value: value}(
-            IBinSwapRouterBase.V4ExactOutputParams({
+            IBinSwapRouterBase.V4BinExactOutputParams({
                 currencyOut: Currency.wrap(address(token1)),
                 path: path,
                 recipient: alice,

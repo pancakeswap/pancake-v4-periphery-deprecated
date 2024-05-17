@@ -513,7 +513,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart(gasSnapshotName);
         uint256 amountIn = router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
+            IBinSwapRouterBase.V4BinExactOutputSingleParams({
                 poolKey: key,
                 swapForY: swapForY,
                 recipient: alice,
@@ -540,7 +540,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart("BinSwapRouterTest#testExactOutputSingle_DifferentRecipient");
         uint256 amountIn = router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
+            IBinSwapRouterBase.V4BinExactOutputSingleParams({
                 poolKey: key,
                 swapForY: true,
                 recipient: bob,
@@ -565,7 +565,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
         router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
+            IBinSwapRouterBase.V4BinExactOutputSingleParams({
                 poolKey: key,
                 swapForY: true,
                 recipient: bob,
@@ -584,7 +584,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
         router.exactOutputSingle(
-            IBinSwapRouterBase.V4ExactOutputSingleParams({
+            IBinSwapRouterBase.V4BinExactOutputSingleParams({
                 poolKey: key,
                 swapForY: true,
                 recipient: bob,
@@ -622,7 +622,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart("BinSwapRouterTest#testExactOutput_SingleHop");
         uint256 amountIn = router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
+            IBinSwapRouterBase.V4BinExactOutputParams({
                 currencyOut: Currency.wrap(address(token1)),
                 path: path,
                 recipient: alice,
@@ -670,7 +670,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart("BinSwapRouterTest#testExactOutput_MultiHopDifferentRecipient");
         uint256 amountIn = router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
+            IBinSwapRouterBase.V4BinExactOutputParams({
                 currencyOut: Currency.wrap(address(token2)),
                 path: path,
                 recipient: bob,
@@ -696,7 +696,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](0);
         vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
         router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
+            IBinSwapRouterBase.V4BinExactOutputParams({
                 currencyOut: Currency.wrap(address(token1)),
                 path: path,
                 recipient: alice,
@@ -723,7 +723,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
         router.exactOutput(
-            IBinSwapRouterBase.V4ExactOutputParams({
+            IBinSwapRouterBase.V4BinExactOutputParams({
                 currencyOut: Currency.wrap(address(token1)),
                 path: path,
                 recipient: alice,

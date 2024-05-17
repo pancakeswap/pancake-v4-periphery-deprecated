@@ -55,7 +55,7 @@ contract BinSwapRouter is
             abi.decode(vault.lock(abi.encode(SwapInfo(SwapType.ExactInput, msg.sender, abi.encode(params)))), (uint256));
     }
 
-    function exactOutputSingle(V4ExactOutputSingleParams calldata params, uint256 deadline)
+    function exactOutputSingle(V4BinExactOutputSingleParams calldata params, uint256 deadline)
         external
         payable
         override
@@ -67,7 +67,7 @@ contract BinSwapRouter is
         );
     }
 
-    function exactOutput(V4ExactOutputParams calldata params, uint256 deadline)
+    function exactOutput(V4BinExactOutputParams calldata params, uint256 deadline)
         external
         payable
         override
@@ -94,11 +94,14 @@ contract BinSwapRouter is
                 _v4BinSwapExactInputSingle(abi.decode(swapInfo.params, (V4BinExactInputSingleParams)), settlementParams)
             );
         } else if (swapInfo.swapType == SwapType.ExactOutput) {
-            return
-                abi.encode(_v4BinSwapExactOutput(abi.decode(swapInfo.params, (V4ExactOutputParams)), settlementParams));
+            return abi.encode(
+                _v4BinSwapExactOutput(abi.decode(swapInfo.params, (V4BinExactOutputParams)), settlementParams)
+            );
         } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
             return abi.encode(
-                _v4BinSwapExactOutputSingle(abi.decode(swapInfo.params, (V4ExactOutputSingleParams)), settlementParams)
+                _v4BinSwapExactOutputSingle(
+                    abi.decode(swapInfo.params, (V4BinExactOutputSingleParams)), settlementParams
+                )
             );
         } else {
             revert InvalidSwapType();

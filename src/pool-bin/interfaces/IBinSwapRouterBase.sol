@@ -24,7 +24,7 @@ interface IBinSwapRouterBase is ISwapRouterBase {
         uint128 amountOutMinimum;
     }
 
-    struct V4ExactOutputSingleParams {
+    struct V4BinExactOutputSingleParams {
         PoolKey poolKey;
         bool swapForY;
         address recipient;
@@ -33,7 +33,7 @@ interface IBinSwapRouterBase is ISwapRouterBase {
         bytes hookData;
     }
 
-    struct V4ExactOutputParams {
+    struct V4BinExactOutputParams {
         Currency currencyOut;
         PathKey[] path;
         address recipient;

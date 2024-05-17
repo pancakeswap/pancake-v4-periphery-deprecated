@@ -37,7 +37,7 @@ interface IBinSwapRouter is IBinSwapRouterBase {
     /// @notice Swaps as little as possible of one token for `amountOut` of another token
     /// @param params The parameters necessary for the swap, encoded as `ExactOutputSingleParams` in calldata
     /// @return amountIn The amount of the input token
-    function exactOutputSingle(V4ExactOutputSingleParams calldata params, uint256 deadline)
+    function exactOutputSingle(V4BinExactOutputSingleParams calldata params, uint256 deadline)
         external
         payable
         returns (uint256 amountIn);
@@ -45,7 +45,7 @@ interface IBinSwapRouter is IBinSwapRouterBase {
     /// @notice Swaps as little as possible of one token for `amountOut` of another along the specified path (reversed)
     /// @param params The parameters necessary for the multi-hop swap, encoded as `ExactOutputParams` in calldata
     /// @return amountIn The amount of the input token
-    function exactOutput(V4ExactOutputParams calldata params, uint256 deadline)
+    function exactOutput(V4BinExactOutputParams calldata params, uint256 deadline)
         external
         payable
         returns (uint256 amountIn);

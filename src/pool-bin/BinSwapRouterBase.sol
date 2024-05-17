@@ -83,7 +83,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
     function _v4BinSwapExactOutputSingle(
-        V4ExactOutputSingleParams memory params,
+        V4BinExactOutputSingleParams memory params,
         V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountIn) {
         (uint128 amtIn,,) = binPoolManager.getSwapIn(params.poolKey, params.swapForY, params.amountOut);
@@ -115,7 +115,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     }
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
-    function _v4BinSwapExactOutput(V4ExactOutputParams memory params, V4SettlementParams memory settlementParams)
+    function _v4BinSwapExactOutput(V4BinExactOutputParams memory params, V4SettlementParams memory settlementParams)
         internal
         returns (uint256 amountIn)
     {
