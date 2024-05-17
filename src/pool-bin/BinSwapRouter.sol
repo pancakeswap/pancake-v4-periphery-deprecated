@@ -86,26 +86,20 @@ contract BinSwapRouter is
         V4SettlementParams memory settlementParams =
             V4SettlementParams({payer: swapInfo.msgSender, settle: true, take: true});
 
-        if (swapInfo.swapType == SwapType.ExactInputSingle) {
-            V4BinExactInputSingleParams memory params = abi.decode(swapInfo.params, (V4BinExactInputSingleParams));
-            uint256 amountOut = _v4BinSwapExactInputSingle(params, settlementParams);
-
-            return abi.encode(amountOut);
-        } else if (swapInfo.swapType == SwapType.ExactInput) {
-            V4BinExactInputParams memory params = abi.decode(swapInfo.params, (V4BinExactInputParams));
-            uint256 amountOut = _v4BinSwapExactInput(params, settlementParams);
-
-            return abi.encode(amountOut);
-        } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
-            V4ExactOutputSingleParams memory params = abi.decode(swapInfo.params, (V4ExactOutputSingleParams));
-            uint256 amountIn = _v4BinSwapExactOutputSingle(params, settlementParams);
-
-            return abi.encode(amountIn);
+        if (swapInfo.swapType == SwapType.ExactInput) {
+            return
+                abi.encode(_v4BinSwapExactInput(abi.decode(swapInfo.params, (V4BinExactInputParams)), settlementParams));
+        } else if (swapInfo.swapType == SwapType.ExactInputSingle) {
+            return abi.encode(
+                _v4BinSwapExactInputSingle(abi.decode(swapInfo.params, (V4BinExactInputSingleParams)), settlementParams)
+            );
         } else if (swapInfo.swapType == SwapType.ExactOutput) {
-            V4ExactOutputParams memory params = abi.decode(swapInfo.params, (V4ExactOutputParams));
-            uint256 amountIn = _v4BinSwapExactOutput(params, settlementParams);
-
-            return abi.encode(amountIn);
+            return
+                abi.encode(_v4BinSwapExactOutput(abi.decode(swapInfo.params, (V4ExactOutputParams)), settlementParams));
+        } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
+            return abi.encode(
+                _v4BinSwapExactOutputSingle(abi.decode(swapInfo.params, (V4ExactOutputSingleParams)), settlementParams)
+            );
         } else {
             revert InvalidSwapType();
         }
