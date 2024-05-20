@@ -55,7 +55,7 @@ contract BinSwapRouter is
             abi.decode(vault.lock(abi.encode(SwapInfo(SwapType.ExactInput, msg.sender, abi.encode(params)))), (uint256));
     }
 
-    function exactOutputSingle(V4ExactOutputSingleParams calldata params, uint256 deadline)
+    function exactOutputSingle(V4BinExactOutputSingleParams calldata params, uint256 deadline)
         external
         payable
         override
@@ -67,7 +67,7 @@ contract BinSwapRouter is
         );
     }
 
-    function exactOutput(V4ExactOutputParams calldata params, uint256 deadline)
+    function exactOutput(V4BinExactOutputParams calldata params, uint256 deadline)
         external
         payable
         override
@@ -82,26 +82,27 @@ contract BinSwapRouter is
     function lockAcquired(bytes calldata data) external override vaultOnly returns (bytes memory) {
         SwapInfo memory swapInfo = abi.decode(data, (SwapInfo));
 
-        if (swapInfo.swapType == SwapType.ExactInputSingle) {
-            V4BinExactInputSingleParams memory params = abi.decode(swapInfo.params, (V4BinExactInputSingleParams));
-            uint256 amountOut = _v4BinSwapExactInputSingle(params, swapInfo.msgSender, true, true);
+        /// @dev By default for SwapRouter, the payer will always be msg.sender and will perform take/settle after the swap.
+        V4SettlementParams memory settlementParams =
+            V4SettlementParams({payer: swapInfo.msgSender, settle: true, take: true});
 
-            return abi.encode(amountOut);
-        } else if (swapInfo.swapType == SwapType.ExactInput) {
-            V4BinExactInputParams memory params = abi.decode(swapInfo.params, (V4BinExactInputParams));
-            uint256 amountOut = _v4BinSwapExactInput(params, swapInfo.msgSender, true, true);
-
-            return abi.encode(amountOut);
-        } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
-            V4ExactOutputSingleParams memory params = abi.decode(swapInfo.params, (V4ExactOutputSingleParams));
-            uint256 amountIn = _v4BinSwapExactOutputSingle(params, swapInfo.msgSender, true, true);
-
-            return abi.encode(amountIn);
+        if (swapInfo.swapType == SwapType.ExactInput) {
+            return
+                abi.encode(_v4BinSwapExactInput(abi.decode(swapInfo.params, (V4BinExactInputParams)), settlementParams));
+        } else if (swapInfo.swapType == SwapType.ExactInputSingle) {
+            return abi.encode(
+                _v4BinSwapExactInputSingle(abi.decode(swapInfo.params, (V4BinExactInputSingleParams)), settlementParams)
+            );
         } else if (swapInfo.swapType == SwapType.ExactOutput) {
-            V4ExactOutputParams memory params = abi.decode(swapInfo.params, (V4ExactOutputParams));
-            uint256 amountIn = _v4BinSwapExactOutput(params, swapInfo.msgSender, true, true);
-
-            return abi.encode(amountIn);
+            return abi.encode(
+                _v4BinSwapExactOutput(abi.decode(swapInfo.params, (V4BinExactOutputParams)), settlementParams)
+            );
+        } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
+            return abi.encode(
+                _v4BinSwapExactOutputSingle(
+                    abi.decode(swapInfo.params, (V4BinExactOutputSingleParams)), settlementParams
+                )
+            );
         } else {
             revert InvalidSwapType();
         }

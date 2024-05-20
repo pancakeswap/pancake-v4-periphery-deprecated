@@ -20,23 +20,19 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     }
 
     /// @notice Perform a swap with `amountIn` in and ensure at least `amountOutMinimum` out
-    /// @param settle If true, transfer token from `msgSender` to Vault. If false, must perform the settle elsewhere
-    /// @param take  If true, transfer token from Vault to `recipient`. If false, must perform the take elsewhere
     function _v4BinSwapExactInputSingle(
         V4BinExactInputSingleParams memory params,
-        address msgSender,
-        bool settle,
-        bool take
+        V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountOut) {
         amountOut = uint256(
             _swapExactPrivate(
                 params.poolKey,
                 params.swapForY,
-                msgSender,
+                settlementParams.payer,
                 params.recipient,
                 params.amountIn,
-                settle,
-                take,
+                settlementParams.settle,
+                settlementParams.take,
                 params.hookData
             )
         );
@@ -52,9 +48,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     }
 
     /// @notice Perform a swap with `amountIn` in and ensure at least `amountOutMinimum` out
-    /// @param settle If true, transfer token from `msgSender` to Vault. If false, must perform the settle elsewhere
-    /// @param take  If true, transfer token from Vault to `recipient`. If false, must perform the take elsewhere
-    function _v4BinSwapExactInput(V4BinExactInputParams memory params, address msgSender, bool settle, bool take)
+    function _v4BinSwapExactInput(V4BinExactInputParams memory params, V4SettlementParams memory settlementParams)
         internal
         returns (uint256 amountOut)
     {
@@ -67,11 +61,11 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
             state.amountOut = _swapExactPrivate(
                 state.poolKey,
                 state.swapForY,
-                msgSender,
+                settlementParams.payer,
                 params.recipient,
                 params.amountIn,
-                i == 0 && settle, // only settle at first iteration AND settle = true
-                i == state.pathLength - 1 && take, // only take at last iteration AND take = true
+                i == 0 && settlementParams.settle, // only settle at first iteration AND settle = true
+                i == state.pathLength - 1 && settlementParams.take, // only take at last iteration AND take = true
                 params.path[i].hookData
             );
 
@@ -88,20 +82,23 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     }
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
-    /// @param settle If true, transfer token from `msgSender` to Vault. If false, must perform the settle elsewhere
-    /// @param take  If true, transfer token from Vault to `recipient`. If false, must perform the take elsewhere
     function _v4BinSwapExactOutputSingle(
-        V4ExactOutputSingleParams memory params,
-        address msgSender,
-        bool settle,
-        bool take
+        V4BinExactOutputSingleParams memory params,
+        V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountIn) {
         (uint128 amtIn,,) = binPoolManager.getSwapIn(params.poolKey, params.swapForY, params.amountOut);
 
         if (amtIn > params.amountInMaximum) revert TooMuchRequested();
 
         uint128 amountOutReal = _swapExactPrivate(
-            params.poolKey, params.swapForY, msgSender, params.recipient, amtIn, settle, take, params.hookData
+            params.poolKey,
+            params.swapForY,
+            settlementParams.payer,
+            params.recipient,
+            amtIn,
+            settlementParams.settle,
+            settlementParams.take,
+            params.hookData
         );
 
         if (amountOutReal < params.amountOut) revert TooLittleReceived();
@@ -118,7 +115,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     }
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
-    function _v4BinSwapExactOutput(V4ExactOutputParams memory params, address msgSender, bool settle, bool take)
+    function _v4BinSwapExactOutput(V4BinExactOutputParams memory params, V4SettlementParams memory settlementParams)
         internal
         returns (uint256 amountIn)
     {
@@ -135,11 +132,11 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
             state.amountOut = _swapExactPrivate(
                 state.poolKey,
                 !state.swapForY,
-                msgSender,
+                settlementParams.payer,
                 params.recipient,
                 state.amountIn,
-                i == 1 && settle, // only settle at first swap AND settle = true
-                i == state.pathLength && take, // only take at last iteration AND take = true
+                i == 1 && settlementParams.settle, // only settle at first swap AND settle = true
+                i == state.pathLength && settlementParams.take, // only take at last iteration AND take = true
                 params.path[i - 1].hookData
             );
 
@@ -163,7 +160,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     function _swapExactPrivate(
         PoolKey memory poolKey,
         bool swapForY,
-        address msgSender,
+        address payer,
         address recipient,
         uint128 amountIn,
         bool settle,
@@ -173,10 +170,10 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         BalanceDelta delta = binPoolManager.swap(poolKey, swapForY, amountIn, hookData);
 
         if (swapForY) {
-            if (settle) _payAndSettle(poolKey.currency0, msgSender, delta.amount0());
+            if (settle) _payAndSettle(poolKey.currency0, payer, delta.amount0());
             if (take) vault.take(poolKey.currency1, recipient, uint128(-delta.amount1()));
         } else {
-            if (settle) _payAndSettle(poolKey.currency1, msgSender, delta.amount1());
+            if (settle) _payAndSettle(poolKey.currency1, payer, delta.amount1());
             if (take) vault.take(poolKey.currency0, recipient, uint128(-delta.amount0()));
         }
 

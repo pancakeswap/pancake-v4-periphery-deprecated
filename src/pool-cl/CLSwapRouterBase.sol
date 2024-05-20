@@ -22,9 +22,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
 
     function _v4CLSwapExactInputSingle(
         V4CLExactInputSingleParams memory params,
-        address msgSender,
-        bool settle,
-        bool take
+        V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountOut) {
         amountOut = uint128(
             -_swapExactPrivate(
@@ -32,10 +30,10 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
                 params.zeroForOne,
                 int256(int128(params.amountIn)),
                 params.sqrtPriceLimitX96,
-                msgSender,
+                settlementParams.payer,
                 params.recipient,
-                settle,
-                take,
+                settlementParams.settle,
+                settlementParams.take,
                 params.hookData
             )
         );
@@ -49,7 +47,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         bool zeroForOne;
     }
 
-    function _v4CLSwapExactInput(V4CLExactInputParams memory params, address msgSender, bool settle, bool take)
+    function _v4CLSwapExactInput(V4CLExactInputParams memory params, V4SettlementParams memory settlementParams)
         internal
         returns (uint256)
     {
@@ -65,10 +63,10 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
                         state.zeroForOne,
                         int256(int128(params.amountIn)),
                         0,
-                        msgSender,
+                        settlementParams.payer,
                         params.recipient,
-                        i == 0 && settle,
-                        i == state.pathLength - 1 && take,
+                        i == 0 && settlementParams.settle,
+                        i == state.pathLength - 1 && settlementParams.take,
                         params.path[i].hookData
                     )
                 );
@@ -85,9 +83,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
 
     function _v4CLSwapExactOutputSingle(
         V4CLExactOutputSingleParams memory params,
-        address msgSender,
-        bool settle,
-        bool take
+        V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountIn) {
         amountIn = uint128(
             _swapExactPrivate(
@@ -95,10 +91,10 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
                 params.zeroForOne,
                 -int256(int128(params.amountOut)),
                 params.sqrtPriceLimitX96,
-                msgSender,
+                settlementParams.payer,
                 params.recipient,
-                settle,
-                take,
+                settlementParams.settle,
+                settlementParams.take,
                 params.hookData
             )
         );
@@ -112,7 +108,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         bool oneForZero;
     }
 
-    function _v4CLSwapExactOutput(V4CLExactOutputParams memory params, address msgSender, bool settle, bool take)
+    function _v4CLSwapExactOutput(V4CLExactOutputParams memory params, V4SettlementParams memory settlementParams)
         internal
         returns (uint256)
     {
@@ -128,10 +124,10 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
                         !state.oneForZero,
                         -int256(int128(params.amountOut)),
                         0,
-                        msgSender,
+                        settlementParams.payer,
                         params.recipient,
-                        i == 1 && settle,
-                        i == state.pathLength && take,
+                        i == 1 && settlementParams.settle,
+                        i == state.pathLength && settlementParams.take,
                         params.path[i - 1].hookData
                     )
                 );
@@ -150,7 +146,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         bool zeroForOne,
         int256 amountSpecified,
         uint160 sqrtPriceLimitX96,
-        address msgSender,
+        address payer,
         address recipient,
         bool settle,
         bool take,
@@ -170,11 +166,11 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
 
         if (zeroForOne) {
             reciprocalAmount = amountSpecified > 0 ? delta.amount1() : delta.amount0();
-            if (settle) _payAndSettle(poolKey.currency0, msgSender, delta.amount0());
+            if (settle) _payAndSettle(poolKey.currency0, payer, delta.amount0());
             if (take) vault.take(poolKey.currency1, recipient, uint128(-delta.amount1()));
         } else {
             reciprocalAmount = amountSpecified > 0 ? delta.amount0() : delta.amount1();
-            if (settle) _payAndSettle(poolKey.currency1, msgSender, delta.amount1());
+            if (settle) _payAndSettle(poolKey.currency1, payer, delta.amount1());
             if (take) vault.take(poolKey.currency0, recipient, uint128(-delta.amount0()));
         }
     }
