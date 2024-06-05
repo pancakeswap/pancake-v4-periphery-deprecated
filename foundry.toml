@@ -16,11 +16,17 @@ evm_version = 'cancun'
 runs = 1000 # change this for higher number of fuzz/invariant locally
 
 [profile.ci.fuzz]
-runs = 100000
+runs = 10000
 
 [profile.ci.invariant]
-runs = 10000           # The number of calls to make in the invariant tests
+runs = 1000            # The number of calls to make in the invariant tests
 call_override = false  # Override calls
 fail_on_revert = false # Fail the test if the contract reverts
 
-# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+[profile.ci_main.fuzz]
+runs = 100000
+
+[profile.ci_main.invariant]
+runs = 10000           # The number of calls to make in the invariant tests
+call_override = false  # Override calls
+fail_on_revert = false # Fail the test if the contract reverts
