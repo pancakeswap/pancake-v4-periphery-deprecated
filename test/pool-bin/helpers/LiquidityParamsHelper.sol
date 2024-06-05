@@ -79,8 +79,8 @@ contract LiquidityParamsHelper {
         uint256[] memory distribY = new uint256[](totalBins);
         for (uint256 i; i < totalBins; ++i) {
             uint24 binId = binIds[i];
-            distribX[i] = binId >= activeId && nbBinX > 0 ? uint256(1e18 / nbBinX).safe64() : 0;
-            distribY[i] = binId <= activeId && nbBinY > 0 ? uint256(1e18 / nbBinY).safe64() : 0;
+            distribX[i] = binId >= activeId ? uint256(1e18 / nbBinX).safe64() : 0;
+            distribY[i] = binId <= activeId ? uint256(1e18 / nbBinY).safe64() : 0;
         }
 
         params = IBinFungiblePositionManager.AddLiquidityParams({
