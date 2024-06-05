@@ -5,7 +5,7 @@
 ## Running test
 
 1. Install dependencies with `forge install`
-2. Run test with `forge test`
+2. Run test with `forge test --isolate`
 
 ## Update dependencies
 
