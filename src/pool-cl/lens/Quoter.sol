@@ -5,6 +5,7 @@ import {Hooks} from "pancake-v4-core/src/libraries/Hooks.sol";
 import {TickMath} from "pancake-v4-core/src/pool-cl/libraries/TickMath.sol";
 import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
 import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
+import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {ICLPoolManager} from "pancake-v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
 import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
@@ -22,7 +23,7 @@ contract Quoter is IQuoter, ILockCallback {
     /// @dev cache used to check a safety condition in exact output swaps.
     uint128 private amountOutCached;
 
-    // v4 Singleton contract
+    IVault public immutable vault;
     ICLPoolManager public immutable manager;
 
     /// @dev min valid reason is 3-words long
@@ -52,7 +53,8 @@ contract Quoter is IQuoter, ILockCallback {
         _;
     }
 
-    constructor(address _poolManager) {
+    constructor(IVault _vault, address _poolManager) {
+        vault = _vault;
         manager = ICLPoolManager(_poolManager);
     }
 
@@ -60,38 +62,106 @@ contract Quoter is IQuoter, ILockCallback {
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         public
         override
-        returns (int128[] memory, uint160, uint32)
+    returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
     {
-        (, int24 tickBefore,,) = manager.getSlot0(params.poolKey.toId());
-
-        (BalanceDelta deltas, uint160 sqrtPriceX96After, int24 tickAfter) = _swap(
-            params.poolKey,
-            params.zeroForOne,
-            -int256(int128(params.exactAmount)),
-            params.sqrtPriceLimitX96,
-            params.hookData
-        );
-
-        int128[] memory deltaAmounts = new int128[](2);
-
-        deltaAmounts[0] = -deltas.amount0();
-        deltaAmounts[1] = -deltas.amount1();
-
-        uint32 initializedTicksLoaded =
-                            PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
-
-        return (deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
+        try vault.lock(abi.encodeWithSelector(this._quoteExactInputSingle.selector, params)) {}
+        catch (bytes memory reason) {
+            return _handleRevertSingle(reason);
+        }
     }
 
     /// @inheritdoc IQuoter
     function quoteExactInput(QuoteExactParams memory params)
         external
         returns (
-            int128[] memory,
-            uint160[] memory,
-            uint32[] memory
+            int128[] memory deltaAmounts,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksLoadedList
         )
     {
+        try vault.lock(abi.encodeWithSelector(this._quoteExactInput.selector, params)) {}
+        catch (bytes memory reason) {
+            return _handleRevert(reason);
+        }
+    }
+
+    /// @inheritdoc IQuoter
+    function quoteExactOutputSingle(QuoteExactSingleParams memory params)
+        public
+        override
+        returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
+    {
+        try vault.lock(abi.encodeWithSelector(this._quoteExactOutputSingle.selector, params)) {}
+        catch (bytes memory reason) {
+            if (params.sqrtPriceLimitX96 == 0) delete amountOutCached;
+            return _handleRevertSingle(reason);
+        }
+    }
+
+    /// @inheritdoc IQuoter
+    function quoteExactOutput(QuoteExactParams memory params)
+        public
+        override
+        returns (
+            int128[] memory deltaAmounts,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksLoadedList
+        )
+    {
+        try vault.lock(abi.encodeWithSelector(this._quoteExactOutput.selector, params)) {}
+        catch (bytes memory reason) {
+            return _handleRevert(reason);
+        }
+    }
+
+    function lockAcquired(bytes calldata data) external returns (bytes memory) {
+        require(msg.sender == address(vault));
+
+        (bool success, bytes memory returnData) = address(this).call(data);
+        if (success) return returnData;
+        if (returnData.length == 0) revert LockFailure();
+        // if the call failed, bubble up the reason
+        /// @solidity memory-safe-assembly
+        assembly {
+            revert(add(returnData, 32), mload(returnData))
+        }
+    }
+
+    /// @dev check revert bytes and pass through if considered valid; otherwise revert with different message
+    function validateRevertReason(bytes memory reason) private pure returns (bytes memory) {
+        if (reason.length < MINIMUM_VALID_RESPONSE_LENGTH) {
+            revert UnexpectedRevertBytes(reason);
+        }
+        return reason;
+    }
+
+    /// @dev parse revert bytes from a single-pool quote
+    function _handleRevertSingle(bytes memory reason)
+        private
+        pure
+        returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
+    {
+        reason = validateRevertReason(reason);
+        (deltaAmounts, sqrtPriceX96After, initializedTicksLoaded) = abi.decode(reason, (int128[], uint160, uint32));
+    }
+
+    /// @dev parse revert bytes from a potentially multi-hop quote and return the delta amounts, sqrtPriceX96After, and initializedTicksLoaded
+    function _handleRevert(bytes memory reason)
+        private
+        pure
+        returns (
+            int128[] memory deltaAmounts,
+            uint160[] memory sqrtPriceX96AfterList,
+            uint32[] memory initializedTicksLoadedList
+        )
+    {
+        reason = validateRevertReason(reason);
+        (deltaAmounts, sqrtPriceX96AfterList, initializedTicksLoadedList) =
+        abi.decode(reason, (int128[], uint160[], uint32[]));
+    }
+
+    /// @dev quote an ExactInput swap along a path of tokens, then revert with the result
+    function _quoteExactInput(QuoteExactParams memory params) public selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
 
         QuoteResult memory result = QuoteResult({
@@ -126,29 +196,25 @@ contract Quoter is IQuoter, ILockCallback {
             result.initializedTicksLoadedList[i] =
                                 PoolTicksCounter.countInitializedTicksLoaded(manager, poolKey, cache.tickBefore, cache.tickAfter);
         }
-
-        return (result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
+        bytes memory r =
+                            abi.encode(result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
+        assembly {
+            revert(add(0x20, r), mload(r))
+        }
     }
 
-    /// @inheritdoc IQuoter
-    function quoteExactOutputSingle(QuoteExactSingleParams memory params)
-        public
-        override
-        returns (int128[] memory, uint160, uint32)
-    {
-        // if no price limit has been specified, cache the output amount for comparison in the swap callback
-        if (params.sqrtPriceLimitX96 == 0) amountOutCached = params.exactAmount;
-
+    /// @dev quote an ExactInput swap on a pool, then revert with the result
+    function _quoteExactInputSingle(QuoteExactSingleParams memory params) public selfOnly returns (bytes memory) {
         (, int24 tickBefore,,) = manager.getSlot0(params.poolKey.toId());
+
         (BalanceDelta deltas, uint160 sqrtPriceX96After, int24 tickAfter) = _swap(
             params.poolKey,
             params.zeroForOne,
-            int256(uint256(params.exactAmount)),
+            -int256(int128(params.exactAmount)),
             params.sqrtPriceLimitX96,
             params.hookData
         );
 
-        if (amountOutCached != 0) delete amountOutCached;
         int128[] memory deltaAmounts = new int128[](2);
 
         deltaAmounts[0] = -deltas.amount0();
@@ -156,20 +222,14 @@ contract Quoter is IQuoter, ILockCallback {
 
         uint32 initializedTicksLoaded =
                             PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
-
-        return (deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
+        bytes memory result = abi.encode(deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
+        assembly {
+            revert(add(0x20, result), mload(result))
+        }
     }
 
-    /// @inheritdoc IQuoter
-    function quoteExactOutput(QuoteExactParams memory params)
-        public
-        override
-        returns (
-            int128[] memory,
-            uint160[] memory,
-            uint32[] memory
-        )
-    {
+    /// @dev quote an ExactOutput swap along a path of tokens, then revert with the result
+    function _quoteExactOutput(QuoteExactParams memory params) public selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
 
         QuoteResult memory result = QuoteResult({
@@ -207,32 +267,39 @@ contract Quoter is IQuoter, ILockCallback {
             result.initializedTicksLoadedList[i - 1] =
                                 PoolTicksCounter.countInitializedTicksLoaded(manager, poolKey, cache.tickBefore, cache.tickAfter);
         }
-
-        return (result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
-    }
-
-    /// @inheritdoc ILockCallback
-    function lockAcquired(bytes calldata data) external returns (bytes memory) {
-        if (msg.sender != address(manager)) {
-            revert InvalidLockAcquiredSender();
-        }
-
-        (bool success, bytes memory returnData) = address(this).call(data);
-        if (success) return returnData;
-        if (returnData.length == 0) revert LockFailure();
-        // if the call failed, bubble up the reason
-        /// @solidity memory-safe-assembly
+        bytes memory r =
+                            abi.encode(result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
         assembly {
-            revert(add(returnData, 32), mload(returnData))
+            revert(add(0x20, r), mload(r))
         }
     }
 
-    /// @dev check revert bytes and pass through if considered valid; otherwise revert with different message
-    function validateRevertReason(bytes memory reason) private pure returns (bytes memory) {
-        if (reason.length < MINIMUM_VALID_RESPONSE_LENGTH) {
-            revert UnexpectedRevertBytes(reason);
+    /// @dev quote an ExactOutput swap on a pool, then revert with the result
+    function _quoteExactOutputSingle(QuoteExactSingleParams memory params) public selfOnly returns (bytes memory) {
+        // if no price limit has been specified, cache the output amount for comparison in the swap callback
+        if (params.sqrtPriceLimitX96 == 0) amountOutCached = params.exactAmount;
+
+        (, int24 tickBefore,,) = manager.getSlot0(params.poolKey.toId());
+        (BalanceDelta deltas, uint160 sqrtPriceX96After, int24 tickAfter) = _swap(
+            params.poolKey,
+            params.zeroForOne,
+            int256(uint256(params.exactAmount)),
+            params.sqrtPriceLimitX96,
+            params.hookData
+        );
+
+        if (amountOutCached != 0) delete amountOutCached;
+        int128[] memory deltaAmounts = new int128[](2);
+
+        deltaAmounts[0] = -deltas.amount0();
+        deltaAmounts[1] = -deltas.amount1();
+
+        uint32 initializedTicksLoaded =
+            PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
+        bytes memory result = abi.encode(deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
+        assembly {
+            revert(add(0x20, result), mload(result))
         }
-        return reason;
     }
 
     /// @dev Execute a swap and return the amounts delta, as well as relevant pool state
