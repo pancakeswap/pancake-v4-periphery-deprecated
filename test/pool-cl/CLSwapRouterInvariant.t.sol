@@ -330,7 +330,6 @@ contract CLSwapRouterInvariant is Test {
         // token0
         uint256 token0BalInVault = vault.reservesOfVault(_handler.currency0());
         uint256 token0WithAlice = _handler.token0().balanceOf(_handler.alice());
-        uint256 token0Reserve = vault.reservesOfPoolManager(_handler.poolManager(), _handler.currency0());
         assertEq(token0BalInVault + token0WithAlice, _handler.token0Minted());
 
         // token1
