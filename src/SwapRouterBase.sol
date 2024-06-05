@@ -39,8 +39,13 @@ abstract contract SwapRouterBase is ISwapRouterBase {
     }
 
     function _payAndSettle(Currency currency, address msgSender, int128 settleAmount) internal virtual {
-        _pay(currency, msgSender, address(vault), uint256(uint128(settleAmount)));
-        vault.settleAndMintRefund(currency, msgSender);
+        if (currency.isNative()) {
+            vault.settle{value: uint256(uint128(settleAmount))}(currency);
+        } else {
+            vault.sync(currency);
+            _pay(currency, msgSender, address(vault), uint256(uint128(settleAmount)));
+            vault.settle(currency);
+        }
     }
 
     function _pay(Currency currency, address payer, address recipient, uint256 amount) internal virtual;
