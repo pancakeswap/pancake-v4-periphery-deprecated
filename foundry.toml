@@ -15,6 +15,9 @@ evm_version = 'cancun'
 [fuzz]
 runs = 1000 # change this for higher number of fuzz/invariant locally
 
+[invariant]
+depth = 15 # revert to 15 as default is 500: https://github.com/foundry-rs/foundry/pull/7957
+
 [profile.ci.fuzz]
 runs = 10000
 
