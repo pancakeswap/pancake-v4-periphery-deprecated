@@ -310,7 +310,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
         snapEnd();
     }
 
-    function testExactInputX() external {
+    function testExactInput() external {
         ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
         path[0] = ISwapRouterBase.PathKey({
             intermediateCurrency: currency1,
