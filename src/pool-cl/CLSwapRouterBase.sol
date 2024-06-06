@@ -28,7 +28,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
             -_swapExactPrivate(
                 params.poolKey,
                 params.zeroForOne,
-                int256(int128(params.amountIn)),
+                -int256(int128(params.amountIn)),
                 params.sqrtPriceLimitX96,
                 settlementParams.payer,
                 params.recipient,
@@ -57,11 +57,12 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
 
             for (uint256 i = 0; i < state.pathLength; i++) {
                 (state.poolKey, state.zeroForOne) = _getPoolAndSwapDirection(params.path[i], params.currencyIn);
+
                 state.amountOut = uint128(
                     -_swapExactPrivate(
                         state.poolKey,
                         state.zeroForOne,
-                        int256(int128(params.amountIn)),
+                        -int256(int128(params.amountIn)),
                         0,
                         settlementParams.payer,
                         params.recipient,
@@ -89,7 +90,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
             _swapExactPrivate(
                 params.poolKey,
                 params.zeroForOne,
-                -int256(int128(params.amountOut)),
+                int256(int128(params.amountOut)),
                 params.sqrtPriceLimitX96,
                 settlementParams.payer,
                 params.recipient,
@@ -122,7 +123,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
                     _swapExactPrivate(
                         state.poolKey,
                         !state.oneForZero,
-                        -int256(int128(params.amountOut)),
+                        int256(int128(params.amountOut)),
                         0,
                         settlementParams.payer,
                         params.recipient,
@@ -165,13 +166,13 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         );
 
         if (zeroForOne) {
-            reciprocalAmount = amountSpecified > 0 ? delta.amount1() : delta.amount0();
-            if (settle) _payAndSettle(poolKey.currency0, payer, delta.amount0());
-            if (take) vault.take(poolKey.currency1, recipient, uint128(-delta.amount1()));
+            reciprocalAmount = amountSpecified < 0 ? -delta.amount1() : -delta.amount0();
+            if (settle) _payAndSettle(poolKey.currency0, payer, -delta.amount0());
+            if (take) vault.take(poolKey.currency1, recipient, uint128(delta.amount1()));
         } else {
-            reciprocalAmount = amountSpecified > 0 ? delta.amount0() : delta.amount1();
-            if (settle) _payAndSettle(poolKey.currency1, payer, delta.amount1());
-            if (take) vault.take(poolKey.currency0, recipient, uint128(-delta.amount0()));
+            reciprocalAmount = amountSpecified < 0 ? -delta.amount0() : -delta.amount1();
+            if (settle) _payAndSettle(poolKey.currency1, payer, -delta.amount1());
+            if (take) vault.take(poolKey.currency0, recipient, uint128(delta.amount0()));
         }
     }
 }

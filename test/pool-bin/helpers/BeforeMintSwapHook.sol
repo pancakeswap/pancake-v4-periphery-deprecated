@@ -70,20 +70,22 @@ contract BeforeMintSwapHook is BaseBinTestHook {
 
         PoolKey memory poolKey = data.key;
         if (data.swapForY) {
-            if (delta.amount0() > 0) {
-                IERC20(Currency.unwrap(poolKey.currency0)).transfer(address(vault), uint256(int256(delta.amount0())));
+            if (delta.amount0() < 0) {
+                vault.sync(poolKey.currency0);
+                IERC20(Currency.unwrap(poolKey.currency0)).transfer(address(vault), uint128(-delta.amount0()));
                 vault.settle(poolKey.currency0);
             }
-            if (delta.amount1() < 0) {
-                vault.take(poolKey.currency1, address(this), uint128(-delta.amount1()));
+            if (delta.amount1() > 0) {
+                vault.take(poolKey.currency1, address(this), uint256(int256(delta.amount1())));
             }
         } else {
-            if (delta.amount1() > 0) {
-                IERC20(Currency.unwrap(poolKey.currency1)).transfer(address(vault), uint256(int256(delta.amount1())));
+            if (delta.amount1() < 0) {
+                vault.sync(poolKey.currency1);
+                IERC20(Currency.unwrap(poolKey.currency1)).transfer(address(vault), uint128(-delta.amount1()));
                 vault.settle(poolKey.currency1);
             }
-            if (delta.amount0() < 0) {
-                vault.take(data.key.currency0, address(this), uint128(-delta.amount0()));
+            if (delta.amount0() > 0) {
+                vault.take(data.key.currency0, address(this), uint256(int256(delta.amount0())));
             }
         }
 

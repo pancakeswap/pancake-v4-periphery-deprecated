@@ -234,8 +234,10 @@ contract NonfungiblePositionManager is
         uint256 tokenId = _nextId++;
         _mint(params.recipient, tokenId);
 
-        CLPosition.Info memory positionInfo =
-            poolManager.getPosition(params.poolKey.toId(), address(this), params.tickLower, params.tickUpper);
+        // todo: about the salt
+        CLPosition.Info memory positionInfo = poolManager.getPosition(
+            params.poolKey.toId(), address(this), params.tickLower, params.tickUpper, bytes32(0)
+        );
         _positions[tokenId] = Position({
             nonce: 0,
             operator: address(0),
@@ -254,7 +256,7 @@ contract NonfungiblePositionManager is
 
         settleDeltas(data.sender, params.poolKey, delta);
 
-        return abi.encode(tokenId, liquidity, delta.amount0(), delta.amount1());
+        return abi.encode(tokenId, liquidity, -delta.amount0(), -delta.amount1());
     }
 
     function _handleIncreaseLiquidity(CallbackData memory data) internal returns (bytes memory) {
@@ -278,8 +280,9 @@ contract NonfungiblePositionManager is
             })
         );
 
+        // todo: about the salt
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolId, address(this), tickLower, tickUpper);
+            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, bytes32(0));
 
         /// @dev This can be overflow in following cases:
         /// 1. feeGrowthInside0LastX128 is overflow
@@ -313,7 +316,7 @@ contract NonfungiblePositionManager is
 
         settleDeltas(data.sender, poolKey, delta);
 
-        return abi.encode(liquidity, delta.amount0(), delta.amount1());
+        return abi.encode(liquidity, -delta.amount0(), -delta.amount1());
     }
 
     function _handleDecreaseLiquidity(CallbackData memory data) internal returns (bytes memory) {
@@ -340,8 +343,9 @@ contract NonfungiblePositionManager is
             })
         );
 
+        // todo: about the salt
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolId, address(this), tickLower, tickUpper);
+            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, bytes32(0));
 
         /// @dev This can be overflow in following cases:
         /// 1. feeGrowthInside0LastX128 is overflow
@@ -378,7 +382,7 @@ contract NonfungiblePositionManager is
 
         settleDeltas(data.sender, poolKey, delta);
 
-        return abi.encode(-delta.amount0(), -delta.amount1());
+        return abi.encode(delta.amount0(), delta.amount1());
     }
 
     function _handleCollect(CallbackData memory data) internal returns (bytes memory) {
@@ -394,8 +398,10 @@ contract NonfungiblePositionManager is
         if (nftPositionCache.liquidity > 0) {
             resetAccumulatedFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper);
 
-            CLPosition.Info memory poolManagerPositionInfo =
-                poolManager.getPosition(poolId, address(this), nftPositionCache.tickLower, nftPositionCache.tickUpper);
+            // todo: about the salt
+            CLPosition.Info memory poolManagerPositionInfo = poolManager.getPosition(
+                poolId, address(this), nftPositionCache.tickLower, nftPositionCache.tickUpper, bytes32(0)
+            );
 
             /// @dev This can be overflow in following cases:
             /// 1. feeGrowthInside0LastX128 is overflow
