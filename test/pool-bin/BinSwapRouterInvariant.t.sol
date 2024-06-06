@@ -53,7 +53,7 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         WETH weth = new WETH();
         vault = new Vault();
         poolManager = new BinPoolManager(IVault(address(vault)), 500000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         token0 = new MockERC20("TestA", "A", 18);
         token1 = new MockERC20("TestB", "B", 18);
@@ -227,26 +227,6 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         );
     }
 
-    function _mint(uint128 amt) private {
-        /// @dev given that amt is cap at 100 ether, we can safely mint 10x the amount to reduce slippage in trading
-        amt = amt * 10;
-
-        // step 1: Mint token to alice for add liquidity
-        token0.mint(alice, amt);
-        token1.mint(alice, amt);
-        token0Minted += (amt);
-        token1Minted += amt;
-
-        // Step 2: add liquidity around activeId
-        vm.startPrank(alice);
-        (activeId,,) = poolManager.getSlot0(poolKey.toId());
-        uint24[] memory binIds = getBinIds(activeId, 3);
-        IBinFungiblePositionManager.AddLiquidityParams memory addParams;
-        addParams = _getAddParams(poolKey, binIds, amt, amt, activeId, alice);
-        binFungiblePositionManager.addLiquidity(addParams);
-        vm.stopPrank();
-    }
-
     function _mint(uint128 amt, bool isNativePool) private {
         /// @dev given that amt is cap at 100 ether, we can safely mint 5x the amount to reduce slippage in trading
         amt = amt * 10;
@@ -292,21 +272,21 @@ contract BinSwapRouterInvariant is Test {
     }
 
     /// @dev token minted should be either in vault or with alice
-    function invariant_AllTokensInVaultOrUser() public {
+    function invariant_AllTokensInVaultOrUser() public view {
         IVault vault = IVault(_handler.vault());
 
         // verify token0
-        uint256 token0BalInVault = vault.reservesOfVault(_handler.currency0());
+        uint256 token0BalInVault = _handler.token0().balanceOf(address(vault));
         uint256 token0WithAlice = _handler.token0().balanceOf(_handler.alice());
         assertEq(token0BalInVault + token0WithAlice, _handler.token0Minted());
 
         // verify token1
-        uint256 token1BalInVault = vault.reservesOfVault(_handler.currency1());
+        uint256 token1BalInVault = _handler.token1().balanceOf(address(vault));
         uint256 token1WithAlice = _handler.token1().balanceOf(_handler.alice());
         assertEq(token1BalInVault + token1WithAlice, _handler.token1Minted());
 
         // eth case will also need to check router balance
-        uint256 nativeTokenInVault = vault.reservesOfVault(CurrencyLibrary.NATIVE);
+        uint256 nativeTokenInVault = address(vault).balance;
         uint256 nativeTokenWithAlice = _handler.alice().balance;
         uint256 routerBalance = address(_handler.router()).balance;
         assertEq(nativeTokenInVault + nativeTokenWithAlice + routerBalance, _handler.nativeTokenMinted());

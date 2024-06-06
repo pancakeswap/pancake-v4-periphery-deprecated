@@ -20,6 +20,9 @@ import {LiquidityAmounts} from "../libraries/LiquidityAmounts.sol";
 abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPayments {
     using PoolIdLibrary for PoolKey;
 
+    // todo: think if salt require non zero byte
+    bytes32 constant SALT_0 = bytes32(0);
+
     error PriceSlippageCheckFailed();
 
     struct AddLiquidityParams {
@@ -46,18 +49,20 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
     // for update liquidity, we claim the fee before further action to avoid this.
     function resetAccumulatedFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper) internal {
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolKey.toId(), address(this), tickLower, tickUpper);
+            poolManager.getPosition(poolKey.toId(), address(this), tickLower, tickUpper, SALT_0);
 
         if (poolManagerPositionInfo.liquidity > 0) {
-            BalanceDelta delta =
-                poolManager.modifyLiquidity(poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0), "");
+            // todo: can we avoid this resetAccumulatedFee call?
+            (, BalanceDelta feeDelta) = poolManager.modifyLiquidity(
+                poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0, SALT_0), ""
+            );
 
-            if (delta.amount0() < 0) {
-                vault.mint(address(this), poolKey.currency0, uint256(int256(-delta.amount0())));
+            if (feeDelta.amount0() > 0) {
+                vault.mint(address(this), poolKey.currency0, uint256(int256(feeDelta.amount0())));
             }
 
-            if (delta.amount1() < 0) {
-                vault.mint(address(this), poolKey.currency1, uint256(int256(-delta.amount1())));
+            if (feeDelta.amount1() > 0) {
+                vault.mint(address(this), poolKey.currency1, uint256(int256(feeDelta.amount1())));
             }
         }
     }
@@ -72,16 +77,16 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
             sqrtPriceX96, sqrtRatioAX96, sqrtRatioBX96, params.amount0Desired, params.amount1Desired
         );
 
-        delta = poolManager.modifyLiquidity(
+        (delta,) = poolManager.modifyLiquidity(
             params.poolKey,
-            ICLPoolManager.ModifyLiquidityParams(params.tickLower, params.tickUpper, int256(uint256(liquidity))),
+            ICLPoolManager.ModifyLiquidityParams(params.tickLower, params.tickUpper, int256(uint256(liquidity)), SALT_0),
             ""
         );
 
-        /// @dev amount0 & amount1 cant be negative here since LPing has been claimed
+        /// @dev amount0 & amount1 cant be positive here since LPing has been claimed
         if (
-            uint256(uint128(delta.amount0())) < params.amount0Min
-                || uint256(uint128(delta.amount1())) < params.amount1Min
+            uint256(uint128(-delta.amount0())) < params.amount0Min
+                || uint256(uint128(-delta.amount1())) < params.amount1Min
         ) {
             revert PriceSlippageCheckFailed();
         }
@@ -90,16 +95,18 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
     function removeLiquidity(RemoveLiquidityParams memory params) internal returns (BalanceDelta delta) {
         resetAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
 
-        delta = poolManager.modifyLiquidity(
+        (delta,) = poolManager.modifyLiquidity(
             params.poolKey,
-            ICLPoolManager.ModifyLiquidityParams(params.tickLower, params.tickUpper, -int256(uint256(params.liquidity))),
+            ICLPoolManager.ModifyLiquidityParams(
+                params.tickLower, params.tickUpper, -int256(uint256(params.liquidity)), SALT_0
+            ),
             ""
         );
 
-        /// @dev amount0 & amount1 must be negative here since LPing has been claimed
+        /// @dev amount0 & amount1 must be positive here since LPing has been claimed
         if (
-            uint256(uint128(-delta.amount0())) < params.amount0Min
-                || uint256(uint128(-delta.amount1())) < params.amount1Min
+            uint256(uint128(delta.amount0())) < params.amount0Min
+                || uint256(uint128(delta.amount1())) < params.amount1Min
         ) {
             revert PriceSlippageCheckFailed();
         }
@@ -112,16 +119,27 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
 
     function settleDeltas(address sender, PoolKey memory poolKey, BalanceDelta delta) internal {
         if (delta.amount0() > 0) {
-            pay(poolKey.currency0, sender, address(vault), uint256(int256(delta.amount0())));
-            vault.settleAndMintRefund(poolKey.currency0, sender);
+            vault.take(poolKey.currency0, sender, uint128(delta.amount0()));
         } else if (delta.amount0() < 0) {
-            vault.take(poolKey.currency0, sender, uint128(-delta.amount0()));
+            if (poolKey.currency0.isNative()) {
+                vault.settle{value: uint256(int256(-delta.amount0()))}(poolKey.currency0);
+            } else {
+                vault.sync(poolKey.currency0);
+                pay(poolKey.currency0, sender, address(vault), uint256(int256(-delta.amount0())));
+                vault.settle(poolKey.currency0);
+            }
         }
+
         if (delta.amount1() > 0) {
-            pay(poolKey.currency1, sender, address(vault), uint256(int256(delta.amount1())));
-            vault.settleAndMintRefund(poolKey.currency1, sender);
+            vault.take(poolKey.currency1, sender, uint128(delta.amount1()));
         } else if (delta.amount1() < 0) {
-            vault.take(poolKey.currency1, sender, uint128(-delta.amount1()));
+            if (poolKey.currency1.isNative()) {
+                vault.settle{value: uint256(int256(-delta.amount1()))}(poolKey.currency1);
+            } else {
+                vault.sync(poolKey.currency1);
+                pay(poolKey.currency1, sender, address(vault), uint256(int256(-delta.amount1())));
+                vault.settle(poolKey.currency1);
+            }
         }
     }
 }

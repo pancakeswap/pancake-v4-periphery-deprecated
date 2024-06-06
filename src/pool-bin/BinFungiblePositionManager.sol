@@ -165,13 +165,13 @@ contract BinFungiblePositionManager is
             bytes32 amountIn = params.amount0.encode(params.amount1);
             (BalanceDelta delta, BinPool.MintArrays memory mintArray) = poolManager.mint(
                 params.poolKey,
-                IBinPoolManager.MintParams({liquidityConfigs: liquidityConfigs, amountIn: amountIn}),
+                IBinPoolManager.MintParams({liquidityConfigs: liquidityConfigs, amountIn: amountIn, salt: bytes32(0)}),
                 ZERO_BYTES
             );
 
-            // delta amt0/amt1 will always be positive in mint case
-            if (delta.amount0() < 0 || delta.amount1() < 0) revert IncorrectOutputAmount();
-            if (uint128(delta.amount0()) < params.amount0Min || uint128(delta.amount1()) < params.amount1Min) {
+            // delta amt0/amt1 will always be negative in mint case
+            if (delta.amount0() > 0 || delta.amount1() > 0) revert IncorrectOutputAmount();
+            if (uint128(-delta.amount0()) < params.amount0Min || uint128(-delta.amount1()) < params.amount1Min) {
                 revert OutputAmountSlippage();
             }
 
@@ -194,17 +194,19 @@ contract BinFungiblePositionManager is
                 }
             }
 
-            return abi.encode(delta.amount0(), delta.amount1(), tokenIds, mintArray.liquidityMinted);
+            return abi.encode(uint128(-delta.amount0()), uint128(-delta.amount1()), tokenIds, mintArray.liquidityMinted);
         } else if (data.callbackDataType == CallbackDataType.RemoveLiquidity) {
             RemoveLiquidityParams memory params = abi.decode(data.params, (RemoveLiquidityParams));
 
             BalanceDelta delta = poolManager.burn(
-                params.poolKey, IBinPoolManager.BurnParams({ids: params.ids, amountsToBurn: params.amounts}), ZERO_BYTES
+                params.poolKey,
+                IBinPoolManager.BurnParams({ids: params.ids, amountsToBurn: params.amounts, salt: bytes32(0)}),
+                ZERO_BYTES
             );
 
-            // delta amt0/amt1 will either be 0 or negative in removing liquidity
-            if (delta.amount0() > 0 || delta.amount1() > 0) revert IncorrectOutputAmount();
-            if (uint128(-delta.amount0()) < params.amount0Min || uint128(-delta.amount1()) < params.amount1Min) {
+            // delta amt0/amt1 will either be 0 or positive in removing liquidity
+            if (delta.amount0() < 0 || delta.amount1() < 0) revert IncorrectOutputAmount();
+            if (uint128(delta.amount0()) < params.amount0Min || uint128(delta.amount1()) < params.amount1Min) {
                 revert OutputAmountSlippage();
             }
 
@@ -223,7 +225,7 @@ contract BinFungiblePositionManager is
                 }
             }
 
-            return abi.encode(uint128(-delta.amount0()), uint128(-delta.amount1()), tokenIds);
+            return abi.encode(delta.amount0(), delta.amount1(), tokenIds);
         }
     }
 
@@ -231,17 +233,27 @@ contract BinFungiblePositionManager is
     /// @param user If delta.amt > 0, take amt from user. else if delta.amt < 0, transfer amt to user
     function _settleDeltas(address user, PoolKey memory poolKey, BalanceDelta delta) internal {
         if (delta.amount0() > 0) {
-            pay(poolKey.currency0, user, address(vault), uint256(int256(delta.amount0())));
-            vault.settleAndMintRefund(poolKey.currency0, user);
+            vault.take(poolKey.currency0, user, uint128(delta.amount0()));
         } else if (delta.amount0() < 0) {
-            vault.take(poolKey.currency0, user, uint128(-delta.amount0()));
+            if (poolKey.currency0.isNative()) {
+                vault.settle{value: uint256(int256(-delta.amount0()))}(poolKey.currency0);
+            } else {
+                vault.sync(poolKey.currency0);
+                pay(poolKey.currency0, user, address(vault), uint256(int256(-delta.amount0())));
+                vault.settle(poolKey.currency0);
+            }
         }
 
         if (delta.amount1() > 0) {
-            pay(poolKey.currency1, user, address(vault), uint256(int256(delta.amount1())));
-            vault.settleAndMintRefund(poolKey.currency1, user);
+            vault.take(poolKey.currency1, user, uint128(delta.amount1()));
         } else if (delta.amount1() < 0) {
-            vault.take(poolKey.currency1, user, uint128(-delta.amount1()));
+            if (poolKey.currency1.isNative()) {
+                vault.settle{value: uint256(int256(-delta.amount1()))}(poolKey.currency1);
+            } else {
+                vault.sync(poolKey.currency1);
+                pay(poolKey.currency1, user, address(vault), uint256(int256(-delta.amount1())));
+                vault.settle(poolKey.currency1);
+            }
         }
     }
 }

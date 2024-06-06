@@ -24,18 +24,16 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         V4CLExactInputSingleParams memory params,
         V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountOut) {
-        amountOut = uint128(
-            -_swapExactPrivate(
-                params.poolKey,
-                params.zeroForOne,
-                int256(int128(params.amountIn)),
-                params.sqrtPriceLimitX96,
-                settlementParams.payer,
-                params.recipient,
-                settlementParams.settle,
-                settlementParams.take,
-                params.hookData
-            )
+        amountOut = _swapExactPrivate(
+            params.poolKey,
+            params.zeroForOne,
+            -int256(int128(params.amountIn)),
+            params.sqrtPriceLimitX96,
+            settlementParams.payer,
+            params.recipient,
+            settlementParams.settle,
+            settlementParams.take,
+            params.hookData
         );
         if (amountOut < params.amountOutMinimum) revert TooLittleReceived();
     }
@@ -57,18 +55,16 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
 
             for (uint256 i = 0; i < state.pathLength; i++) {
                 (state.poolKey, state.zeroForOne) = _getPoolAndSwapDirection(params.path[i], params.currencyIn);
-                state.amountOut = uint128(
-                    -_swapExactPrivate(
-                        state.poolKey,
-                        state.zeroForOne,
-                        int256(int128(params.amountIn)),
-                        0,
-                        settlementParams.payer,
-                        params.recipient,
-                        i == 0 && settlementParams.settle,
-                        i == state.pathLength - 1 && settlementParams.take,
-                        params.path[i].hookData
-                    )
+                state.amountOut = _swapExactPrivate(
+                    state.poolKey,
+                    state.zeroForOne,
+                    -int256(int128(params.amountIn)),
+                    0,
+                    settlementParams.payer,
+                    params.recipient,
+                    i == 0 && settlementParams.settle,
+                    i == state.pathLength - 1 && settlementParams.take,
+                    params.path[i].hookData
                 );
 
                 params.amountIn = state.amountOut;
@@ -85,18 +81,16 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         V4CLExactOutputSingleParams memory params,
         V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountIn) {
-        amountIn = uint128(
-            _swapExactPrivate(
-                params.poolKey,
-                params.zeroForOne,
-                -int256(int128(params.amountOut)),
-                params.sqrtPriceLimitX96,
-                settlementParams.payer,
-                params.recipient,
-                settlementParams.settle,
-                settlementParams.take,
-                params.hookData
-            )
+        amountIn = _swapExactPrivate(
+            params.poolKey,
+            params.zeroForOne,
+            int256(int128(params.amountOut)),
+            params.sqrtPriceLimitX96,
+            settlementParams.payer,
+            params.recipient,
+            settlementParams.settle,
+            settlementParams.take,
+            params.hookData
         );
         if (amountIn > params.amountInMaximum) revert TooMuchRequested();
     }
@@ -118,18 +112,16 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
 
             for (uint256 i = state.pathLength; i > 0; i--) {
                 (state.poolKey, state.oneForZero) = _getPoolAndSwapDirection(params.path[i - 1], params.currencyOut);
-                state.amountIn = uint128(
-                    _swapExactPrivate(
-                        state.poolKey,
-                        !state.oneForZero,
-                        -int256(int128(params.amountOut)),
-                        0,
-                        settlementParams.payer,
-                        params.recipient,
-                        i == 1 && settlementParams.settle,
-                        i == state.pathLength && settlementParams.take,
-                        params.path[i - 1].hookData
-                    )
+                state.amountIn = _swapExactPrivate(
+                    state.poolKey,
+                    !state.oneForZero,
+                    int256(int128(params.amountOut)),
+                    0,
+                    settlementParams.payer,
+                    params.recipient,
+                    i == 1 && settlementParams.settle,
+                    i == state.pathLength && settlementParams.take,
+                    params.path[i - 1].hookData
                 );
 
                 params.amountOut = state.amountIn;
@@ -141,6 +133,9 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         }
     }
 
+    /// @return reciprocalAmount The amount of the reciprocal token
+    //      If exactInput token0 for token1, the reciprocalAmount is the amount of token1.
+    //      If exactOutput token0 for token1, the reciprocalAmount is the amount of token0.
     function _swapExactPrivate(
         PoolKey memory poolKey,
         bool zeroForOne,
@@ -151,7 +146,7 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         bool settle,
         bool take,
         bytes memory hookData
-    ) private returns (int128 reciprocalAmount) {
+    ) private returns (uint128 reciprocalAmount) {
         BalanceDelta delta = clPoolManager.swap(
             poolKey,
             ICLPoolManager.SwapParams(
@@ -165,13 +160,17 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         );
 
         if (zeroForOne) {
-            reciprocalAmount = amountSpecified > 0 ? delta.amount1() : delta.amount0();
-            if (settle) _payAndSettle(poolKey.currency0, payer, delta.amount0());
-            if (take) vault.take(poolKey.currency1, recipient, uint128(-delta.amount1()));
+            /// @dev amountSpecified < 0 indicate exactInput, so reciprocal token is token1 and positive
+            ///      amountSpecified > 0 indicate exactOutput, so reciprocal token is token0 but is negative
+            reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount1()) : uint128(-delta.amount0());
+
+            if (settle) _payAndSettle(poolKey.currency0, payer, -delta.amount0());
+            if (take) vault.take(poolKey.currency1, recipient, uint128(delta.amount1()));
         } else {
-            reciprocalAmount = amountSpecified > 0 ? delta.amount0() : delta.amount1();
-            if (settle) _payAndSettle(poolKey.currency1, payer, delta.amount1());
-            if (take) vault.take(poolKey.currency0, recipient, uint128(-delta.amount0()));
+            reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount0()) : uint128(-delta.amount1());
+
+            if (settle) _payAndSettle(poolKey.currency1, payer, -delta.amount1());
+            if (take) vault.take(poolKey.currency0, recipient, uint128(delta.amount0()));
         }
     }
 }

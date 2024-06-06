@@ -170,13 +170,13 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         BalanceDelta delta = binPoolManager.swap(poolKey, swapForY, amountIn, hookData);
 
         if (swapForY) {
-            if (settle) _payAndSettle(poolKey.currency0, payer, delta.amount0());
-            if (take) vault.take(poolKey.currency1, recipient, uint128(-delta.amount1()));
+            if (settle) _payAndSettle(poolKey.currency0, payer, -delta.amount0());
+            if (take) vault.take(poolKey.currency1, recipient, uint128(delta.amount1()));
         } else {
-            if (settle) _payAndSettle(poolKey.currency1, payer, delta.amount1());
-            if (take) vault.take(poolKey.currency0, recipient, uint128(-delta.amount0()));
+            if (settle) _payAndSettle(poolKey.currency1, payer, -delta.amount1());
+            if (take) vault.take(poolKey.currency0, recipient, uint128(delta.amount0()));
         }
 
-        amountOut = swapForY ? uint128(-delta.amount1()) : uint128(-delta.amount0());
+        amountOut = swapForY ? uint128(delta.amount1()) : uint128(delta.amount0());
     }
 }

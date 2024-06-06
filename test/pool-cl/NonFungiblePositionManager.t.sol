@@ -30,7 +30,6 @@ import {NonfungiblePositionManager} from "../../src/pool-cl/NonfungiblePositionM
 import {INonfungiblePositionManager} from "../../src/pool-cl/interfaces/INonfungiblePositionManager.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
 import {LiquidityManagement} from "../../src/pool-cl/base/LiquidityManagement.sol";
-// import {console2} from "forge-std/console2.sol";
 
 contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     using PoolIdLibrary for PoolKey;
@@ -49,7 +48,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     function setUp() public {
         vault = new Vault();
         poolManager = new CLPoolManager(vault, 3000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         initializeTokens();
 
@@ -321,7 +320,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(liquidity, 3982750054135827175977, "Liquidity from mint and liquidity from raw calculation mismatch");
         assertEq(poolManager.getLiquidity(key.toId()), 3982750054135827175977, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             3982750054135827175977,
             "Unexpected liquidity for current position"
         );
@@ -428,7 +427,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(liquidity, 1991375027067913587988, "Liquidity from mint and liquidity from raw calculation mismatch");
         assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988 * 2,
             "Unexpected liquidity for current position"
         );
@@ -528,7 +527,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(liquidity, 1991375027067913587988, "Liquidity from mint and liquidity from raw calculation mismatch");
         assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988 * 2,
             "Unexpected liquidity for current position"
         );
@@ -659,7 +658,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988 * 2,
             "Unexpected liquidity for current position"
         );
@@ -826,7 +825,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988 * 2,
             "Unexpected liquidity for current position"
         );
@@ -1028,7 +1027,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         assertEq(poolManager.getLiquidity(key.toId()), 0, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             0,
             "Unexpected liquidity for current position"
         );
@@ -1266,6 +1265,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 token0Before = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
             uint256 token1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
+            console2.log("about to decrease liquidity");
             (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.decreaseLiquidity(
                 INonfungiblePositionManager.DecreaseLiquidityParams({
                     tokenId: 1,
@@ -1286,9 +1286,10 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(token1After - token1Before, 999999999999999999, "Unexpected currency1 consumed");
             assertEq(amount1, 999999999999999999, "Actual consumed currency1 mismatch");
         }
+
         assertEq(poolManager.getLiquidity(key.toId()), 0, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             0,
             "Unexpected liquidity for current position"
         );
@@ -1635,6 +1636,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
         nonfungiblePoolManager.mint(mintParams);
+
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -1685,7 +1687,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         }
         assertEq(poolManager.getLiquidity(key.toId()), 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988,
             "Unexpected liquidity for current position"
         );
@@ -1995,7 +1997,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         }
         assertEq(poolManager.getLiquidity(key.toId()), 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988,
             "Unexpected liquidity for current position"
         );
@@ -2090,7 +2092,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         assertEq(poolManager.getLiquidity(key.toId()), 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988,
             "Unexpected liquidity for current position"
         );
@@ -2197,7 +2199,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         }
         assertEq(poolManager.getLiquidity(key.toId()), 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
             1991375027067913587988,
             "Unexpected liquidity for current position"
         );
@@ -2338,7 +2340,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(tick, 46054, "Unexpected tick");
 
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0));
             assertEq(info.liquidity, 1991375027067913587988, "Unexpected liquidity");
             assertEq(info.feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
             assertEq(info.feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
@@ -2362,7 +2364,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         {
             // non zero feeGrowthInside0LastX128 and feeGrowthInside1LastX128
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0));
             assertEq(info.liquidity, 0, "Unexpected liquidity");
             assertEq(
                 info.feeGrowthInside0LastX128,
@@ -2411,7 +2413,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         {
             // non zero feeGrowthInside0LastX128 and feeGrowthInside1LastX128
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0));
             assertEq(info.liquidity, 1991375027067913587988, "Unexpected liquidity");
             assertEq(info.feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
             assertEq(info.feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
@@ -2481,7 +2483,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             );
 
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0));
             assertEq(info.liquidity, 1, "Unexpected liquidity");
         }
 
@@ -2492,7 +2494,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(tick, 46054, "Unexpected tick");
 
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0));
             assertEq(info.liquidity, 1, "Unexpected liquidity");
             assertEq(info.feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
             assertEq(info.feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
@@ -2541,7 +2543,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // decrease liquidity to 1 to better manipulate feeGrowthGlobal for position2
         {
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058, bytes32(0));
 
             nonfungiblePoolManager.decreaseLiquidity(
                 INonfungiblePositionManager.DecreaseLiquidityParams({
@@ -2553,7 +2555,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 })
             );
 
-            info = poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058);
+            info = poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058, bytes32(0));
 
             assertEq(info.liquidity, 1, "Unexpected liquidity");
         }
@@ -2602,7 +2604,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             // tokenOwed are calculated correctly even when overflow happens
             CLPosition.Info memory info =
-                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058);
+                poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058, bytes32(0));
             // positionInfo from nonfungiblePoolManager has been synced
             (
                 ,
@@ -2624,99 +2626,5 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(tokenOwed0, 1000000000000000000, "Unexpected tokenOwed0");
             assertEq(tokenOwed1, 1000000000000000000, "Unexpected tokenOwed1");
         }
-    }
-
-    function testSettleAndMintRefund() external {
-        PoolKey memory key = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            hooks: IHooks(address(0)),
-            poolManager: poolManager,
-            fee: uint24(3000),
-            // 0 ~ 15  hookRegistrationMap = nil
-            // 16 ~ 24 tickSpacing = 1
-            parameters: bytes32(uint256(0x10000))
-        });
-
-        int24 tickLower = 46053;
-        int24 tickUpper = 46055;
-        uint256 amount0Desired = 1 ether;
-        uint256 amount1Desired = 2 ether;
-
-        // transfer excess token to vault
-        uint256 excessTokenAmount = 1 ether;
-        IERC20(Currency.unwrap(currency0)).transfer(address(vault), excessTokenAmount);
-
-        {
-            uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
-            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-
-            uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
-                sqrtPriceX96,
-                TickMath.getSqrtRatioAtTick(tickLower),
-                TickMath.getSqrtRatioAtTick(tickUpper),
-                amount0Desired,
-                amount1Desired
-            );
-
-            vm.expectEmit(true, true, true, false);
-            emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
-        }
-
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = nonfungiblePoolManager.mint(
-            INonfungiblePositionManager.MintParams({
-                poolKey: key,
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                amount0Desired: amount0Desired,
-                amount1Desired: amount1Desired,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: address(this),
-                deadline: type(uint256).max
-            })
-        );
-
-        // token consumed
-        {
-            uint256 token0Left = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
-            uint256 token1Left = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
-            // 1.982e16 roughly 0.02 ether, need to add 1 ether which is unexpected currency0 amount
-            assertEq(1000 ether - token0Left - excessTokenAmount, 19824513708386292, "Unexpected currency0 consumed");
-            assertEq(amount0, 19824513708386292, "Actual consumed currency0 mismatch");
-            // 1e18 i.e. 2 ether, make sense because price is 100
-            assertEq(1000 ether - token1Left, 2000000000000000000, "Unexpected currency1 consumed");
-            assertEq(amount1, 2000000000000000000, "Actual consumed currency1 mismatch");
-        }
-
-        // check currency balance in vault
-        {
-            uint256 currency0Balance = vault.balanceOf(address(this), currency0);
-            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
-        }
-
-        // tick lower and tick upper
-        {
-            (,,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
-            assertEq(_tickLower, tickLower, "Unexpected tickLower");
-            assertEq(_tickUpper, tickUpper, "Unexpected tickUpper");
-        }
-
-        // token id starts from 1
-        assertEq(tokenId, 1, "Unexpected tokenId");
-
-        assertEq(liquidity, 3982750054135827175977, "Liquidity from mint and liquidity from raw calculation mismatch");
-        assertEq(poolManager.getLiquidity(key.toId()), 3982750054135827175977, "Unexpected liquidity for the pool");
-        assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055),
-            3982750054135827175977,
-            "Unexpected liquidity for current position"
-        );
-
-        assertEq(
-            nonfungiblePoolManager.balanceOf(address(this)), 1, "Unexpected balance of the position owner after mint"
-        );
-
-        assertEq(nonfungiblePoolManager.ownerOf(tokenId), address(this), "Unexpected owner of the position");
     }
 }

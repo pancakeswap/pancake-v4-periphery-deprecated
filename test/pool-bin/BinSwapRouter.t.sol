@@ -58,7 +58,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         weth = new WETH();
         vault = new Vault();
         poolManager = new BinPoolManager(IVault(address(vault)), 500000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
         router = new BinSwapRouter(vault, poolManager, address(weth));
 
         binFungiblePositionManager =
@@ -251,7 +251,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
     function testExactInputSingle_EthPool_InsufficientETH() public {
         vm.deal(alice, 1 ether);
 
-        vm.expectRevert(CurrencyLibrary.NativeTransferFailed.selector);
+        vm.expectRevert(); // OutOfFund
         router.exactInputSingle{value: 0.5 ether}(
             IBinSwapRouterBase.V4BinExactInputSingleParams({
                 poolKey: key3,
@@ -764,46 +764,5 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(alice.balance, 1 ether);
         assertEq(address(router).balance, 0 ether);
         assertEq(token0.balanceOf(alice), abi.decode(result[0], (uint256)));
-    }
-
-    function testSettleAndMintRefund() public {
-        // transfer excess token to vault
-        uint256 excessTokenAmount = 1 ether;
-        address hacker = address(1);
-        token0.mint(hacker, excessTokenAmount);
-        vm.startPrank(hacker);
-        token0.transfer(address(vault), excessTokenAmount);
-        vm.stopPrank();
-
-        vm.startPrank(alice);
-        token0.mint(alice, 1 ether);
-
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
-            intermediateCurrency: Currency.wrap(address(token1)),
-            fee: key.fee,
-            hooks: key.hooks,
-            hookData: new bytes(0),
-            poolManager: key.poolManager,
-            parameters: key.parameters
-        });
-
-        uint256 amountOut = router.exactInput(
-            IBinSwapRouterBase.V4BinExactInputParams({
-                currencyIn: Currency.wrap(address(token0)),
-                path: path,
-                recipient: alice,
-                amountIn: 1 ether,
-                amountOutMinimum: 0
-            }),
-            block.timestamp + 60
-        );
-        assertEq(token1.balanceOf(alice), amountOut);
-
-        // check currency balance in vault
-        {
-            uint256 currency0Balance = vault.balanceOf(alice, Currency.wrap(address(token0)));
-            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
-        }
     }
 }

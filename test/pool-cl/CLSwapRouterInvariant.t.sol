@@ -54,7 +54,7 @@ contract CLSwapRouterHandler is Test {
         WETH weth = new WETH();
         vault = new Vault();
         poolManager = new CLPoolManager(vault, 3000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         token0 = new MockERC20("TestA", "A", 18);
         token1 = new MockERC20("TestB", "B", 18);
@@ -298,9 +298,11 @@ contract CLSwapRouterHandler is Test {
             abi.decode(entries[0].data, (int128, int128, uint160, uint128, int24, uint24, uint256));
 
         if (amount0 < 0) {
-            token1FeeAccrued += uint128(amount1) * 3000 / 1e6;
+            // amt0 < 0 means token0 is swapped in, so fee taken from token0
+            token0FeeAccrued += uint128(-amount0) * 3000 / 1e6;
         } else {
-            token0FeeAccrued += uint128(amount0) * 3000 / 1e6;
+            // else fee taken from token1
+            token1FeeAccrued += uint128(-amount1) * 3000 / 1e6;
         }
     }
 }
@@ -324,22 +326,21 @@ contract CLSwapRouterInvariant is Test {
     }
 
     /// @dev token minted should be either in vault or with alice
-    function invariant_AllTokensInVaultOrUser() public {
+    function invariant_AllTokensInVaultOrUser() public view {
         IVault vault = IVault(_handler.vault());
 
         // token0
-        uint256 token0BalInVault = vault.reservesOfVault(_handler.currency0());
+        uint256 token0BalInVault = _handler.token0().balanceOf(address(vault));
         uint256 token0WithAlice = _handler.token0().balanceOf(_handler.alice());
-        uint256 token0Reserve = vault.reservesOfPoolManager(_handler.poolManager(), _handler.currency0());
         assertEq(token0BalInVault + token0WithAlice, _handler.token0Minted());
 
         // token1
-        uint256 token1BalInVault = vault.reservesOfVault(_handler.currency1());
+        uint256 token1BalInVault = _handler.token1().balanceOf(address(vault));
         uint256 token1WithAlice = _handler.token1().balanceOf(_handler.alice());
         assertEq(token1BalInVault + token1WithAlice, _handler.token1Minted());
 
         // Native ETH case will have spare ETH in router
-        uint256 nativeTokenInVault = vault.reservesOfVault(CurrencyLibrary.NATIVE);
+        uint256 nativeTokenInVault = address(vault).balance;
         uint256 nativeTokenWithAlice = _handler.alice().balance;
         uint256 routerBalance = address(_handler.router()).balance;
         assertEq(nativeTokenInVault + nativeTokenWithAlice + routerBalance, _handler.nativeTokenMinted());

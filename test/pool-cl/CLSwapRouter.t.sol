@@ -42,7 +42,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
         WETH weth = new WETH();
         vault = new Vault();
         poolManager = new CLPoolManager(vault, 3000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         initializeTokens();
         vm.label(Currency.unwrap(currency0), "token0");
@@ -75,7 +75,12 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
 
         positionManager.modifyPosition(
             poolKey0,
-            ICLPoolManager.ModifyLiquidityParams({tickLower: 46053, tickUpper: 46055, liquidityDelta: 1e4 ether}),
+            ICLPoolManager.ModifyLiquidityParams({
+                tickLower: 46053,
+                tickUpper: 46055,
+                liquidityDelta: 1e4 ether,
+                salt: bytes32(0)
+            }),
             new bytes(0)
         );
 
@@ -95,7 +100,12 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
 
         positionManager.modifyPosition(
             poolKey1,
-            ICLPoolManager.ModifyLiquidityParams({tickLower: -5, tickUpper: 5, liquidityDelta: 1e5 ether}),
+            ICLPoolManager.ModifyLiquidityParams({
+                tickLower: -5,
+                tickUpper: 5,
+                liquidityDelta: 1e5 ether,
+                salt: bytes32(0)
+            }),
             new bytes(0)
         );
 
@@ -117,7 +127,12 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
 
         positionManager.modifyPosition{value: 25 ether}(
             poolKey2,
-            ICLPoolManager.ModifyLiquidityParams({tickLower: -5, tickUpper: 5, liquidityDelta: 1e5 ether}),
+            ICLPoolManager.ModifyLiquidityParams({
+                tickLower: -5,
+                tickUpper: 5,
+                liquidityDelta: 1e5 ether,
+                salt: bytes32(0)
+            }),
             new bytes(0)
         );
 
@@ -397,7 +412,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
         );
     }
 
-    function testExactInput_gas() external {
+    function testExactInput_gasX() external {
         ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
         path[0] = ISwapRouterBase.PathKey({
             intermediateCurrency: currency1,
@@ -687,40 +702,6 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
             block.timestamp + 100
         );
         snapEnd();
-    }
-
-    function testSettleAndMintRefund() external {
-        // transfer excess token to vault
-        uint256 excessTokenAmount = 1 ether;
-        address hacker = address(1);
-        MockERC20(Currency.unwrap(currency0)).mint(hacker, excessTokenAmount);
-        vm.startPrank(hacker);
-        MockERC20(Currency.unwrap(currency0)).transfer(address(vault), excessTokenAmount);
-        vm.stopPrank();
-
-        uint256 amountOut = router.exactInputSingle(
-            ICLSwapRouterBase.V4CLExactInputSingleParams({
-                poolKey: poolKey0,
-                zeroForOne: true,
-                recipient: makeAddr("recipient"),
-                amountIn: 0.01 ether,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0,
-                hookData: new bytes(0)
-            }),
-            block.timestamp + 100
-        );
-
-        uint256 received = IERC20(Currency.unwrap(currency1)).balanceOf(makeAddr("recipient"));
-        assertEq(received, amountOut);
-        // considering slippage and fee, tolerance is 1%
-        assertApproxEqAbs(amountOut, 1 ether, amountOut / 100);
-
-        // check currency balance in vault
-        {
-            uint256 currency0Balance = vault.balanceOf(address(this), currency0);
-            assertEq(currency0Balance, excessTokenAmount, "Unexpected currency0 balance in vault");
-        }
     }
 
     // allow refund of ETH
