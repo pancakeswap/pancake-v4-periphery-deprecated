@@ -60,7 +60,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         WETH weth = new WETH();
         vault = new Vault();
         poolManager = new BinPoolManager(IVault(address(vault)), 500000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         binFungiblePositionManager =
             new BinFungiblePositionManager(IVault(address(vault)), IBinPoolManager(address(poolManager)), address(weth));

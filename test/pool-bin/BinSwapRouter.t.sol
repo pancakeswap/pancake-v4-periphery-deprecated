@@ -58,7 +58,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         weth = new WETH();
         vault = new Vault();
         poolManager = new BinPoolManager(IVault(address(vault)), 500000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
         router = new BinSwapRouter(vault, poolManager, address(weth));
 
         binFungiblePositionManager =

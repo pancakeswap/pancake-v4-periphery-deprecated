@@ -48,7 +48,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     function setUp() public {
         vault = new Vault();
         poolManager = new CLPoolManager(vault, 3000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         initializeTokens();
 

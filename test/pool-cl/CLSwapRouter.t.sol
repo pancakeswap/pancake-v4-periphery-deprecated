@@ -42,7 +42,7 @@ contract CLSwapRouterTest is TokenFixture, Test, GasSnapshot {
         WETH weth = new WETH();
         vault = new Vault();
         poolManager = new CLPoolManager(vault, 3000);
-        vault.registerPoolManager(address(poolManager));
+        vault.registerApp(address(poolManager));
 
         initializeTokens();
         vm.label(Currency.unwrap(currency0), "token0");

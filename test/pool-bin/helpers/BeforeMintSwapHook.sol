@@ -50,7 +50,7 @@ contract BeforeMintSwapHook is BaseBinTestHook {
         returns (bytes4)
     {
         // Swap and verify activeId did change
-        if (vault.reservesOfPoolManager(binManager, key.currency1) > 1 ether) {
+        if (vault.reservesOfApp(address(binManager), key.currency1) > 1 ether) {
             (uint24 activeIdBeforeSwap,,) = binManager.getSlot0(key.toId());
 
             // swapForY for 1 ether
