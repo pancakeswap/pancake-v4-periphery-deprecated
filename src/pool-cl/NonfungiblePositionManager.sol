@@ -396,7 +396,7 @@ contract NonfungiblePositionManager is
         uint128 tokensOwed1 = nftPositionCache.tokensOwed1;
 
         if (nftPositionCache.liquidity > 0) {
-            resetAccumulatedFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper);
+            mintAccumulatedPositionFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper);
 
             // todo: about the salt
             CLPosition.Info memory poolManagerPositionInfo = poolManager.getPosition(
