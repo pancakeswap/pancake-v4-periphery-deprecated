@@ -44,32 +44,34 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         uint256 amount1Min;
     }
 
-    /// @dev Since in v4 `modifyLiquidity` accumulated fee are claimed and
-    // resynced by default, which can mixup with user's actual settlement
-    // for update liquidity, we claim the fee before further action to avoid this.
-    function resetAccumulatedFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper) internal {
+    /// @notice Claim accumulated fees from the position and mint them to the NFP contract
+    function mintAccumulatedPositionFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper) internal {
         CLPosition.Info memory poolManagerPositionInfo =
             poolManager.getPosition(poolKey.toId(), address(this), tickLower, tickUpper, SALT_0);
 
         if (poolManagerPositionInfo.liquidity > 0) {
-            // todo: can we avoid this resetAccumulatedFee call?
             (, BalanceDelta feeDelta) = poolManager.modifyLiquidity(
                 poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0, SALT_0), ""
             );
 
-            if (feeDelta.amount0() > 0) {
-                vault.mint(address(this), poolKey.currency0, uint256(int256(feeDelta.amount0())));
-            }
-
-            if (feeDelta.amount1() > 0) {
-                vault.mint(address(this), poolKey.currency1, uint256(int256(feeDelta.amount1())));
-            }
+            mintFeeDelta(poolKey, feeDelta);
         }
     }
 
-    function addLiquidity(AddLiquidityParams memory params) internal returns (uint128 liquidity, BalanceDelta delta) {
-        resetAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
+    /// @dev Mint accumulated fee to the contract so user can perform collect() at a later stage
+    function mintFeeDelta(PoolKey memory poolKey, BalanceDelta feeDelta) internal {
+        if (feeDelta.amount0() > 0) {
+            vault.mint(address(this), poolKey.currency0, uint256(int256(feeDelta.amount0())));
+        }
 
+        if (feeDelta.amount1() > 0) {
+            vault.mint(address(this), poolKey.currency1, uint256(int256(feeDelta.amount1())));
+        }
+    }
+
+    /// @return liquidity The amount of liquidity added to the position
+    /// @return delta The amount of token0 and token1 from liquidity additional. Does not include the fee accumulated in the position.
+    function addLiquidity(AddLiquidityParams memory params) internal returns (uint128 liquidity, BalanceDelta delta) {
         (uint160 sqrtPriceX96,,,) = poolManager.getSlot0(params.poolKey.toId());
         uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(params.tickLower);
         uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(params.tickUpper);
@@ -77,11 +79,16 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
             sqrtPriceX96, sqrtRatioAX96, sqrtRatioBX96, params.amount0Desired, params.amount1Desired
         );
 
-        (delta,) = poolManager.modifyLiquidity(
+        BalanceDelta feeDelta;
+        (delta, feeDelta) = poolManager.modifyLiquidity(
             params.poolKey,
             ICLPoolManager.ModifyLiquidityParams(params.tickLower, params.tickUpper, int256(uint256(liquidity)), SALT_0),
             ""
         );
+
+        /// @dev `delta` return value of modifyLiquidity is inclusive of fee. Mint the `feeDelta` to nfp contract so subtract from `delta`
+        delta = delta - feeDelta;
+        mintFeeDelta(params.poolKey, feeDelta);
 
         /// @dev amount0 & amount1 cant be positive here since LPing has been claimed
         if (
@@ -92,16 +99,20 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         }
     }
 
+    /// @return delta The amount of token0 and token1 from liquidity removal. Does not include the fee accumulated in the position.
     function removeLiquidity(RemoveLiquidityParams memory params) internal returns (BalanceDelta delta) {
-        resetAccumulatedFee(params.poolKey, params.tickLower, params.tickUpper);
-
-        (delta,) = poolManager.modifyLiquidity(
+        BalanceDelta feeDelta;
+        (delta, feeDelta) = poolManager.modifyLiquidity(
             params.poolKey,
             ICLPoolManager.ModifyLiquidityParams(
                 params.tickLower, params.tickUpper, -int256(uint256(params.liquidity)), SALT_0
             ),
             ""
         );
+
+        /// @dev `delta` return value of modifyLiquidity is inclusive of fee. Mint the `feeDelta` to nfp contract so subtract from `delta`
+        delta = delta - feeDelta;
+        mintFeeDelta(params.poolKey, feeDelta);
 
         /// @dev amount0 & amount1 must be positive here since LPing has been claimed
         if (
