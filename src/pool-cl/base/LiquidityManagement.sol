@@ -86,7 +86,7 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
             ""
         );
 
-        /// @dev `delta` return value of modifyLiquidity is inclusive of fee, we mint the fee to nfp contract so we need to subtract it from delta
+        /// @dev `delta` return value of modifyLiquidity is inclusive of fee. Mint the `feeDelta` to nfp contract so subtract from `delta`
         delta = delta - feeDelta;
         mintFeeDelta(params.poolKey, feeDelta);
 
@@ -110,7 +110,7 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
             ""
         );
 
-        /// @dev first return value of modifyLiquidity is inclusive of fee, we mint the fee to nfp contract so we need to subtract it from delta
+        /// @dev `delta` return value of modifyLiquidity is inclusive of fee. Mint the `feeDelta` to nfp contract so subtract from `delta`
         delta = delta - feeDelta;
         mintFeeDelta(params.poolKey, feeDelta);
 
