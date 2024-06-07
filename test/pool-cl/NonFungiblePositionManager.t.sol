@@ -92,6 +92,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 poolKey: key,
                 tickLower: 46053,
                 tickUpper: 46055,
+                salt: bytes32(0),
                 amount0Desired: 1 ether,
                 amount1Desired: 1 ether,
                 amount0Min: 0,
@@ -111,10 +112,15 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             // make the LPing balance of the position non-zero
             router.donate(key, 1 ether, 1 ether, "");
 
-            // mint another position in the same price range
+            // mint another position in the same price range but different recipient
             INonfungiblePositionManager.MintParams memory mintParams2 = mintParams;
             mintParams2.recipient = address(this);
             nonfungiblePoolManager.mint(mintParams2);
+
+            // mint another position in the same price range but different salt
+            INonfungiblePositionManager.MintParams memory mintParams3 = mintParams;
+            mintParams3.salt = bytes32(uint256(0xABCD));
+            nonfungiblePoolManager.mint(mintParams3);
         }
 
         {
@@ -130,7 +136,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
+                bytes32 salt
             ) = nonfungiblePoolManager.positions(1);
             assertEq(nonce, 0, "Unexpected nonce");
             assertEq(operator, address(0), "Unexpected operator");
@@ -144,6 +151,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
             assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
             assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
+            assertEq(salt, bytes32(0), "Unexpected salt");
             string memory expectTokenURI =
                 string.concat("https://nft.pancakeswap.com/v4/", block.chainid.toString(), "/1");
             string memory realTokenURI = nonfungiblePoolManager.tokenURI(1);
@@ -162,7 +170,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
+                bytes32 salt
             ) = nonfungiblePoolManager.positions(2);
             assertEq(nonce, 0, "Unexpected nonce");
             assertEq(operator, address(0), "Unexpected operator");
@@ -181,6 +190,46 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             );
             assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
             assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
+            assertEq(salt, bytes32(0), "Unexpected salt");
+        }
+
+        {
+            (
+                uint96 nonce,
+                address operator,
+                Currency _currency0,
+                Currency _currency1,
+                uint24 fee,
+                int24 tickLower,
+                int24 tickUpper,
+                uint128 liquidity,
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint128 tokensOwed0,
+                uint128 tokensOwed1,
+                bytes32 salt
+            ) = nonfungiblePoolManager.positions(3);
+            assertEq(nonce, 0, "Unexpected nonce");
+            assertEq(operator, address(0), "Unexpected operator");
+            assertEq(Currency.unwrap(_currency0), Currency.unwrap(currency0), "Unexpected currency0");
+            assertEq(Currency.unwrap(_currency1), Currency.unwrap(currency1), "Unexpected currency1");
+            assertEq(fee, 3000, "Unexpected fee");
+            assertEq(tickLower, 46053, "Unexpected tickLower");
+            assertEq(tickUpper, 46055, "Unexpected tickUpper");
+            assertEq(liquidity, 1991375027067913587988, "Unexpected liquidity");
+            assertEq(
+                feeGrowthInside0LastX128, 170878092923545294145335173946080448, "Unexpected feeGrowthInside0LastX128"
+            );
+            assertEq(
+                feeGrowthInside1LastX128, 170878092923545294145335173946080448, "Unexpected feeGrowthInside1LastX128"
+            );
+            assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
+            assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
+            assertEq(salt, bytes32(uint256(0xABCD)), "Unexpected salt");
+            string memory expectTokenURI =
+                string.concat("https://nft.pancakeswap.com/v4/", block.chainid.toString(), "/3");
+            string memory realTokenURI = nonfungiblePoolManager.tokenURI(3);
+            assertEq(expectTokenURI, realTokenURI, "Unexpected tokenURI");
         }
 
         // modifyPosition 0 to refresh position(1)'s LPing
@@ -209,7 +258,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(nonce, 0, "Unexpected nonce");
             assertEq(operator, address(0), "Unexpected operator");
@@ -247,7 +296,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(vault.balanceOf(address(nonfungiblePoolManager), currency1), 999999999999999999);
     }
 
-    function testMint() external {
+    function testMint(bytes32 salt) external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
             currency1: currency1,
@@ -285,6 +334,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 poolKey: key,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
+                salt: salt,
                 amount0Desired: amount0Desired,
                 amount1Desired: amount1Desired,
                 amount0Min: 0,
@@ -307,11 +357,12 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             assertEq(amount1, 2000000000000000000, "Actual consumed currency1 mismatch");
         }
 
-        // tick lower and tick upper
+        // tick lower and tick upper and salt
         {
-            (,,,,, int24 _tickLower, int24 _tickUpper,,,,,) = nonfungiblePoolManager.positions(1);
+            (,,,,, int24 _tickLower, int24 _tickUpper,,,,,, bytes32 _salt) = nonfungiblePoolManager.positions(1);
             assertEq(_tickLower, tickLower, "Unexpected tickLower");
             assertEq(_tickUpper, tickUpper, "Unexpected tickUpper");
+            assertEq(_salt, salt, "Unexpected salt");
         }
 
         // token id starts from 1
@@ -320,7 +371,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(liquidity, 3982750054135827175977, "Liquidity from mint and liquidity from raw calculation mismatch");
         assertEq(poolManager.getLiquidity(key.toId()), 3982750054135827175977, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, salt),
             3982750054135827175977,
             "Unexpected liquidity for current position"
         );
@@ -358,6 +409,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 poolKey: key,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
+                salt: bytes32(0),
                 amount0Desired: amount0Desired,
                 amount1Desired: amount1Desired,
                 amount0Min: 0,
@@ -385,6 +437,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -437,6 +490,29 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
 
         assertEq(nonfungiblePoolManager.ownerOf(tokenId), address(this), "Unexpected owner of the position");
+
+        // mint another position in the same price range but different salt
+        INonfungiblePositionManager.MintParams memory mintParams3 = mintParams;
+        mintParams3.salt = bytes32(uint256(0xABCD));
+        nonfungiblePoolManager.mint(mintParams3);
+
+        assertEq(
+            nonfungiblePoolManager.balanceOf(address(this)),
+            2,
+            "Unexpected balance of the position owner after mint again"
+        );
+
+        // make sure total liquidity is correct
+        assertEq(poolManager.getLiquidity(key.toId()), 3 * 1991375027067913587988, "Unexpected liquidity for the pool");
+
+        // make sure liquidity for each position is correct
+        assertEq(
+            poolManager.getLiquidity(
+                key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(uint256(0xABCD))
+            ),
+            1991375027067913587988,
+            "Unexpected liquidity for current position"
+        );
     }
 
     function testMint_slippage() external {
@@ -455,6 +531,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             // price 100, the rough ratio is 1:100
@@ -488,6 +565,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -550,7 +628,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -558,7 +636,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
         assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(2);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -568,7 +646,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
     }
 
-    function testIncreaseLiquidity() external {
+    function testIncreaseLiquidity(bytes32 salt) external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
             currency1: currency1,
@@ -584,6 +662,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: salt,
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -609,7 +688,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
             assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -658,7 +737,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, salt),
             1991375027067913587988 * 2,
             "Unexpected liquidity for current position"
         );
@@ -682,7 +761,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(_liquidity, 1991375027067913587988 * 2, "Unexpected liquidity");
             assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -708,6 +787,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -750,6 +830,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -775,7 +856,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
             assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -849,7 +930,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokensOwed0,
-                uint128 tokensOwed1
+                uint128 tokensOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(_liquidity, 1991375027067913587988 * 2, "Unexpected liquidity");
             assertEq(
@@ -879,6 +960,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -923,6 +1005,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -951,7 +1034,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
     }
 
-    function testDecreaseLiquidity() external {
+    function testDecreaseLiquidity(bytes32 salt) external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
             currency1: currency1,
@@ -967,6 +1050,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: salt,
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -991,7 +1075,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -1027,7 +1111,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         assertEq(poolManager.getLiquidity(key.toId()), 0, "Unexpected liquidity for the pool");
         assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, bytes32(0)),
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, salt),
             0,
             "Unexpected liquidity for current position"
         );
@@ -1037,7 +1121,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1061,6 +1145,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1102,6 +1187,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1143,6 +1229,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1185,6 +1272,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0 ether,
@@ -1227,6 +1315,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1250,7 +1339,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -1299,7 +1388,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1325,6 +1414,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1351,7 +1441,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         vm.expectEmit();
         emit Transfer(address(this), address(0), 1);
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,,, uint128 liquidity,,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 0, "Unexpected liquidity");
 
         nonfungiblePoolManager.burn(1);
@@ -1379,6 +1469,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1423,6 +1514,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1448,7 +1540,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,,, uint128 liquidity,,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 0, "Unexpected liquidity");
         nonfungiblePoolManager.burn(1);
 
@@ -1475,6 +1567,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1523,6 +1616,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1546,7 +1640,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,,, uint128 liquidity,,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 1, "Unexpected liquidity");
 
         vm.expectRevert(INonfungiblePositionManager.NonEmptyPosition.selector);
@@ -1569,6 +1663,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1595,7 +1690,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,,, uint128 liquidity,,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(liquidity, 0, "Unexpected liquidity");
 
         vm.expectRevert(INonfungiblePositionManager.NonEmptyPosition.selector);
@@ -1624,6 +1719,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1652,7 +1748,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -1697,7 +1793,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1724,6 +1820,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1751,7 +1848,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -1770,7 +1867,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, _liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,,, _liquidity,,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
 
         {
@@ -1804,7 +1901,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -1831,6 +1928,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1874,6 +1972,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1901,7 +2000,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -1936,6 +2035,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -1963,7 +2063,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -2007,7 +2107,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2034,6 +2134,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -2061,7 +2162,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -2102,7 +2203,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         );
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2126,6 +2227,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -2153,7 +2255,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
         ) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
@@ -2204,7 +2306,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             "Unexpected liquidity for current position"
         );
 
-        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1) =
+        (,,,,,,, _liquidity, feeGrowthInside0LastX128, feeGrowthInside1LastX128, tokensOwed0, tokensOwed1,) =
             nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 1991375027067913587988, "Unexpected liquidity");
         // after donation, the feeGrowthInside0LastX128 and feeGrowthInside1LastX128 should be synced
@@ -2228,6 +2330,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -2268,6 +2371,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             poolKey: key,
             tickLower: 46053,
             tickUpper: 46055,
+            salt: bytes32(0),
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
@@ -2299,7 +2403,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        (,,,,,,, uint128 _liquidity,,,,) = nonfungiblePoolManager.positions(1);
+        (,,,,,,, uint128 _liquidity,,,,,) = nonfungiblePoolManager.positions(1);
         assertEq(_liquidity, 0, "Unexpected liquidity");
     }
 
@@ -2324,6 +2428,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 poolKey: poolKey,
                 tickLower: 46053,
                 tickUpper: 46055,
+                salt: bytes32(0),
                 amount0Desired: 1 ether,
                 amount1Desired: 1 ether,
                 amount0Min: 0,
@@ -2390,7 +2495,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokenOwed0,
-                uint128 tokenOwed1
+                uint128 tokenOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(info.feeGrowthInside0LastX128, feeGrowthInside0LastX128, "Unexpected feeGrowthInside0LastX128");
             assertEq(info.feeGrowthInside1LastX128, feeGrowthInside1LastX128, "Unexpected feeGrowthInside1LastX128");
@@ -2431,7 +2536,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokenOwed0,
-                uint128 tokenOwed1
+                uint128 tokenOwed1,
             ) = nonfungiblePoolManager.positions(1);
             assertEq(info.feeGrowthInside0LastX128, feeGrowthInside0LastX128, "Unexpected feeGrowthInside0LastX128");
             assertEq(info.feeGrowthInside1LastX128, feeGrowthInside1LastX128, "Unexpected feeGrowthInside1LastX128");
@@ -2461,6 +2566,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 poolKey: poolKey,
                 tickLower: 46053,
                 tickUpper: 46055,
+                salt: bytes32(0),
                 amount0Desired: 1 ether,
                 amount1Desired: 1 ether,
                 amount0Min: 0,
@@ -2512,6 +2618,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 poolKey: poolKey,
                 tickLower: 46055,
                 tickUpper: 46058,
+                salt: bytes32(0),
                 amount0Desired: 1 ether,
                 amount1Desired: 1 ether,
                 amount0Min: 0,
@@ -2618,7 +2725,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 uint256 feeGrowthInside0LastX128,
                 uint256 feeGrowthInside1LastX128,
                 uint128 tokenOwed0,
-                uint128 tokenOwed1
+                uint128 tokenOwed1,
             ) = nonfungiblePoolManager.positions(2);
             assertEq(info.feeGrowthInside0LastX128, feeGrowthInside0LastX128, "Unexpected feeGrowthInside0LastX128");
             assertEq(info.feeGrowthInside1LastX128, feeGrowthInside1LastX128, "Unexpected feeGrowthInside1LastX128");

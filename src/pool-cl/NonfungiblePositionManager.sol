@@ -79,7 +79,8 @@ contract NonfungiblePositionManager is
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
+            bytes32 salt
         )
     {
         Position memory position = _positions[tokenId];
@@ -97,7 +98,8 @@ contract NonfungiblePositionManager is
             position.feeGrowthInside0LastX128,
             position.feeGrowthInside1LastX128,
             position.tokensOwed0,
-            position.tokensOwed1
+            position.tokensOwed1,
+            position.salt
         );
     }
 
@@ -224,6 +226,7 @@ contract NonfungiblePositionManager is
                 poolKey: params.poolKey,
                 tickLower: params.tickLower,
                 tickUpper: params.tickUpper,
+                salt: params.salt,
                 amount0Desired: params.amount0Desired,
                 amount1Desired: params.amount1Desired,
                 amount0Min: params.amount0Min,
@@ -234,9 +237,8 @@ contract NonfungiblePositionManager is
         uint256 tokenId = _nextId++;
         _mint(params.recipient, tokenId);
 
-        // todo: about the salt
         CLPosition.Info memory positionInfo = poolManager.getPosition(
-            params.poolKey.toId(), address(this), params.tickLower, params.tickUpper, bytes32(0)
+            params.poolKey.toId(), address(this), params.tickLower, params.tickUpper, params.salt
         );
         _positions[tokenId] = Position({
             nonce: 0,
@@ -248,7 +250,8 @@ contract NonfungiblePositionManager is
             feeGrowthInside0LastX128: positionInfo.feeGrowthInside0LastX128,
             feeGrowthInside1LastX128: positionInfo.feeGrowthInside1LastX128,
             tokensOwed0: 0,
-            tokensOwed1: 0
+            tokensOwed1: 0,
+            salt: params.salt
         });
         if (address(_poolIdToPoolKey[params.poolKey.toId()].poolManager) == address(0)) {
             _poolIdToPoolKey[params.poolKey.toId()] = params.poolKey;
@@ -263,16 +266,18 @@ contract NonfungiblePositionManager is
         IncreaseLiquidityParams memory params = abi.decode(data.params, (IncreaseLiquidityParams));
         Position storage nftPosition = _positions[params.tokenId];
         PoolId poolId = nftPosition.poolId;
-        PoolKey memory poolKey = _poolIdToPoolKey[poolId];
         uint128 existingLiquility = nftPosition.liquidity;
         int24 tickLower = nftPosition.tickLower;
         int24 tickUpper = nftPosition.tickUpper;
+        bytes32 salt = nftPosition.salt;
+        PoolKey memory poolKey = _poolIdToPoolKey[poolId];
 
         (uint128 liquidity, BalanceDelta delta) = addLiquidity(
             AddLiquidityParams({
                 poolKey: poolKey,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
+                salt: salt,
                 amount0Desired: params.amount0Desired,
                 amount1Desired: params.amount1Desired,
                 amount0Min: params.amount0Min,
@@ -280,9 +285,8 @@ contract NonfungiblePositionManager is
             })
         );
 
-        // todo: about the salt
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, bytes32(0));
+            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, salt);
 
         /// @dev This can be overflow in following cases:
         /// 1. feeGrowthInside0LastX128 is overflow
@@ -323,10 +327,11 @@ contract NonfungiblePositionManager is
         DecreaseLiquidityParams memory params = abi.decode(data.params, (DecreaseLiquidityParams));
         Position storage nftPosition = _positions[params.tokenId];
         PoolId poolId = nftPosition.poolId;
-        PoolKey memory poolKey = _poolIdToPoolKey[poolId];
         uint128 liquidity = nftPosition.liquidity;
         int24 tickLower = nftPosition.tickLower;
         int24 tickUpper = nftPosition.tickUpper;
+        bytes32 salt = nftPosition.salt;
+        PoolKey memory poolKey = _poolIdToPoolKey[poolId];
 
         if (liquidity < params.liquidity) {
             revert InvalidLiquidityDecreaseAmount();
@@ -339,13 +344,13 @@ contract NonfungiblePositionManager is
                 tickUpper: tickUpper,
                 liquidity: params.liquidity,
                 amount0Min: params.amount0Min,
-                amount1Min: params.amount1Min
+                amount1Min: params.amount1Min,
+                salt: salt
             })
         );
 
-        // todo: about the salt
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, bytes32(0));
+            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, salt);
 
         /// @dev This can be overflow in following cases:
         /// 1. feeGrowthInside0LastX128 is overflow
@@ -390,17 +395,17 @@ contract NonfungiblePositionManager is
         Position storage nftPosition = _positions[params.tokenId];
         Position memory nftPositionCache = _positions[params.tokenId];
         PoolId poolId = nftPositionCache.poolId;
+        bytes32 salt = nftPositionCache.salt;
         PoolKey memory poolKey = _poolIdToPoolKey[poolId];
 
         uint128 tokensOwed0 = nftPositionCache.tokensOwed0;
         uint128 tokensOwed1 = nftPositionCache.tokensOwed1;
 
         if (nftPositionCache.liquidity > 0) {
-            mintAccumulatedPositionFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper);
+            mintAccumulatedPositionFee(poolKey, nftPositionCache.tickLower, nftPositionCache.tickUpper, salt);
 
-            // todo: about the salt
             CLPosition.Info memory poolManagerPositionInfo = poolManager.getPosition(
-                poolId, address(this), nftPositionCache.tickLower, nftPositionCache.tickUpper, bytes32(0)
+                poolId, address(this), nftPositionCache.tickLower, nftPositionCache.tickUpper, salt
             );
 
             /// @dev This can be overflow in following cases:
