@@ -580,7 +580,8 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
     function testExactOutputSingle_AmountInMax() public {
         vm.startPrank(alice);
 
-        token0.mint(alice, 1 ether);
+        // Give alice > amountInMax so TooMuchRequestedError instead of TransferFromFailed
+        token0.mint(alice, 2 ether);
 
         vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
         router.exactOutputSingle(
