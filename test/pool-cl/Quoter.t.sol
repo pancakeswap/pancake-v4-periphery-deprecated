@@ -620,7 +620,8 @@ contract QuoterTest is Test, Deployers {
             ICLPoolManager.ModifyLiquidityParams({
                 tickLower: MIN_TICK,
                 tickUpper: MAX_TICK,
-                liquidityDelta: calculateLiquidityFromAmounts(SQRT_RATIO_1_1, MIN_TICK, MAX_TICK, 1000000, 1000000).toInt256(),
+                liquidityDelta: calculateLiquidityFromAmounts(SQRT_RATIO_1_1, MIN_TICK, MAX_TICK, 1000000, 1000000).toInt256(
+                ),
                 salt: bytes32(0)
             }),
             ZERO_BYTES
@@ -661,7 +662,15 @@ contract QuoterTest is Test, Deployers {
     {
         PathKey[] memory path = new PathKey[](_tokenPath.length - 1);
         for (uint256 i = 0; i < _tokenPath.length - 1; i++) {
-            path[i] = PathKey(Currency.wrap(address(_tokenPath[i + 1])), 3000, 60, IHooks(address(0)), ICLPoolManager(manager), bytes(""), bytes32(uint256(0x3c0000)));
+            path[i] = PathKey(
+                Currency.wrap(address(_tokenPath[i + 1])),
+                3000,
+                60,
+                IHooks(address(0)),
+                ICLPoolManager(manager),
+                bytes(""),
+                bytes32(uint256(0x3c0000))
+            );
         }
 
         params.exactCurrency = Currency.wrap(address(_tokenPath[0]));
@@ -677,7 +686,15 @@ contract QuoterTest is Test, Deployers {
     {
         PathKey[] memory path = new PathKey[](_tokenPath.length - 1);
         for (uint256 i = _tokenPath.length - 1; i > 0; i--) {
-            path[i - 1] = PathKey(Currency.wrap(address(_tokenPath[i - 1])), 3000, 60, IHooks(address(0)), ICLPoolManager(manager), bytes(""), bytes32(uint256(0x3c0000)));
+            path[i - 1] = PathKey(
+                Currency.wrap(address(_tokenPath[i - 1])),
+                3000,
+                60,
+                IHooks(address(0)),
+                ICLPoolManager(manager),
+                bytes(""),
+                bytes32(uint256(0x3c0000))
+            );
         }
 
         params.exactCurrency = Currency.wrap(address(_tokenPath[_tokenPath.length - 1]));

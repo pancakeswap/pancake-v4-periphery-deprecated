@@ -62,7 +62,7 @@ contract Quoter is IQuoter, ILockCallback {
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         public
         override
-    returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
+        returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
     {
         try vault.lock(abi.encodeWithSelector(this._quoteExactInputSingle.selector, params)) {}
         catch (bytes memory reason) {

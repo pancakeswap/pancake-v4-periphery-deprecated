@@ -18,13 +18,13 @@ library PoolGetters {
         view
         returns (int128 l)
     {
-//        bytes32 value = poolManager.extsload(
-//            keccak256(abi.encode(tick, uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + TICKS_OFFSET))
-//        );
-//
-//        assembly {
-//            l := shr(128, and(value, shl(128, sub(shl(128, 1), 1))))
-//        }
+        //        bytes32 value = poolManager.extsload(
+        //            keccak256(abi.encode(tick, uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + TICKS_OFFSET))
+        //        );
+        //
+        //        assembly {
+        //            l := shr(128, and(value, shl(128, sub(shl(128, 1), 1))))
+        //        }
     }
 
     function getTickBitmapAtWord(IPoolManager poolManager, PoolId poolId, int16 word)
@@ -32,11 +32,11 @@ library PoolGetters {
         view
         returns (uint256 bm)
     {
-//        bm = uint256(
-//            poolManager.extsload(
-//                keccak256(abi.encode(word, uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + TICK_BITMAP_OFFSET))
-//            )
-//        );
+        //        bm = uint256(
+        //            poolManager.extsload(
+        //                keccak256(abi.encode(word, uint256(keccak256(abi.encode(poolId, POOL_SLOT))) + TICK_BITMAP_OFFSET))
+        //            )
+        //        );
     }
 
     /// @notice Returns the next initialized tick contained in the same word (or adjacent word) as the tick that is either
@@ -54,38 +54,38 @@ library PoolGetters {
         int24 tickSpacing,
         bool lte
     ) internal view returns (int24 next, bool initialized) {
-//        unchecked {
-//            int24 compressed = tick / tickSpacing;
-//            if (tick < 0 && tick % tickSpacing != 0) compressed--; // round towards negative infinity
-//
-//            if (lte) {
-//                (int16 wordPos, uint8 bitPos) = position(compressed);
-//                // all the 1s at or to the right of the current bitPos
-//                uint256 mask = (1 << bitPos) - 1 + (1 << bitPos);
-//                // uint256 masked = self[wordPos] & mask;
-//                uint256 masked = poolManager.getPoolBitmapInfo(poolId, wordPos) & mask;
-//
-//                // if there are no initialized ticks to the right of or at the current tick, return rightmost in the word
-//                initialized = masked != 0;
-//                // overflow/underflow is possible, but prevented externally by limiting both tickSpacing and tick
-//                next = initialized
-//                    ? (compressed - int24(uint24(bitPos - BitMath.mostSignificantBit(masked)))) * tickSpacing
-//                    : (compressed - int24(uint24(bitPos))) * tickSpacing;
-//            } else {
-//                // start from the word of the next tick, since the current tick state doesn't matter
-//                (int16 wordPos, uint8 bitPos) = position(compressed + 1);
-//                // all the 1s at or to the left of the bitPos
-//                uint256 mask = ~((1 << bitPos) - 1);
-//                uint256 masked = poolManager.getPoolBitmapInfo(poolId, wordPos) & mask;
-//
-//                // if there are no initialized ticks to the left of the current tick, return leftmost in the word
-//                initialized = masked != 0;
-//                // overflow/underflow is possible, but prevented externally by limiting both tickSpacing and tick
-//                next = initialized
-//                    ? (compressed + 1 + int24(uint24(BitMath.leastSignificantBit(masked) - bitPos))) * tickSpacing
-//                    : (compressed + 1 + int24(uint24(type(uint8).max - bitPos))) * tickSpacing;
-//            }
-//        }
+        //        unchecked {
+        //            int24 compressed = tick / tickSpacing;
+        //            if (tick < 0 && tick % tickSpacing != 0) compressed--; // round towards negative infinity
+        //
+        //            if (lte) {
+        //                (int16 wordPos, uint8 bitPos) = position(compressed);
+        //                // all the 1s at or to the right of the current bitPos
+        //                uint256 mask = (1 << bitPos) - 1 + (1 << bitPos);
+        //                // uint256 masked = self[wordPos] & mask;
+        //                uint256 masked = poolManager.getPoolBitmapInfo(poolId, wordPos) & mask;
+        //
+        //                // if there are no initialized ticks to the right of or at the current tick, return rightmost in the word
+        //                initialized = masked != 0;
+        //                // overflow/underflow is possible, but prevented externally by limiting both tickSpacing and tick
+        //                next = initialized
+        //                    ? (compressed - int24(uint24(bitPos - BitMath.mostSignificantBit(masked)))) * tickSpacing
+        //                    : (compressed - int24(uint24(bitPos))) * tickSpacing;
+        //            } else {
+        //                // start from the word of the next tick, since the current tick state doesn't matter
+        //                (int16 wordPos, uint8 bitPos) = position(compressed + 1);
+        //                // all the 1s at or to the left of the bitPos
+        //                uint256 mask = ~((1 << bitPos) - 1);
+        //                uint256 masked = poolManager.getPoolBitmapInfo(poolId, wordPos) & mask;
+        //
+        //                // if there are no initialized ticks to the left of the current tick, return leftmost in the word
+        //                initialized = masked != 0;
+        //                // overflow/underflow is possible, but prevented externally by limiting both tickSpacing and tick
+        //                next = initialized
+        //                    ? (compressed + 1 + int24(uint24(BitMath.leastSignificantBit(masked) - bitPos))) * tickSpacing
+        //                    : (compressed + 1 + int24(uint24(type(uint8).max - bitPos))) * tickSpacing;
+        //            }
+        //        }
     }
 
     /// @notice Computes the position in the mapping where the initialized bit for a tick lives
