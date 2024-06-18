@@ -87,6 +87,7 @@ interface INonfungiblePositionManager is
         // how many uncollected tokens are owed to the position, as of the last computation
         uint128 tokensOwed0;
         uint128 tokensOwed1;
+        bytes32 salt;
     }
 
     /// @notice Returns the position information associated with a given token ID.
@@ -105,7 +106,8 @@ interface INonfungiblePositionManager is
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1
+            uint128 tokensOwed1,
+            bytes32 salt
         );
 
     /// @notice Initialize the pool state for a given pool ID.
@@ -123,6 +125,7 @@ interface INonfungiblePositionManager is
         PoolKey poolKey;
         int24 tickLower;
         int24 tickUpper;
+        bytes32 salt;
         uint256 amount0Desired;
         uint256 amount1Desired;
         uint256 amount0Min;

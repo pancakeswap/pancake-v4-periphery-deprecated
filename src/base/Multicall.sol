@@ -16,7 +16,7 @@ abstract contract Multicall is IMulticall {
             if (!success) {
                 // Next 5 lines from https://ethereum.stackexchange.com/a/83577
                 if (result.length < 68) revert();
-                assembly {
+                assembly ("memory-safe") {
                     result := add(result, 0x04)
                 }
                 revert(abi.decode(result, (string)));

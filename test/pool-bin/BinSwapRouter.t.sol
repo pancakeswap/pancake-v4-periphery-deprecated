@@ -189,6 +189,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, 0 ether);
         assertEq(token0.balanceOf(alice), amountOut);
     }
@@ -244,6 +245,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, amountOut);
         assertEq(token0.balanceOf(alice), 0 ether);
     }
@@ -298,6 +300,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        assertEq(amountOut, 997000000000000000);
         if (swapForY) {
             assertEq(token0.balanceOf(alice), 0 ether);
             assertEq(token1.balanceOf(alice), amountOut);
@@ -525,6 +528,7 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        assertEq(amountIn, 501504513540621866);
         if (swapForY) {
             assertEq(token0.balanceOf(alice), 1 ether - amountIn);
             assertEq(token1.balanceOf(alice), 0.5 ether);
@@ -580,7 +584,8 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
     function testExactOutputSingle_AmountInMax() public {
         vm.startPrank(alice);
 
-        token0.mint(alice, 1 ether);
+        // Give alice > amountInMax so TooMuchRequestedError instead of TransferFromFailed
+        token0.mint(alice, 2 ether);
 
         vm.expectRevert(abi.encodeWithSelector(ISwapRouterBase.TooMuchRequested.selector));
         router.exactOutputSingle(

@@ -7,11 +7,13 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {IBinPoolManager} from "pancake-v4-core/src/pool-bin/interfaces/IBinPoolManager.sol";
 import {Currency, CurrencyLibrary} from "pancake-v4-core/src/types/Currency.sol";
 import {IBinPoolManager} from "pancake-v4-core/src/pool-bin/interfaces/IBinPoolManager.sol";
+import {SafeCast} from "pancake-v4-core/src/pool-bin/libraries/math/SafeCast.sol";
 import {SwapRouterBase} from "../SwapRouterBase.sol";
 import {IBinSwapRouterBase} from "./interfaces/IBinSwapRouterBase.sol";
 
 abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
     using CurrencyLibrary for Currency;
+    using SafeCast for uint128;
 
     IBinPoolManager public immutable binPoolManager;
 
@@ -30,7 +32,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
                 params.swapForY,
                 settlementParams.payer,
                 params.recipient,
-                params.amountIn,
+                -(params.amountIn.safeInt128()),
                 settlementParams.settle,
                 settlementParams.take,
                 params.hookData
@@ -55,7 +57,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         V4BinExactInputState memory state;
         state.pathLength = params.path.length;
 
-        for (uint256 i = 0; i < state.pathLength;) {
+        for (uint256 i = 0; i < state.pathLength; i++) {
             (state.poolKey, state.swapForY) = _getPoolAndSwapDirection(params.path[i], params.currencyIn);
 
             state.amountOut = _swapExactPrivate(
@@ -63,7 +65,7 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
                 state.swapForY,
                 settlementParams.payer,
                 params.recipient,
-                params.amountIn,
+                -(params.amountIn.safeInt128()),
                 i == 0 && settlementParams.settle, // only settle at first iteration AND settle = true
                 i == state.pathLength - 1 && settlementParams.take, // only take at last iteration AND take = true
                 params.path[i].hookData
@@ -71,10 +73,6 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
 
             params.amountIn = state.amountOut;
             params.currencyIn = params.path[i].intermediateCurrency;
-
-            unchecked {
-                ++i;
-            }
         }
 
         if (state.amountOut < params.amountOutMinimum) revert TooLittleReceived();
@@ -86,24 +84,20 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         V4BinExactOutputSingleParams memory params,
         V4SettlementParams memory settlementParams
     ) internal returns (uint256 amountIn) {
-        (uint128 amtIn,,) = binPoolManager.getSwapIn(params.poolKey, params.swapForY, params.amountOut);
-
-        if (amtIn > params.amountInMaximum) revert TooMuchRequested();
-
-        uint128 amountOutReal = _swapExactPrivate(
-            params.poolKey,
-            params.swapForY,
-            settlementParams.payer,
-            params.recipient,
-            amtIn,
-            settlementParams.settle,
-            settlementParams.take,
-            params.hookData
+        amountIn = uint256(
+            _swapExactPrivate(
+                params.poolKey,
+                params.swapForY,
+                settlementParams.payer,
+                params.recipient,
+                params.amountOut.safeInt128(),
+                settlementParams.settle,
+                settlementParams.take,
+                params.hookData
+            )
         );
 
-        if (amountOutReal < params.amountOut) revert TooLittleReceived();
-
-        amountIn = uint256(amtIn);
+        if (amountIn > params.amountInMaximum) revert TooMuchRequested();
     }
 
     struct V4BinExactOutputState {
@@ -111,7 +105,6 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         PoolKey poolKey;
         bool swapForY;
         uint128 amountIn;
-        uint128 amountOut;
     }
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
@@ -126,24 +119,17 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         for (uint256 i = state.pathLength; i > 0;) {
             // Step 1: Find out poolKey and how much amountIn required to get amountOut
             (state.poolKey, state.swapForY) = _getPoolAndSwapDirection(params.path[i - 1], params.currencyOut);
-            (state.amountIn,,) = binPoolManager.getSwapIn(state.poolKey, state.swapForY, params.amountOut);
 
-            // Step 2: Perform the swap, will revert if user do not give approval or not enough amountIn balance
-            state.amountOut = _swapExactPrivate(
+            state.amountIn = _swapExactPrivate(
                 state.poolKey,
                 !state.swapForY,
                 settlementParams.payer,
                 params.recipient,
-                state.amountIn,
+                params.amountOut.safeInt128(),
                 i == 1 && settlementParams.settle, // only settle at first swap AND settle = true
                 i == state.pathLength && settlementParams.take, // only take at last iteration AND take = true
                 params.path[i - 1].hookData
             );
-
-            /// @dev only check amountOut for the last path since thats what the user cares
-            if (i == state.pathLength) {
-                if (state.amountOut < params.amountOut) revert TooLittleReceived();
-            }
 
             params.amountOut = state.amountIn;
             params.currencyOut = params.path[i - 1].intermediateCurrency;
@@ -162,21 +148,30 @@ abstract contract BinSwapRouterBase is SwapRouterBase, IBinSwapRouterBase {
         bool swapForY,
         address payer,
         address recipient,
-        uint128 amountIn,
+        int128 amountSpecified,
         bool settle,
         bool take,
         bytes memory hookData
-    ) private returns (uint128 amountOut) {
-        BalanceDelta delta = binPoolManager.swap(poolKey, swapForY, amountIn, hookData);
+    ) private returns (uint128 reciprocalAmount) {
+        BalanceDelta delta = binPoolManager.swap(poolKey, swapForY, amountSpecified, hookData);
 
         if (swapForY) {
+            /// @dev amountSpecified < 0 indicate exactInput, so reciprocal token is token1 and positive
+            ///      amountSpecified > 0 indicate exactOutput, so reciprocal token is token0 but is negative
+            unchecked {
+                /// unchecked as we are sure that the amount is within uint128
+                reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount1()) : uint128(-delta.amount0());
+            }
+
             if (settle) _payAndSettle(poolKey.currency0, payer, -delta.amount0());
             if (take) vault.take(poolKey.currency1, recipient, uint128(delta.amount1()));
         } else {
+            unchecked {
+                reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount0()) : uint128(-delta.amount1());
+            }
+
             if (settle) _payAndSettle(poolKey.currency1, payer, -delta.amount1());
             if (take) vault.take(poolKey.currency0, recipient, uint128(delta.amount0()));
         }
-
-        amountOut = swapForY ? uint128(delta.amount1()) : uint128(delta.amount0());
     }
 }
