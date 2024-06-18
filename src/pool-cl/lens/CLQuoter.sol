@@ -11,11 +11,11 @@ import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {PoolIdLibrary} from "pancake-v4-core/src/types/PoolId.sol";
-import {IQuoter} from "../interfaces/IQuoter.sol";
+import {ICLQuoter} from "../interfaces/ICLQuoter.sol";
 import {PoolTicksCounter} from "../libraries/PoolTicksCounter.sol";
 import {PathKey, PathKeyLib} from "../libraries/PathKey.sol";
 
-contract Quoter is IQuoter, ILockCallback {
+contract CLQuoter is ICLQuoter, ILockCallback {
     using Hooks for IHooks;
     using PoolIdLibrary for PoolKey;
     using PathKeyLib for PathKey;
@@ -58,7 +58,7 @@ contract Quoter is IQuoter, ILockCallback {
         manager = ICLPoolManager(_poolManager);
     }
 
-    /// @inheritdoc IQuoter
+    /// @inheritdoc ICLQuoter
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
         public
         override
@@ -70,7 +70,7 @@ contract Quoter is IQuoter, ILockCallback {
         }
     }
 
-    /// @inheritdoc IQuoter
+    /// @inheritdoc ICLQuoter
     function quoteExactInput(QuoteExactParams memory params)
         external
         returns (
@@ -85,7 +85,7 @@ contract Quoter is IQuoter, ILockCallback {
         }
     }
 
-    /// @inheritdoc IQuoter
+    /// @inheritdoc ICLQuoter
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
         public
         override
@@ -98,7 +98,7 @@ contract Quoter is IQuoter, ILockCallback {
         }
     }
 
-    /// @inheritdoc IQuoter
+    /// @inheritdoc ICLQuoter
     function quoteExactOutput(QuoteExactParams memory params)
         public
         override
@@ -125,7 +125,7 @@ contract Quoter is IQuoter, ILockCallback {
         if (returnData.length == 0) revert LockFailure();
         // if the call failed, bubble up the reason
         /// @solidity memory-safe-assembly
-        assembly {
+        assembly ("memory-safe") {
             revert(add(returnData, 32), mload(returnData))
         }
     }
@@ -201,7 +201,7 @@ contract Quoter is IQuoter, ILockCallback {
         }
         bytes memory r =
             abi.encode(result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
-        assembly {
+        assembly ("memory-safe") {
             revert(add(0x20, r), mload(r))
         }
     }
@@ -226,7 +226,7 @@ contract Quoter is IQuoter, ILockCallback {
         uint32 initializedTicksLoaded =
             PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
         bytes memory result = abi.encode(deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
-        assembly {
+        assembly ("memory-safe") {
             revert(add(0x20, result), mload(result))
         }
     }
@@ -272,7 +272,7 @@ contract Quoter is IQuoter, ILockCallback {
         }
         bytes memory r =
             abi.encode(result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
-        assembly {
+        assembly ("memory-safe") {
             revert(add(0x20, r), mload(r))
         }
     }
@@ -300,13 +300,13 @@ contract Quoter is IQuoter, ILockCallback {
         uint32 initializedTicksLoaded =
             PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
         bytes memory result = abi.encode(deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
-        assembly {
+        assembly ("memory-safe") {
             revert(add(0x20, result), mload(result))
         }
     }
 
     /// @dev Execute a swap and return the amounts delta, as well as relevant pool state
-    /// @notice if amountSpecified > 0, the swap is exactInput, otherwise exactOutput
+    /// @notice if amountSpecified < 0, the swap is exactInput, otherwise exactOutput
     function _swap(
         PoolKey memory poolKey,
         bool zeroForOne,

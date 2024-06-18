@@ -5,15 +5,13 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {PathKey} from "../libraries/PathKey.sol";
 
-/// @title Quoter Interface
+/// @title CLQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
 /// @notice For each pool also tells you the number of initialized ticks loaded and the sqrt price of the pool after the swap.
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
-interface IQuoter {
+interface ICLQuoter {
     error InvalidLockAcquiredSender();
-    error InvalidLockCaller();
-    error InvalidQuoteBatchParams();
     error InsufficientAmountOut();
     error LockFailure();
     error NotSelf();
