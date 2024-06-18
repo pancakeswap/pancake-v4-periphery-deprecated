@@ -18,6 +18,7 @@ import {BinFungibleToken} from "./BinFungibleToken.sol";
 import {IBinFungiblePositionManager} from "./interfaces/IBinFungiblePositionManager.sol";
 import {PeripheryPayments} from "../base/PeripheryPayments.sol";
 import {PeripheryValidation} from "../base/PeripheryValidation.sol";
+import {Multicall} from "../base/Multicall.sol";
 import {PeripheryImmutableState} from "../base/PeripheryImmutableState.sol";
 import {BinTokenLibrary} from "./libraries/BinTokenLibrary.sol";
 
@@ -26,7 +27,8 @@ contract BinFungiblePositionManager is
     IBinFungiblePositionManager,
     BinFungibleToken,
     PeripheryPayments,
-    PeripheryValidation
+    PeripheryValidation,
+    Multicall
 {
     using CurrencyLibrary for Currency;
     using PackedUint128Math for bytes32;

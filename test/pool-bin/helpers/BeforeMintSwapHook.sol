@@ -22,7 +22,7 @@ contract BeforeMintSwapHook is BaseBinTestHook {
     struct BeforeMintCallbackData {
         PoolKey key;
         bool swapForY;
-        uint128 amountIn;
+        int128 amountSpecified;
     }
 
     uint16 bitmap;
@@ -53,8 +53,8 @@ contract BeforeMintSwapHook is BaseBinTestHook {
         if (vault.reservesOfApp(address(binManager), key.currency1) > 1 ether) {
             (uint24 activeIdBeforeSwap,,) = binManager.getSlot0(key.toId());
 
-            // swapForY for 1 ether
-            _swap(BeforeMintCallbackData(key, true, 1 ether));
+            // swapForY, exactInput 1 ether
+            _swap(BeforeMintCallbackData(key, true, -1 ether));
 
             (uint24 activeIdAfterSwap,,) = binManager.getSlot0(key.toId());
 
@@ -66,7 +66,7 @@ contract BeforeMintSwapHook is BaseBinTestHook {
     }
 
     function _swap(BeforeMintCallbackData memory data) internal returns (bytes memory) {
-        BalanceDelta delta = binManager.swap(data.key, data.swapForY, data.amountIn, new bytes(0));
+        BalanceDelta delta = binManager.swap(data.key, data.swapForY, data.amountSpecified, new bytes(0));
 
         PoolKey memory poolKey = data.key;
         if (data.swapForY) {
