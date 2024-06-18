@@ -264,6 +264,7 @@ contract CLSwapRouterHandler is Test {
             poolKey: pk,
             tickLower: -10,
             tickUpper: 10,
+            salt: bytes32(0),
             amount0Desired: amt,
             amount1Desired: amt,
             amount0Min: 0,

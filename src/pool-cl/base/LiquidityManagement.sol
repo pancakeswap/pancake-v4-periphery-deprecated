@@ -20,15 +20,13 @@ import {LiquidityAmounts} from "../libraries/LiquidityAmounts.sol";
 abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPayments {
     using PoolIdLibrary for PoolKey;
 
-    // todo: think if salt require non zero byte
-    bytes32 constant SALT_0 = bytes32(0);
-
     error PriceSlippageCheckFailed();
 
     struct AddLiquidityParams {
         PoolKey poolKey;
         int24 tickLower;
         int24 tickUpper;
+        bytes32 salt;
         uint256 amount0Desired;
         uint256 amount1Desired;
         uint256 amount0Min;
@@ -42,16 +40,19 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         uint128 liquidity;
         uint256 amount0Min;
         uint256 amount1Min;
+        bytes32 salt;
     }
 
     /// @notice Claim accumulated fees from the position and mint them to the NFP contract
-    function mintAccumulatedPositionFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper) internal {
+    function mintAccumulatedPositionFee(PoolKey memory poolKey, int24 tickLower, int24 tickUpper, bytes32 salt)
+        internal
+    {
         CLPosition.Info memory poolManagerPositionInfo =
-            poolManager.getPosition(poolKey.toId(), address(this), tickLower, tickUpper, SALT_0);
+            poolManager.getPosition(poolKey.toId(), address(this), tickLower, tickUpper, salt);
 
         if (poolManagerPositionInfo.liquidity > 0) {
             (, BalanceDelta feeDelta) = poolManager.modifyLiquidity(
-                poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0, SALT_0), ""
+                poolKey, ICLPoolManager.ModifyLiquidityParams(tickLower, tickUpper, 0, salt), ""
             );
 
             mintFeeDelta(poolKey, feeDelta);
@@ -82,7 +83,9 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         BalanceDelta feeDelta;
         (delta, feeDelta) = poolManager.modifyLiquidity(
             params.poolKey,
-            ICLPoolManager.ModifyLiquidityParams(params.tickLower, params.tickUpper, int256(uint256(liquidity)), SALT_0),
+            ICLPoolManager.ModifyLiquidityParams(
+                params.tickLower, params.tickUpper, int256(uint256(liquidity)), params.salt
+            ),
             ""
         );
 
@@ -105,7 +108,7 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         (delta, feeDelta) = poolManager.modifyLiquidity(
             params.poolKey,
             ICLPoolManager.ModifyLiquidityParams(
-                params.tickLower, params.tickUpper, -int256(uint256(params.liquidity)), SALT_0
+                params.tickLower, params.tickUpper, -int256(uint256(params.liquidity)), params.salt
             ),
             ""
         );

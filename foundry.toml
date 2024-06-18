@@ -3,12 +3,12 @@ src = 'src'
 out = 'foundry-out'
 solc_version = '0.8.26'
 optimizer_runs = 400
-via_ir = false
+via_ir = true
 ffi = true
 fs_permissions = [
     { access = "read-write", path = ".forge-snapshots/" },
     { access = "read", path = "./foundry-out" },
-    { access = "read", path = "./script/config"},
+    { access = "read", path = "./script/config" },
 ]
 evm_version = 'cancun'
 
