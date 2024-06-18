@@ -162,12 +162,18 @@ abstract contract CLSwapRouterBase is SwapRouterBase, ICLSwapRouterBase {
         if (zeroForOne) {
             /// @dev amountSpecified < 0 indicate exactInput, so reciprocal token is token1 and positive
             ///      amountSpecified > 0 indicate exactOutput, so reciprocal token is token0 but is negative
-            reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount1()) : uint128(-delta.amount0());
+            unchecked {
+                /// unchecked as we are sure that the amount is within uint128
+                reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount1()) : uint128(-delta.amount0());
+            }
 
             if (settle) _payAndSettle(poolKey.currency0, payer, -delta.amount0());
             if (take) vault.take(poolKey.currency1, recipient, uint128(delta.amount1()));
         } else {
-            reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount0()) : uint128(-delta.amount1());
+            unchecked {
+                /// unchecked as we are sure that the amount is within uint128
+                reciprocalAmount = amountSpecified < 0 ? uint128(delta.amount0()) : uint128(-delta.amount1());
+            }
 
             if (settle) _payAndSettle(poolKey.currency1, payer, -delta.amount1());
             if (take) vault.take(poolKey.currency0, recipient, uint128(delta.amount0()));
