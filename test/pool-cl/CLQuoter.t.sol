@@ -97,7 +97,6 @@ contract CLQuoterTest is Test, Deployers {
             ICLQuoter.QuoteExactSingleParams({
                 poolKey: key02,
                 zeroForOne: true,
-                recipient: address(this),
                 exactAmount: uint128(amountIn),
                 sqrtPriceLimitX96: 0,
                 hookData: ZERO_BYTES
@@ -119,7 +118,6 @@ contract CLQuoterTest is Test, Deployers {
             ICLQuoter.QuoteExactSingleParams({
                 poolKey: key02,
                 zeroForOne: false,
-                recipient: address(this),
                 exactAmount: uint128(amountIn),
                 sqrtPriceLimitX96: 0,
                 hookData: ZERO_BYTES
@@ -335,7 +333,6 @@ contract CLQuoterTest is Test, Deployers {
             ICLQuoter.QuoteExactSingleParams({
                 poolKey: key01,
                 zeroForOne: true,
-                recipient: address(this),
                 exactAmount: type(uint128).max,
                 sqrtPriceLimitX96: SQRT_RATIO_100_102,
                 hookData: ZERO_BYTES
@@ -353,7 +350,6 @@ contract CLQuoterTest is Test, Deployers {
             ICLQuoter.QuoteExactSingleParams({
                 poolKey: key01,
                 zeroForOne: false,
-                recipient: address(this),
                 exactAmount: type(uint128).max,
                 sqrtPriceLimitX96: SQRT_RATIO_102_100,
                 hookData: ZERO_BYTES

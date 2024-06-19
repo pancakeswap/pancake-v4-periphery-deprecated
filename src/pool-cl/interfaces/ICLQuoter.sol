@@ -25,7 +25,6 @@ interface ICLQuoter {
     struct QuoteExactSingleParams {
         PoolKey poolKey;
         bool zeroForOne;
-        address recipient;
         uint128 exactAmount;
         uint160 sqrtPriceLimitX96;
         bytes hookData;
