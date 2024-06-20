@@ -40,7 +40,6 @@ contract CLQuoterTest is Test, Deployers {
 
     IVault public vault;
     CLPoolManager public manager;
-    CLPoolManagerRouter public router;
     ProtocolFeeControllerTest public feeController;
 
     CLQuoter quoter;
@@ -59,7 +58,6 @@ contract CLQuoterTest is Test, Deployers {
 
     function setUp() public {
         (vault, manager) = createFreshManager();
-        router = new CLPoolManagerRouter(vault, manager);
         feeController = new ProtocolFeeControllerTest();
         manager.setProtocolFeeController(IProtocolFeeController(address(feeController)));
         quoter = new CLQuoter(vault, address(manager));
@@ -87,7 +85,7 @@ contract CLQuoterTest is Test, Deployers {
         setupPoolMultiplePositions(key02);
     }
 
-    function testQuoter_quoteExactInputSingle_ZeroForOne_MultiplePositions() public {
+    function testCLQuoter_quoteExactInputSingle_ZeroForOne_MultiplePositions() public {
         uint256 amountIn = 10000;
         uint256 expectedAmountOut = 9871;
         uint160 expectedSqrtPriceX96After = 78461846509168490764501028180;
@@ -108,7 +106,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoaded, 2);
     }
 
-    function testQuoter_quoteExactInputSingle_OneForZero_MultiplePositions() public {
+    function testCLQuoter_quoteExactInputSingle_OneForZero_MultiplePositions() public {
         uint256 amountIn = 10000;
         uint256 expectedAmountOut = 9871;
         uint160 expectedSqrtPriceX96After = 80001962924147897865541384515;
@@ -130,13 +128,13 @@ contract CLQuoterTest is Test, Deployers {
     }
 
     // nested self-call into lockAcquired reverts
-    function testQuoter_callLockAcquired_reverts() public {
+    function testCLQuoter_callLockAcquired_reverts() public {
         vm.expectRevert(ICLQuoter.LockFailure.selector);
         vm.prank(address(vault));
         quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, address(this), "0x"));
     }
 
-    function testQuoter_quoteExactInput_0to2_2TicksLoaded() public {
+    function testCLQuoter_quoteExactInput_0to2_2TicksLoaded() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
         ICLQuoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
@@ -152,7 +150,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 2);
     }
 
-    function testQuoter_quoteExactInput_0to2_2TicksLoaded_initialiedAfter() public {
+    function testCLQuoter_quoteExactInput_0to2_2TicksLoaded_initialiedAfter() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
@@ -171,7 +169,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactInput_0to2_1TickLoaded() public {
+    function testCLQuoter_quoteExactInput_0to2_1TickLoaded() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
@@ -190,7 +188,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactInput_0to2_0TickLoaded_startingNotInitialized() public {
+    function testCLQuoter_quoteExactInput_0to2_0TickLoaded_startingNotInitialized() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
         ICLQuoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10);
@@ -206,7 +204,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 0);
     }
 
-    function testQuoter_quoteExactInput_0to2_0TickLoaded_startingInitialized() public {
+    function testCLQuoter_quoteExactInput_0to2_0TickLoaded_startingInitialized() public {
         setupPoolWithZeroTickInitialized(key02);
         tokenPath.push(token0);
         tokenPath.push(token2);
@@ -223,7 +221,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactInput_2to0_2TicksLoaded() public {
+    function testCLQuoter_quoteExactInput_2to0_2TicksLoaded() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
         ICLQuoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
@@ -239,7 +237,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 2);
     }
 
-    function testQuoter_quoteExactInput_2to0_2TicksLoaded_initialiedAfter() public {
+    function testCLQuoter_quoteExactInput_2to0_2TicksLoaded_initialiedAfter() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
 
@@ -258,7 +256,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 2);
     }
 
-    function testQuoter_quoteExactInput_2to0_0TickLoaded_startingInitialized() public {
+    function testCLQuoter_quoteExactInput_2to0_0TickLoaded_startingInitialized() public {
         setupPoolWithZeroTickInitialized(key02);
         tokenPath.push(token2);
         tokenPath.push(token0);
@@ -277,7 +275,7 @@ contract CLQuoterTest is Test, Deployers {
     }
 
     // 2->0 starting not initialized
-    function testQuoter_quoteExactInput_2to0_0TickLoaded_startingNotInitialized() public {
+    function testCLQuoter_quoteExactInput_2to0_0TickLoaded_startingNotInitialized() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
         ICLQuoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 103);
@@ -293,7 +291,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 0);
     }
 
-    function testQuoter_quoteExactInput_2to1() public {
+    function testCLQuoter_quoteExactInput_2to1() public {
         tokenPath.push(token2);
         tokenPath.push(token1);
         ICLQuoter.QuoteExactParams memory params = getExactInputParams(tokenPath, 10000);
@@ -308,7 +306,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 0);
     }
 
-    function testQuoter_quoteExactInput_0to2to1() public {
+    function testCLQuoter_quoteExactInput_0to2to1() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
         tokenPath.push(token1);
@@ -327,7 +325,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[1], 0);
     }
 
-    function testQuoter_quoteExactOutputSingle_0to1() public {
+    function testCLQuoter_quoteExactOutputSingle_0to1() public {
         (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded) = quoter
             .quoteExactOutputSingle(
             ICLQuoter.QuoteExactSingleParams({
@@ -344,7 +342,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoaded, 0);
     }
 
-    function testQuoter_quoteExactOutputSingle_1to0() public {
+    function testCLQuoter_quoteExactOutputSingle_1to0() public {
         (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded) = quoter
             .quoteExactOutputSingle(
             ICLQuoter.QuoteExactSingleParams({
@@ -361,7 +359,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoaded, 0);
     }
 
-    function testQuoter_quoteExactOutput_0to2_2TicksLoaded() public {
+    function testCLQuoter_quoteExactOutput_0to2_2TicksLoaded() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
         ICLQuoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 15000);
@@ -377,7 +375,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 2);
     }
 
-    function testQuoter_quoteExactOutput_0to2_1TickLoaded_initialiedAfter() public {
+    function testCLQuoter_quoteExactOutput_0to2_1TickLoaded_initialiedAfter() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
@@ -394,7 +392,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactOutput_0to2_1TickLoaded() public {
+    function testCLQuoter_quoteExactOutput_0to2_1TickLoaded() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
@@ -411,7 +409,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactOutput_0to2_0TickLoaded_startingInitialized() public {
+    function testCLQuoter_quoteExactOutput_0to2_0TickLoaded_startingInitialized() public {
         setupPoolWithZeroTickInitialized(key02);
         tokenPath.push(token0);
         tokenPath.push(token2);
@@ -430,7 +428,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactOutput_0to2_0TickLoaded_startingNotInitialized() public {
+    function testCLQuoter_quoteExactOutput_0to2_0TickLoaded_startingNotInitialized() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
 
@@ -447,7 +445,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 0);
     }
 
-    function testQuoter_quoteExactOutput_2to0_2TicksLoaded() public {
+    function testCLQuoter_quoteExactOutput_2to0_2TicksLoaded() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
         ICLQuoter.QuoteExactParams memory params = getExactOutputParams(tokenPath, 15000);
@@ -464,7 +462,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 2);
     }
 
-    function testQuoter_quoteExactOutput_2to0_2TicksLoaded_initialiedAfter() public {
+    function testCLQuoter_quoteExactOutput_2to0_2TicksLoaded_initialiedAfter() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
 
@@ -482,7 +480,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 2);
     }
 
-    function testQuoter_quoteExactOutput_2to0_1TickLoaded() public {
+    function testCLQuoter_quoteExactOutput_2to0_1TickLoaded() public {
         tokenPath.push(token2);
         tokenPath.push(token0);
 
@@ -499,7 +497,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 1);
     }
 
-    function testQuoter_quoteExactOutput_2to1() public {
+    function testCLQuoter_quoteExactOutput_2to1() public {
         tokenPath.push(token2);
         tokenPath.push(token1);
 
@@ -517,7 +515,7 @@ contract CLQuoterTest is Test, Deployers {
         assertEq(initializedTicksLoadedList[0], 0);
     }
 
-    function testQuoter_quoteExactOutput_0to2to1() public {
+    function testCLQuoter_quoteExactOutput_0to2to1() public {
         tokenPath.push(token0);
         tokenPath.push(token2);
         tokenPath.push(token1);

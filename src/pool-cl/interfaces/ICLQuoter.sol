@@ -5,7 +5,7 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {PathKey} from "../libraries/PathKey.sol";
 
-/// @title CLQuoter Interface
+/// @title ICLQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
 /// @notice For each pool also tells you the number of initialized ticks loaded and the sqrt price of the pool after the swap.
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
