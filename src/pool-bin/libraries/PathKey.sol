@@ -21,9 +21,9 @@ library PathKeyLib {
     using SafeCast for int24;
 
     function getPoolAndSwapDirection(PathKey memory params, Currency currencyIn)
-    internal
-    pure
-    returns (PoolKey memory poolKey, bool zeroForOne)
+        internal
+        pure
+        returns (PoolKey memory poolKey, bool zeroForOne)
     {
         (Currency currency0, Currency currency1) = currencyIn < params.intermediateCurrency
             ? (currencyIn, params.intermediateCurrency)

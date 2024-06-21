@@ -61,9 +61,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
         checkDeadline(deadline)
         returns (uint256 amountOut)
     {
-        amountOut = abi.decode(
-            vault.lock(abi.encode(SwapInfo(SwapType.ExactInput, msg.sender, abi.encode(params)))), (uint256)
-        );
+        amountOut =
+            abi.decode(vault.lock(abi.encode(SwapInfo(SwapType.ExactInput, msg.sender, abi.encode(params)))), (uint256));
     }
 
     function exactOutputSingle(V4BinExactOutputSingleParams calldata params, uint256 deadline)
@@ -94,39 +93,21 @@ contract BinQuoter is IBinQuoter, ILockCallback {
         SwapInfo memory swapInfo = abi.decode(data, (SwapInfo));
 
         if (swapInfo.swapType == SwapType.ExactInput) {
-            return abi.encode(
-                _quoteExactInput(abi.decode(swapInfo.params, (V4BinExactInputParams)))
-            );
+            return abi.encode(_quoteExactInput(abi.decode(swapInfo.params, (V4BinExactInputParams))));
         } else if (swapInfo.swapType == SwapType.ExactInputSingle) {
-            return abi.encode(
-                _quoteExactInputSingle(abi.decode(swapInfo.params, (V4BinExactInputSingleParams)))
-            );
+            return abi.encode(_quoteExactInputSingle(abi.decode(swapInfo.params, (V4BinExactInputSingleParams))));
         } else if (swapInfo.swapType == SwapType.ExactOutput) {
-            return abi.encode(
-                _quoteExactOutput(abi.decode(swapInfo.params, (V4BinExactOutputParams)))
-            );
+            return abi.encode(_quoteExactOutput(abi.decode(swapInfo.params, (V4BinExactOutputParams))));
         } else if (swapInfo.swapType == SwapType.ExactOutputSingle) {
-            return abi.encode(
-                _quoteExactOutputSingle(abi.decode(swapInfo.params, (V4BinExactOutputSingleParams)))
-            );
+            return abi.encode(_quoteExactOutputSingle(abi.decode(swapInfo.params, (V4BinExactOutputSingleParams))));
         } else {
             revert InvalidSwapType();
         }
     }
 
     /// @dev quote an ExactInput swap on a pool, then revert with the result
-    function _quoteExactInputSingle(V4BinExactInputSingleParams memory params)
-        internal
-        returns (uint256 amountOut)
-    {
-        amountOut = uint256(
-            _swap(
-                params.poolKey,
-                params.swapForY,
-                -(params.amountIn.safeInt128()),
-                params.hookData
-            )
-        );
+    function _quoteExactInputSingle(V4BinExactInputSingleParams memory params) internal returns (uint256 amountOut) {
+        amountOut = uint256(_swap(params.poolKey, params.swapForY, -(params.amountIn.safeInt128()), params.hookData));
 
         if (amountOut < params.amountOutMinimum) revert TooLittleReceived();
     }
@@ -139,22 +120,15 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @notice Perform a swap with `amountIn` in and ensure at least `amountOutMinimum` out
-    function _quoteExactInput(V4BinExactInputParams memory params)
-        internal
-        returns (uint256 amountOut)
-    {
+    function _quoteExactInput(V4BinExactInputParams memory params) internal returns (uint256 amountOut) {
         V4BinExactInputState memory state;
         state.pathLength = params.path.length;
 
         for (uint256 i = 0; i < state.pathLength; i++) {
             (state.poolKey, state.swapForY) = params.path[i].getPoolAndSwapDirection(params.currencyIn);
 
-            state.amountOut = _swap(
-                state.poolKey,
-                state.swapForY,
-                -(params.amountIn.safeInt128()),
-                params.path[i].hookData
-            );
+            state.amountOut =
+                _swap(state.poolKey, state.swapForY, -(params.amountIn.safeInt128()), params.path[i].hookData);
 
             params.amountIn = state.amountOut;
             params.currencyIn = params.path[i].intermediateCurrency;
@@ -165,18 +139,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
-    function _quoteExactOutputSingle(V4BinExactOutputSingleParams memory params)
-        internal
-        returns (uint256 amountIn)
-    {
-        amountIn = uint256(
-            _swap(
-                params.poolKey,
-                params.swapForY,
-                params.amountOut.safeInt128(),
-                params.hookData
-            )
-        );
+    function _quoteExactOutputSingle(V4BinExactOutputSingleParams memory params) internal returns (uint256 amountIn) {
+        amountIn = uint256(_swap(params.poolKey, params.swapForY, params.amountOut.safeInt128(), params.hookData));
 
         if (amountIn > params.amountInMaximum) revert TooMuchRequested();
     }
@@ -189,10 +153,7 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @notice Perform a swap that ensure at least `amountOut` tokens with `amountInMaximum` tokens
-    function _quoteExactOutput(V4BinExactOutputParams memory params)
-        internal
-        returns (uint256 amountIn)
-    {
+    function _quoteExactOutput(V4BinExactOutputParams memory params) internal returns (uint256 amountIn) {
         V4BinExactOutputState memory state;
         state.pathLength = params.path.length;
 
@@ -201,12 +162,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
             // Step 1: Find out poolKey and how much amountIn required to get amountOut
             (state.poolKey, state.swapForY) = params.path[i - 1].getPoolAndSwapDirection(params.currencyOut);
 
-            state.amountIn = _swap(
-                state.poolKey,
-                !state.swapForY,
-                params.amountOut.safeInt128(),
-                params.path[i - 1].hookData
-            );
+            state.amountIn =
+                _swap(state.poolKey, !state.swapForY, params.amountOut.safeInt128(), params.path[i - 1].hookData);
 
             params.amountOut = state.amountIn;
             params.currencyOut = params.path[i - 1].intermediateCurrency;
@@ -222,12 +179,10 @@ contract BinQuoter is IBinQuoter, ILockCallback {
 
     /// @dev Execute a swap and return the amounts delta, as well as relevant pool state
     /// @notice if amountSpecified > 0, the swap is exactInput, otherwise exactOutput
-    function _swap(
-        PoolKey memory poolKey,
-        bool swapForY,
-        int128 amountSpecified,
-        bytes memory hookData
-    ) private returns (uint128 reciprocalAmount) {
+    function _swap(PoolKey memory poolKey, bool swapForY, int128 amountSpecified, bytes memory hookData)
+        private
+        returns (uint128 reciprocalAmount)
+    {
         BalanceDelta delta = binPoolManager.swap(poolKey, swapForY, amountSpecified, hookData);
 
         if (swapForY) {
