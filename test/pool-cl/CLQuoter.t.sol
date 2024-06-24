@@ -669,7 +669,6 @@ contract CLQuoterTest is Test, Deployers {
 
         params.exactCurrency = Currency.wrap(address(_tokenPath[0]));
         params.path = path;
-        params.recipient = address(this);
         params.exactAmount = uint128(amountIn);
     }
 
@@ -693,7 +692,6 @@ contract CLQuoterTest is Test, Deployers {
 
         params.exactCurrency = Currency.wrap(address(_tokenPath[_tokenPath.length - 1]));
         params.path = path;
-        params.recipient = address(this);
         params.exactAmount = uint128(amountOut);
     }
 }
