@@ -97,6 +97,7 @@ interface INonfungiblePositionManager is
         returns (
             uint96 nonce,
             address operator,
+            PoolId poolId,
             Currency currency0,
             Currency currency1,
             uint24 fee,
