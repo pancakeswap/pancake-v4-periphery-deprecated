@@ -8,7 +8,7 @@ import {PathKey} from "../libraries/PathKey.sol";
 
 /// @title IBinQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
-/// @notice For each pool also tells you the number of initialized ticks loaded and the sqrt price of the pool after the swap.
+/// @notice For each pool also tells you the activeId of the pool after the swap.
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
 interface IBinQuoter {
@@ -46,7 +46,7 @@ interface IBinQuoter {
     /// @notice Returns the delta amounts along the swap path for a given exact input swap
     /// @param params the params for the quote, encoded as 'QuoteExactInputParams'
     /// currencyIn The input currency of the swap
-    /// path The path of the swap encoded as PathKeys that contains currency, fee, tickSpacing, and hook info
+    /// path The path of the swap encoded as PathKeys that contains currency, fee, and hook info
     /// exactAmount The desired input amount
     /// @return deltaAmounts Delta amounts along the path resulted from the swap
     /// @return activeIdAfterList The list for activeId of the pool after the swap
@@ -69,7 +69,7 @@ interface IBinQuoter {
     /// @notice Returns the delta amounts along the swap path for a given exact output swap
     /// @param params the params for the quote, encoded as 'QuoteExactOutputParams'
     /// currencyOut The output currency of the swap
-    /// path The path of the swap encoded as PathKeys that contains currency, fee, tickSpacing, and hook info
+    /// path The path of the swap encoded as PathKeys that contains currency, fee, and hook info
     /// exactAmount The desired output amount
     /// @return deltaAmounts Delta amounts along the path resulted from the swap
     /// @return activeIdAfterList The list for activeId of the pool after the swap
