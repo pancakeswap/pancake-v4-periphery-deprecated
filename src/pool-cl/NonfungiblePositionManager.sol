@@ -70,6 +70,7 @@ contract NonfungiblePositionManager is
         returns (
             uint96 nonce,
             address operator,
+            PoolId poolId,
             Currency currency0,
             Currency currency1,
             uint24 fee,
@@ -89,6 +90,7 @@ contract NonfungiblePositionManager is
         return (
             position.nonce,
             position.operator,
+            position.poolId,
             poolKey.currency0,
             poolKey.currency1,
             poolKey.fee,
