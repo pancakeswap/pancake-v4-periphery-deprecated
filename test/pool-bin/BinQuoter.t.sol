@@ -143,7 +143,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token0.balanceOf(alice), 0 ether);
 
         snapStart("BinQuoterTest#testQuoter_quoteExactInputSingle");
-        int128[] memory deltaAmounts = quoter.quoteExactInputSingle(
+        (int128[] memory deltaAmounts, uint24 activeIdAfter) = quoter.quoteExactInputSingle(
             IBinQuoter.QuoteExactSingleParams({
                 poolKey: key3,
                 zeroForOne: true,
@@ -165,6 +165,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             block.timestamp + 60
         );
 
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
+        assertEq(activeIdAfter, currentActiveId);
         assertEq(uint128(-deltaAmounts[1]), amountOut);
         assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, 0 ether);
@@ -195,7 +198,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
         snapStart("BinQuoterTest#testQuoter_quoteExactInput_SingleHop");
-        int128[] memory deltaAmounts = quoter.quoteExactInput(
+        (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactInput(
             IBinQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token0)),
                 path: quoter_path,
@@ -215,6 +218,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             block.timestamp + 60
         );
 
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
+        assertEq(activeIdAfterList[0], currentActiveId);
         assertEq(uint128(-deltaAmounts[1]), amountOut);
         assertEq(token1.balanceOf(alice), amountOut);
     }
@@ -260,7 +266,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         });
 
         snapStart("BinQuoterTest#testQuoter_quoteExactInput_MultiHop");
-        int128[] memory deltaAmounts = quoter.quoteExactInput(
+        (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactInput(
             IBinQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token0)),
                 path: quoter_path,
@@ -280,6 +286,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             block.timestamp + 60
         );
 
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
+        assertEq(activeIdAfterList[1], currentActiveId);
         assertEq(uint128(-deltaAmounts[2]), amountOut);
         // 1 ether * 0.997 * 0.997 (0.3% fee twice)
         assertEq(amountOut, 994009000000000000);
@@ -292,7 +301,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         token0.mint(alice, 1 ether);
 
         snapStart("BinQuoterTest#testQuoter_quoteExactOutputSingle");
-        int128[] memory deltaAmounts = quoter.quoteExactOutputSingle(
+        (int128[] memory deltaAmounts, uint24 activeIdAfter) = quoter.quoteExactOutputSingle(
             IBinQuoter.QuoteExactSingleParams({
                 poolKey: key,
                 zeroForOne: true,
@@ -314,6 +323,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             block.timestamp + 60
         );
 
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
+        assertEq(activeIdAfter, currentActiveId);
         assertEq(uint128(deltaAmounts[0]), amountIn);
         assertEq(uint128(-deltaAmounts[1]), 0.5 ether);
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
@@ -351,7 +363,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         });
 
         snapStart("BinQuoterTest#testQuoter_quoteExactOutput_SingleHop");
-        int128[] memory deltaAmounts = quoter.quoteExactOutput(
+        (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactOutput(
             IBinQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token1)),
                 path: quoter_path,
@@ -371,7 +383,10 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             block.timestamp + 60
         );
 
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
         // after test validation
+        assertEq(activeIdAfterList[0], currentActiveId);
         assertEq(uint128(deltaAmounts[0]), amountIn);
         assertEq(uint128(-deltaAmounts[1]), 0.5 ether);
         assertEq(amountIn, 501504513540621866); // amt in should be greater than 0.5 eth
@@ -421,7 +436,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         });
 
         snapStart("BinQuoterTest#testQuoter_quoteExactOutput_MultiHop");
-        int128[] memory deltaAmounts = quoter.quoteExactOutput(
+        (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactOutput(
             IBinQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token2)),
                 path: quoter_path,
@@ -447,8 +462,11 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             block.timestamp + 60
         );
 
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
         // after test validation
         // amt in should be greater than 0.5 eth + 0.3% fee twice (2 pool)
+        assertEq(activeIdAfterList[1], currentActiveId);
         assertEq(uint128(deltaAmounts[0]), amountIn);
         assertEq(uint128(-deltaAmounts[2]), 0.5 ether);
         assertEq(amountIn, 503013554203231561);

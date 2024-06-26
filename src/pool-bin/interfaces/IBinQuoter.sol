@@ -38,9 +38,10 @@ interface IBinQuoter {
     /// exactAmount The desired input amount
     /// hookData arbitrary hookData to pass into the associated hooks
     /// @return deltaAmounts Delta amounts resulted from the swap
+    /// @return activeIdAfter The activeId of the pool after the swap
     function quoteExactInputSingle(QuoteExactSingleParams calldata params)
         external
-        returns (int128[] memory deltaAmounts);
+        returns (int128[] memory deltaAmounts, uint24 activeIdAfter);
 
     /// @notice Returns the delta amounts along the swap path for a given exact input swap
     /// @param params the params for the quote, encoded as 'QuoteExactInputParams'
@@ -48,7 +49,10 @@ interface IBinQuoter {
     /// path The path of the swap encoded as PathKeys that contains currency, fee, tickSpacing, and hook info
     /// exactAmount The desired input amount
     /// @return deltaAmounts Delta amounts along the path resulted from the swap
-    function quoteExactInput(QuoteExactParams memory params) external returns (int128[] memory deltaAmounts);
+    /// @return activeIdAfterList The list for activeId of the pool after the swap
+    function quoteExactInput(QuoteExactParams memory params)
+        external
+        returns (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList);
 
     /// @notice Returns the delta amounts for a given exact output swap of a single pool
     /// @param params The params for the quote, encoded as `QuoteExactOutputSingleParams`
@@ -57,9 +61,10 @@ interface IBinQuoter {
     /// exactAmount The desired output amount
     /// hookData arbitrary hookData to pass into the associated hooks
     /// @return deltaAmounts Delta amounts resulted from the swap
+    /// @return activeIdAfter The activeId of the pool after the swap
     function quoteExactOutputSingle(QuoteExactSingleParams calldata params)
         external
-        returns (int128[] memory deltaAmounts);
+        returns (int128[] memory deltaAmounts, uint24 activeIdAfter);
 
     /// @notice Returns the delta amounts along the swap path for a given exact output swap
     /// @param params the params for the quote, encoded as 'QuoteExactOutputParams'
@@ -67,5 +72,8 @@ interface IBinQuoter {
     /// path The path of the swap encoded as PathKeys that contains currency, fee, tickSpacing, and hook info
     /// exactAmount The desired output amount
     /// @return deltaAmounts Delta amounts along the path resulted from the swap
-    function quoteExactOutput(QuoteExactParams memory params) external returns (int128[] memory deltaAmounts);
+    /// @return activeIdAfterList The list for activeId of the pool after the swap
+    function quoteExactOutput(QuoteExactParams memory params)
+        external
+        returns (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList);
 }
