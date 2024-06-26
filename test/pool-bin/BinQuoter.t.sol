@@ -31,6 +31,7 @@ import {PeripheryPayments} from "../../src/base/PeripheryPayments.sol";
 import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 import {IBinQuoter, BinQuoter} from "../../src/pool-bin/lens/BinQuoter.sol";
 import {PathKey} from "../../src/pool-bin/libraries/PathKey.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
     using BinPoolParametersHelper for bytes32;
@@ -153,6 +154,11 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(key3.toId(), address(router), -1 ether, -deltaAmounts[1], activeIdAfter, key3.fee, 0);
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(alice), uint256(uint128(-deltaAmounts[1])));
+
         uint256 amountOut = router.exactInputSingle{value: 1 ether}(
             IBinSwapRouterBase.V4BinExactInputSingleParams({
                 poolKey: key3,
@@ -168,6 +174,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfter, currentActiveId);
+        assertEq(uint128(deltaAmounts[0]), 1 ether);
         assertEq(uint128(-deltaAmounts[1]), amountOut);
         assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, 0 ether);
@@ -207,6 +214,15 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(
+            key.toId(), address(router), -1 ether, -deltaAmounts[1], activeIdAfterList[0], key.fee, 0
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), 1 ether);
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(alice), uint256(uint128(-deltaAmounts[1])));
+
         uint256 amountOut = router.exactInput(
             IBinSwapRouterBase.V4BinExactInputParams({
                 currencyIn: Currency.wrap(address(token0)),
@@ -221,6 +237,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfterList[0], currentActiveId);
+        assertEq(deltaAmounts[0], 1 ether);
         assertEq(uint128(-deltaAmounts[1]), amountOut);
         assertEq(token1.balanceOf(alice), amountOut);
     }
@@ -275,6 +292,21 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
         snapEnd();
 
+        // first hop
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(
+            key.toId(), address(router), -1 ether, 997000000000000000, activeIdAfterList[0], key.fee, 0
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), 1 ether);
+        // second hop
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(
+            key2.toId(), address(router), -997000000000000000, -deltaAmounts[2], activeIdAfterList[1], key2.fee, 0
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(bob), uint256(uint128(-deltaAmounts[2])));
+
         uint256 amountOut = router.exactInput(
             IBinSwapRouterBase.V4BinExactInputParams({
                 currencyIn: Currency.wrap(address(token0)),
@@ -288,6 +320,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
+        assertEq(deltaAmounts[0], 1 ether);
+        assertEq(deltaAmounts[1], 0);
         assertEq(activeIdAfterList[1], currentActiveId);
         assertEq(uint128(-deltaAmounts[2]), amountOut);
         // 1 ether * 0.997 * 0.997 (0.3% fee twice)
@@ -310,6 +344,13 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             })
         );
         snapEnd();
+
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(key.toId(), address(router), -deltaAmounts[0], 0.5 ether, activeIdAfter, key.fee, 0);
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[0])));
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(bob), 0.5 ether);
 
         uint256 amountIn = router.exactOutputSingle(
             IBinSwapRouterBase.V4BinExactOutputSingleParams({
@@ -371,6 +412,15 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             })
         );
         snapEnd();
+
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(
+            key.toId(), address(router), -deltaAmounts[0], 0.5 ether, activeIdAfterList[0], key.fee, 0
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[0])));
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(alice), 0.5 ether);
 
         uint256 amountIn = router.exactOutput(
             IBinSwapRouterBase.V4BinExactOutputParams({
@@ -451,6 +501,21 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token2.balanceOf(alice), 0);
         assertEq(token2.balanceOf(bob), 0 ether);
 
+        // first hop
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(
+            key2.toId(), address(router), -501504513540621866, 0.5 ether, activeIdAfterList[1], key2.fee, 0
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(bob), 0.5 ether);
+        // second hop
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(
+            key.toId(), address(router), -deltaAmounts[0], 501504513540621866, activeIdAfterList[0], key.fee, 0
+        );
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[0])));
+
         uint256 amountIn = router.exactOutput(
             IBinSwapRouterBase.V4BinExactOutputParams({
                 currencyOut: Currency.wrap(address(token2)),
@@ -468,6 +533,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         // amt in should be greater than 0.5 eth + 0.3% fee twice (2 pool)
         assertEq(activeIdAfterList[1], currentActiveId);
         assertEq(uint128(deltaAmounts[0]), amountIn);
+        assertEq(uint128(deltaAmounts[1]), 0);
         assertEq(uint128(-deltaAmounts[2]), 0.5 ether);
         assertEq(amountIn, 503013554203231561);
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
