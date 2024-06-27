@@ -269,8 +269,9 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         (,, uint256[] memory tokenIds,) = binFungiblePositionManager.addLiquidity(params);
 
         for (uint256 i; i < tokenIds.length; i++) {
-            (Currency curr0, Currency curr1, uint24 fee, uint24 binId) =
+            (PoolId poolId, Currency curr0, Currency curr1, uint24 fee, uint24 binId) =
                 binFungiblePositionManager.positions(tokenIds[i]);
+            assertEq(PoolId.unwrap(poolId), PoolId.unwrap(key1.toId()));
             assertEq(Currency.unwrap(curr0), Currency.unwrap(key1.currency0));
             assertEq(Currency.unwrap(curr1), Currency.unwrap(key1.currency1));
             assertEq(fee, key1.fee);

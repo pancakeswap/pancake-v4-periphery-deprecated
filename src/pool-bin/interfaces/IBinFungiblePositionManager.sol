@@ -91,7 +91,7 @@ interface IBinFungiblePositionManager is IBinFungibleToken {
     function positions(uint256 tokenId)
         external
         view
-        returns (Currency currency0, Currency currency1, uint24 fee, uint24 binId);
+        returns (PoolId poolId, Currency currency0, Currency currency1, uint24 fee, uint24 binId);
 
     /// @notice Initialize a new pool
     /// @dev Call this when the pool does not exist and is not initialized

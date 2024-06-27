@@ -61,7 +61,7 @@ contract BinFungiblePositionManager is
     function positions(uint256 tokenId)
         external
         view
-        returns (Currency currency0, Currency currency1, uint24 fee, uint24 binId)
+        returns (PoolId poolId, Currency currency0, Currency currency1, uint24 fee, uint24 binId)
     {
         TokenPosition memory position = _positions[tokenId];
 
@@ -69,7 +69,7 @@ contract BinFungiblePositionManager is
         PoolKey memory poolKey = _poolIdToPoolKey[PoolId.unwrap(position.poolId)];
 
         // todo: sync with CL if we want to return other poolkey val eg. hooks / poolManager or parameters
-        return (poolKey.currency0, poolKey.currency1, poolKey.fee, position.binId);
+        return (position.poolId, poolKey.currency0, poolKey.currency1, poolKey.fee, position.binId);
     }
 
     /// @dev Store poolKey in mapping for lookup
