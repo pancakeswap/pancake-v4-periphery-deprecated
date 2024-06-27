@@ -11,6 +11,7 @@ import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
 import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {BinHelper} from "pancake-v4-core/src/pool-bin/libraries/BinHelper.sol";
 import {IBinPoolManager} from "pancake-v4-core/src/pool-bin/interfaces/IBinPoolManager.sol";
+import {BinPool} from "pancake-v4-core/src/pool-bin/libraries/BinPool.sol";
 import {BinPoolManager} from "pancake-v4-core/src/pool-bin/BinPoolManager.sol";
 import {BinPoolParametersHelper} from "pancake-v4-core/src/pool-bin/libraries/BinPoolParametersHelper.sol";
 import {Vault} from "pancake-v4-core/src/Vault.sol";
@@ -135,7 +136,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         binFungiblePositionManager.addLiquidity{value: 10 ether}(addParams);
     }
 
-    function testQuoter_quoteExactInputSingle() public {
+    function testQuoter_quoteExactInputSingle_zeroForOne() public {
         vm.startPrank(alice);
 
         vm.deal(alice, 1 ether);
@@ -178,6 +179,49 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, 0 ether);
         assertEq(token0.balanceOf(alice), amountOut);
+    }
+
+    function testQuoter_quoteExactInputSingle_oneForZero() public {
+        vm.startPrank(alice);
+
+        token0.mint(alice, 1 ether);
+        assertEq(alice.balance, 0 ether);
+        assertEq(token0.balanceOf(alice), 1 ether);
+
+        (int128[] memory deltaAmounts, uint24 activeIdAfter) = quoter.quoteExactInputSingle(
+            IBinQuoter.QuoteExactSingleParams({
+                poolKey: key3,
+                zeroForOne: false,
+                exactAmount: 1 ether,
+                hookData: new bytes(0)
+            })
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(key3.toId(), address(router), -deltaAmounts[0], -1 ether, activeIdAfter, key3.fee, 0);
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), 1 ether);
+
+        uint256 amountOut = router.exactInputSingle(
+            IBinSwapRouterBase.V4BinExactInputSingleParams({
+                poolKey: key3,
+                swapForY: false, // swap token0 for ETH
+                recipient: alice,
+                amountIn: 1 ether,
+                amountOutMinimum: 0,
+                hookData: new bytes(0)
+            }),
+            block.timestamp + 60
+        );
+
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
+        assertEq(activeIdAfter, currentActiveId);
+        assertEq(uint128(-deltaAmounts[0]), amountOut);
+        assertEq(uint128(deltaAmounts[1]), 1 ether);
+        assertEq(amountOut, 997000000000000000);
+        assertEq(alice.balance, amountOut);
+        assertEq(token0.balanceOf(alice), 0 ether);
     }
 
     function testQuoter_quoteExactInput_SingleHop() public {
@@ -329,7 +373,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token2.balanceOf(bob), amountOut);
     }
 
-    function testQuoter_quoteExactOutputSingle() public {
+    function testQuoter_quoteExactOutputSingle_zeroForOne() public {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
 
@@ -371,6 +415,48 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
         assertEq(token1.balanceOf(alice), 0 ether);
         assertEq(token1.balanceOf(bob), 0.5 ether);
+    }
+
+    function testQuoter_quoteExactOutputSingle_oneForZero() public {
+        vm.startPrank(alice);
+        token1.mint(alice, 1 ether);
+
+        (int128[] memory deltaAmounts, uint24 activeIdAfter) = quoter.quoteExactOutputSingle(
+            IBinQuoter.QuoteExactSingleParams({
+                poolKey: key,
+                zeroForOne: false,
+                exactAmount: 0.5 ether,
+                hookData: new bytes(0)
+            })
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit IBinPoolManager.Swap(key.toId(), address(router), 0.5 ether, -deltaAmounts[1], activeIdAfter, key.fee, 0);
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[1])));
+        vm.expectEmit(true, true, true, true);
+        emit IERC20.Transfer(address(vault), address(bob), 0.5 ether);
+
+        uint256 amountIn = router.exactOutputSingle(
+            IBinSwapRouterBase.V4BinExactOutputSingleParams({
+                poolKey: key,
+                swapForY: false,
+                recipient: bob,
+                amountOut: 0.5 ether,
+                amountInMaximum: 1 ether,
+                hookData: new bytes(0)
+            }),
+            block.timestamp + 60
+        );
+
+        (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
+
+        assertEq(activeIdAfter, currentActiveId);
+        assertEq(uint128(deltaAmounts[1]), amountIn);
+        assertEq(uint128(-deltaAmounts[0]), 0.5 ether);
+        assertEq(token0.balanceOf(alice), 0 ether);
+        assertEq(token1.balanceOf(alice), 1 ether - amountIn);
+        assertEq(token0.balanceOf(bob), 0.5 ether);
     }
 
     function testQuoter_quoteExactOutput_SingleHop() public {
@@ -537,5 +623,50 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(amountIn, 503013554203231561);
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
         assertEq(token2.balanceOf(bob), 0.5 ether);
+    }
+
+    function testQuoter_lockAcquired_revert_InvalidLockAcquiredSender() public {
+        vm.startPrank(alice);
+        vm.expectRevert(IBinQuoter.InvalidLockAcquiredSender.selector);
+        quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, "0x"));
+    }
+
+    function testQuoter_lockAcquired_revert_LockFailure() public {
+        vm.startPrank(address(vault));
+        vm.expectRevert(IBinQuoter.LockFailure.selector);
+        quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, address(this), "0x"));
+    }
+
+    function testQuoter_lockAcquired_revert_NotSelf() public {
+        vm.startPrank(address(alice));
+        vm.expectRevert(IBinQuoter.NotSelf.selector);
+
+        quoter._quoteExactInputSingle(
+            IBinQuoter.QuoteExactSingleParams({
+                poolKey: key3,
+                zeroForOne: true,
+                exactAmount: 1 ether,
+                hookData: new bytes(0)
+            })
+        );
+    }
+
+    function testQuoter_lockAcquired_revert_UnexpectedRevertBytes() public {
+        vm.startPrank(address(alice));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IBinQuoter.UnexpectedRevertBytes.selector,
+                abi.encodeWithSelector(BinPool.BinPool__OutOfLiquidity.selector)
+            )
+        );
+        quoter.quoteExactOutputSingle(
+            IBinQuoter.QuoteExactSingleParams({
+                poolKey: key,
+                zeroForOne: true,
+                exactAmount: 20 ether,
+                hookData: new bytes(0)
+            })
+        );
     }
 }
