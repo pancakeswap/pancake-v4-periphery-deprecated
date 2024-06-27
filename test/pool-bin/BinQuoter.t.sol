@@ -30,7 +30,7 @@ import {SwapRouterBase} from "../../src/SwapRouterBase.sol";
 import {PeripheryPayments} from "../../src/base/PeripheryPayments.sol";
 import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 import {IBinQuoter, BinQuoter} from "../../src/pool-bin/lens/BinQuoter.sol";
-import {PathKey} from "../../src/pool-bin/libraries/PathKey.sol";
+import {PathKey} from "../../src/libraries/PathKey.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {

@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-import {PathKey} from "../libraries/PathKey.sol";
+import {PathKey} from "../../libraries/PathKey.sol";
 
 /// @title IBinQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.

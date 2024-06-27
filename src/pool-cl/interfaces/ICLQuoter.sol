@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-import {PathKey} from "../libraries/PathKey.sol";
+import {PathKey} from "../../libraries/PathKey.sol";
 
 /// @title ICLQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
@@ -65,7 +65,7 @@ interface ICLQuoter {
     /// @param params The params for the quote, encoded as `QuoteExactOutputSingleParams`
     /// poolKey The key for identifying a V4 pool
     /// zeroForOne If the swap is from currency0 to currency1
-    /// exactAmount The desired input amount
+    /// exactAmount The desired output amount
     /// sqrtPriceLimitX96 The price limit of the pool that cannot be exceeded by the swap
     /// hookData arbitrary hookData to pass into the associated hooks
     /// @return deltaAmounts Delta amounts resulted from the swap
