@@ -1,17 +1,15 @@
-//SPDX-License-Identifier: UNLICENSED
-
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright (C) 2024 PancakeSwap
 pragma solidity ^0.8.24;
 
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from "pancake-v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
-import "pancake-v4-core/src/libraries/SafeCast.sol";
 
 struct PathKey {
     Currency intermediateCurrency;
     uint24 fee;
-    int24 tickSpacing;
     IHooks hooks;
     IPoolManager poolManager;
     bytes hookData;
@@ -19,8 +17,6 @@ struct PathKey {
 }
 
 library PathKeyLib {
-    using SafeCast for int24;
-
     function getPoolAndSwapDirection(PathKey memory params, Currency currencyIn)
         internal
         pure
