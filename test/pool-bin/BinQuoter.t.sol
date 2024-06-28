@@ -29,8 +29,8 @@ import {ISwapRouterBase} from "../../src/interfaces/ISwapRouterBase.sol";
 import {SwapRouterBase} from "../../src/SwapRouterBase.sol";
 import {PeripheryPayments} from "../../src/base/PeripheryPayments.sol";
 import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
+import {IQuoter} from "../../src/interfaces/IQuoter.sol";
 import {IBinQuoter, BinQuoter} from "../../src/pool-bin/lens/BinQuoter.sol";
-import {PathKey} from "../../src/libraries/PathKey.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
@@ -238,8 +238,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
 
-        PathKey[] memory quoter_path = new PathKey[](1);
-        quoter_path[0] = PathKey({
+        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](1);
+        quoter_path[0] = IQuoter.PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key.fee,
             hooks: key.hooks,
@@ -249,7 +249,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         });
         snapStart("BinQuoterTest#testQuoter_quoteExactInput_SingleHop");
         (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactInput(
-            IBinQuoter.QuoteExactParams({
+            IQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token0)),
                 path: quoter_path,
                 exactAmount: 1 ether
@@ -307,8 +307,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key2.parameters
         });
 
-        PathKey[] memory quoter_path = new PathKey[](2);
-        quoter_path[0] = PathKey({
+        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](2);
+        quoter_path[0] = IQuoter.PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key.fee,
             hooks: key.hooks,
@@ -316,7 +316,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             poolManager: key.poolManager,
             parameters: key.parameters
         });
-        quoter_path[1] = PathKey({
+        quoter_path[1] = IQuoter.PathKey({
             intermediateCurrency: Currency.wrap(address(token2)),
             fee: key2.fee,
             hooks: key2.hooks,
@@ -327,7 +327,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart("BinQuoterTest#testQuoter_quoteExactInput_MultiHop");
         (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactInput(
-            IBinQuoter.QuoteExactParams({
+            IQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token0)),
                 path: quoter_path,
                 exactAmount: 1 ether
@@ -478,8 +478,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token0.balanceOf(alice), 1 ether);
         assertEq(token1.balanceOf(alice), 0);
 
-        PathKey[] memory quoter_path = new PathKey[](1);
-        quoter_path[0] = PathKey({
+        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](1);
+        quoter_path[0] = IQuoter.PathKey({
             intermediateCurrency: Currency.wrap(address(token0)),
             fee: key.fee,
             hooks: key.hooks,
@@ -490,7 +490,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart("BinQuoterTest#testQuoter_quoteExactOutput_SingleHop");
         (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactOutput(
-            IBinQuoter.QuoteExactParams({
+            IQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token1)),
                 path: quoter_path,
                 exactAmount: 0.5 ether
@@ -552,8 +552,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key2.parameters
         });
 
-        PathKey[] memory quoter_path = new PathKey[](2);
-        quoter_path[0] = PathKey({
+        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](2);
+        quoter_path[0] = IQuoter.PathKey({
             intermediateCurrency: Currency.wrap(address(token0)),
             fee: key.fee,
             hooks: key.hooks,
@@ -561,7 +561,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             poolManager: key.poolManager,
             parameters: key.parameters
         });
-        quoter_path[1] = PathKey({
+        quoter_path[1] = IQuoter.PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key2.fee,
             hooks: key2.hooks,
@@ -572,7 +572,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         snapStart("BinQuoterTest#testQuoter_quoteExactOutput_MultiHop");
         (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList) = quoter.quoteExactOutput(
-            IBinQuoter.QuoteExactParams({
+            IQuoter.QuoteExactParams({
                 exactCurrency: Currency.wrap(address(token2)),
                 path: quoter_path,
                 exactAmount: 0.5 ether
@@ -627,19 +627,19 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
     function testQuoter_lockAcquired_revert_InvalidLockAcquiredSender() public {
         vm.startPrank(alice);
-        vm.expectRevert(IBinQuoter.InvalidLockAcquiredSender.selector);
+        vm.expectRevert(IQuoter.InvalidLockAcquiredSender.selector);
         quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, "0x"));
     }
 
     function testQuoter_lockAcquired_revert_LockFailure() public {
         vm.startPrank(address(vault));
-        vm.expectRevert(IBinQuoter.LockFailure.selector);
+        vm.expectRevert(IQuoter.LockFailure.selector);
         quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, address(this), "0x"));
     }
 
     function testQuoter_lockAcquired_revert_NotSelf() public {
         vm.startPrank(address(alice));
-        vm.expectRevert(IBinQuoter.NotSelf.selector);
+        vm.expectRevert(IQuoter.NotSelf.selector);
 
         quoter._quoteExactInputSingle(
             IBinQuoter.QuoteExactSingleParams({
@@ -656,8 +656,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IBinQuoter.UnexpectedRevertBytes.selector,
-                abi.encodeWithSelector(BinPool.BinPool__OutOfLiquidity.selector)
+                IQuoter.UnexpectedRevertBytes.selector, abi.encodeWithSelector(BinPool.BinPool__OutOfLiquidity.selector)
             )
         );
         quoter.quoteExactOutputSingle(

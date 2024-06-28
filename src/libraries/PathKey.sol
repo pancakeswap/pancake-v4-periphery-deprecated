@@ -6,18 +6,10 @@ import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from "pancake-v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
-
-struct PathKey {
-    Currency intermediateCurrency;
-    uint24 fee;
-    IHooks hooks;
-    IPoolManager poolManager;
-    bytes hookData;
-    bytes32 parameters;
-}
+import {IQuoter} from "../interfaces/IQuoter.sol";
 
 library PathKeyLib {
-    function getPoolAndSwapDirection(PathKey memory params, Currency currencyIn)
+    function getPoolAndSwapDirection(IQuoter.PathKey memory params, Currency currencyIn)
         internal
         pure
         returns (PoolKey memory poolKey, bool zeroForOne)

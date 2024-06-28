@@ -5,7 +5,6 @@ pragma solidity ^0.8.24;
 import {Hooks} from "pancake-v4-core/src/libraries/Hooks.sol";
 import {TickMath} from "pancake-v4-core/src/pool-cl/libraries/TickMath.sol";
 import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
-import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
 import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {IBinPoolManager} from "pancake-v4-core/src/pool-bin/interfaces/IBinPoolManager.sol";
 import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
@@ -14,9 +13,9 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {SafeCast} from "pancake-v4-core/src/pool-bin/libraries/math/SafeCast.sol";
 import {PoolIdLibrary} from "pancake-v4-core/src/types/PoolId.sol";
 import {IBinQuoter} from "../interfaces/IBinQuoter.sol";
-import {PathKey, PathKeyLib} from "../../libraries/PathKey.sol";
+import {PathKeyLib} from "../../libraries/PathKey.sol";
 
-contract BinQuoter is IBinQuoter, ILockCallback {
+contract BinQuoter is IBinQuoter {
     using PoolIdLibrary for PoolKey;
     using Hooks for IHooks;
     using SafeCast for uint128;
@@ -105,8 +104,7 @@ contract BinQuoter is IBinQuoter, ILockCallback {
         }
     }
 
-    /// @inheritdoc ILockCallback
-    function lockAcquired(bytes calldata data) external returns (bytes memory) {
+    function lockAcquired(bytes calldata data) external override returns (bytes memory) {
         if (msg.sender != address(vault)) {
             revert InvalidLockAcquiredSender();
         }
@@ -150,7 +148,7 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactInput swap along a path of tokens, then revert with the result
-    function _quoteExactInput(QuoteExactParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactInput(QuoteExactParams memory params) public override selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
 
         QuoteResult memory result =
@@ -182,7 +180,12 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactInput swap on a pool, then revert with the result
-    function _quoteExactInputSingle(QuoteExactSingleParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactInputSingle(QuoteExactSingleParams memory params)
+        public
+        override
+        selfOnly
+        returns (bytes memory)
+    {
         (BalanceDelta deltas, uint24 activeIdAfter) =
             _swap(params.poolKey, params.zeroForOne, -(params.exactAmount.safeInt128()), params.hookData);
 
@@ -199,7 +202,7 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactOutput swap along a path of tokens, then revert with the result
-    function _quoteExactOutput(QuoteExactParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactOutput(QuoteExactParams memory params) public override selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
 
         QuoteResult memory result =
@@ -236,7 +239,12 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactOutput swap on a pool, then revert with the result
-    function _quoteExactOutputSingle(QuoteExactSingleParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactOutputSingle(QuoteExactSingleParams memory params)
+        public
+        override
+        selfOnly
+        returns (bytes memory)
+    {
         amountOutCached = params.exactAmount;
 
         (BalanceDelta deltas, uint24 activeIdAfter) =

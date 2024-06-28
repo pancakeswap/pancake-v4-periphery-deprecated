@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {PathKey} from "../../src/libraries/PathKey.sol";
+import {IQuoter} from "../../src/interfaces/IQuoter.sol";
 import {ICLQuoter} from "../../src/pool-cl/interfaces/ICLQuoter.sol";
 import {CLQuoter} from "../../src/pool-cl/lens/CLQuoter.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
@@ -129,7 +129,7 @@ contract CLQuoterTest is Test, Deployers {
 
     // nested self-call into lockAcquired reverts
     function testCLQuoter_callLockAcquired_reverts() public {
-        vm.expectRevert(ICLQuoter.LockFailure.selector);
+        vm.expectRevert(IQuoter.LockFailure.selector);
         vm.prank(address(vault));
         quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, address(this), "0x"));
     }
@@ -654,9 +654,9 @@ contract CLQuoterTest is Test, Deployers {
         view
         returns (ICLQuoter.QuoteExactParams memory params)
     {
-        PathKey[] memory path = new PathKey[](_tokenPath.length - 1);
+        IQuoter.PathKey[] memory path = new IQuoter.PathKey[](_tokenPath.length - 1);
         for (uint256 i = 0; i < _tokenPath.length - 1; i++) {
-            path[i] = PathKey(
+            path[i] = IQuoter.PathKey(
                 Currency.wrap(address(_tokenPath[i + 1])),
                 3000,
                 IHooks(address(0)),
@@ -676,9 +676,9 @@ contract CLQuoterTest is Test, Deployers {
         view
         returns (ICLQuoter.QuoteExactParams memory params)
     {
-        PathKey[] memory path = new PathKey[](_tokenPath.length - 1);
+        IQuoter.PathKey[] memory path = new IQuoter.PathKey[](_tokenPath.length - 1);
         for (uint256 i = _tokenPath.length - 1; i > 0; i--) {
-            path[i - 1] = PathKey(
+            path[i - 1] = IQuoter.PathKey(
                 Currency.wrap(address(_tokenPath[i - 1])),
                 3000,
                 IHooks(address(0)),

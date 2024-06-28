@@ -3,32 +3,20 @@ pragma solidity ^0.8.24;
 
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-import {PathKey} from "../../libraries/PathKey.sol";
+import {IQuoter} from "../../interfaces/IQuoter.sol";
 
 /// @title ICLQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
 /// @notice For each pool also tells you the number of initialized ticks loaded and the sqrt price of the pool after the swap.
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
-interface ICLQuoter {
-    error InvalidLockAcquiredSender();
-    error InsufficientAmountOut();
-    error LockFailure();
-    error NotSelf();
-    error UnexpectedRevertBytes(bytes revertData);
-
+interface ICLQuoter is IQuoter {
     struct QuoteExactSingleParams {
         PoolKey poolKey;
         bool zeroForOne;
         uint128 exactAmount;
         uint160 sqrtPriceLimitX96;
         bytes hookData;
-    }
-
-    struct QuoteExactParams {
-        Currency exactCurrency;
-        PathKey[] path;
-        uint128 exactAmount;
     }
 
     /// @notice Returns the delta amounts for a given exact input swap of a single pool
