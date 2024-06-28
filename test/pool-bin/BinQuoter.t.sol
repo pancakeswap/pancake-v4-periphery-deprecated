@@ -155,9 +155,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         snapEnd();
 
         vm.expectEmit(true, true, true, true);
-        emit IBinPoolManager.Swap(key3.toId(), address(router), -1 ether, -deltaAmounts[1], activeIdAfter, key3.fee, 0);
+        emit IBinPoolManager.Swap(key3.toId(), address(router), -1 ether, deltaAmounts[1], activeIdAfter, key3.fee, 0);
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(vault), address(alice), uint256(uint128(-deltaAmounts[1])));
+        emit IERC20.Transfer(address(vault), address(alice), uint256(uint128(deltaAmounts[1])));
 
         uint256 amountOut = router.exactInputSingle{value: 1 ether}(
             IBinSwapRouterBase.V4BinExactInputSingleParams({
@@ -174,8 +174,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfter, currentActiveId);
-        assertEq(uint128(deltaAmounts[0]), 1 ether);
-        assertEq(uint128(-deltaAmounts[1]), amountOut);
+        assertEq(uint128(-deltaAmounts[0]), 1 ether);
+        assertEq(uint128(deltaAmounts[1]), amountOut);
         assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, 0 ether);
         assertEq(token0.balanceOf(alice), amountOut);
@@ -198,7 +198,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit IBinPoolManager.Swap(key3.toId(), address(router), -deltaAmounts[0], -1 ether, activeIdAfter, key3.fee, 0);
+        emit IBinPoolManager.Swap(key3.toId(), address(router), deltaAmounts[0], -1 ether, activeIdAfter, key3.fee, 0);
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(address(alice), address(vault), 1 ether);
 
@@ -217,8 +217,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfter, currentActiveId);
-        assertEq(uint128(-deltaAmounts[0]), amountOut);
-        assertEq(uint128(deltaAmounts[1]), 1 ether);
+        assertEq(uint128(deltaAmounts[0]), amountOut);
+        assertEq(uint128(-deltaAmounts[1]), 1 ether);
         assertEq(amountOut, 997000000000000000);
         assertEq(alice.balance, amountOut);
         assertEq(token0.balanceOf(alice), 0 ether);
@@ -259,12 +259,12 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         vm.expectEmit(true, true, true, true);
         emit IBinPoolManager.Swap(
-            key.toId(), address(router), -1 ether, -deltaAmounts[1], activeIdAfterList[0], key.fee, 0
+            key.toId(), address(router), -1 ether, deltaAmounts[1], activeIdAfterList[0], key.fee, 0
         );
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(address(alice), address(vault), 1 ether);
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(vault), address(alice), uint256(uint128(-deltaAmounts[1])));
+        emit IERC20.Transfer(address(vault), address(alice), uint256(uint128(deltaAmounts[1])));
 
         uint256 amountOut = router.exactInput(
             IBinSwapRouterBase.V4BinExactInputParams({
@@ -280,8 +280,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfterList[0], currentActiveId);
-        assertEq(deltaAmounts[0], 1 ether);
-        assertEq(uint128(-deltaAmounts[1]), amountOut);
+        assertEq(-deltaAmounts[0], 1 ether);
+        assertEq(uint128(deltaAmounts[1]), amountOut);
         assertEq(token1.balanceOf(alice), amountOut);
     }
 
@@ -345,10 +345,10 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         // second hop
         vm.expectEmit(true, true, true, true);
         emit IBinPoolManager.Swap(
-            key2.toId(), address(router), -997000000000000000, -deltaAmounts[2], activeIdAfterList[1], key2.fee, 0
+            key2.toId(), address(router), -997000000000000000, deltaAmounts[2], activeIdAfterList[1], key2.fee, 0
         );
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(vault), address(bob), uint256(uint128(-deltaAmounts[2])));
+        emit IERC20.Transfer(address(vault), address(bob), uint256(uint128(deltaAmounts[2])));
 
         uint256 amountOut = router.exactInput(
             IBinSwapRouterBase.V4BinExactInputParams({
@@ -363,10 +363,10 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
-        assertEq(deltaAmounts[0], 1 ether);
+        assertEq(-deltaAmounts[0], 1 ether);
         assertEq(deltaAmounts[1], 0);
         assertEq(activeIdAfterList[1], currentActiveId);
-        assertEq(uint128(-deltaAmounts[2]), amountOut);
+        assertEq(uint128(deltaAmounts[2]), amountOut);
         // 1 ether * 0.997 * 0.997 (0.3% fee twice)
         assertEq(amountOut, 994009000000000000);
         assertEq(token2.balanceOf(alice), 0);
@@ -389,9 +389,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         snapEnd();
 
         vm.expectEmit(true, true, true, true);
-        emit IBinPoolManager.Swap(key.toId(), address(router), -deltaAmounts[0], 0.5 ether, activeIdAfter, key.fee, 0);
+        emit IBinPoolManager.Swap(key.toId(), address(router), deltaAmounts[0], 0.5 ether, activeIdAfter, key.fee, 0);
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[0])));
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(-deltaAmounts[0])));
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(address(vault), address(bob), 0.5 ether);
 
@@ -410,8 +410,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfter, currentActiveId);
-        assertEq(uint128(deltaAmounts[0]), amountIn);
-        assertEq(uint128(-deltaAmounts[1]), 0.5 ether);
+        assertEq(uint128(-deltaAmounts[0]), amountIn);
+        assertEq(uint128(deltaAmounts[1]), 0.5 ether);
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
         assertEq(token1.balanceOf(alice), 0 ether);
         assertEq(token1.balanceOf(bob), 0.5 ether);
@@ -431,9 +431,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         );
 
         vm.expectEmit(true, true, true, true);
-        emit IBinPoolManager.Swap(key.toId(), address(router), 0.5 ether, -deltaAmounts[1], activeIdAfter, key.fee, 0);
+        emit IBinPoolManager.Swap(key.toId(), address(router), 0.5 ether, deltaAmounts[1], activeIdAfter, key.fee, 0);
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[1])));
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(-deltaAmounts[1])));
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(address(vault), address(bob), 0.5 ether);
 
@@ -452,8 +452,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         (uint24 currentActiveId,,) = poolManager.getSlot0(key.toId());
 
         assertEq(activeIdAfter, currentActiveId);
-        assertEq(uint128(deltaAmounts[1]), amountIn);
-        assertEq(uint128(-deltaAmounts[0]), 0.5 ether);
+        assertEq(uint128(-deltaAmounts[1]), amountIn);
+        assertEq(uint128(deltaAmounts[0]), 0.5 ether);
         assertEq(token0.balanceOf(alice), 0 ether);
         assertEq(token1.balanceOf(alice), 1 ether - amountIn);
         assertEq(token0.balanceOf(bob), 0.5 ether);
@@ -500,10 +500,10 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         vm.expectEmit(true, true, true, true);
         emit IBinPoolManager.Swap(
-            key.toId(), address(router), -deltaAmounts[0], 0.5 ether, activeIdAfterList[0], key.fee, 0
+            key.toId(), address(router), deltaAmounts[0], 0.5 ether, activeIdAfterList[0], key.fee, 0
         );
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[0])));
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(-deltaAmounts[0])));
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(address(vault), address(alice), 0.5 ether);
 
@@ -522,8 +522,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
 
         // after test validation
         assertEq(activeIdAfterList[0], currentActiveId);
-        assertEq(uint128(deltaAmounts[0]), amountIn);
-        assertEq(uint128(-deltaAmounts[1]), 0.5 ether);
+        assertEq(uint128(-deltaAmounts[0]), amountIn);
+        assertEq(uint128(deltaAmounts[1]), 0.5 ether);
         assertEq(amountIn, 501504513540621866); // amt in should be greater than 0.5 eth
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
         assertEq(token1.balanceOf(alice), 0.5 ether);
@@ -596,10 +596,10 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         // second hop
         vm.expectEmit(true, true, true, true);
         emit IBinPoolManager.Swap(
-            key.toId(), address(router), -deltaAmounts[0], 501504513540621866, activeIdAfterList[0], key.fee, 0
+            key.toId(), address(router), deltaAmounts[0], 501504513540621866, activeIdAfterList[0], key.fee, 0
         );
         vm.expectEmit(true, true, true, true);
-        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(deltaAmounts[0])));
+        emit IERC20.Transfer(address(alice), address(vault), uint256(uint128(-deltaAmounts[0])));
 
         uint256 amountIn = router.exactOutput(
             IBinSwapRouterBase.V4BinExactOutputParams({
@@ -617,9 +617,9 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         // after test validation
         // amt in should be greater than 0.5 eth + 0.3% fee twice (2 pool)
         assertEq(activeIdAfterList[1], currentActiveId);
-        assertEq(uint128(deltaAmounts[0]), amountIn);
+        assertEq(uint128(-deltaAmounts[0]), amountIn);
         assertEq(uint128(deltaAmounts[1]), 0);
-        assertEq(uint128(-deltaAmounts[2]), 0.5 ether);
+        assertEq(uint128(deltaAmounts[2]), 0.5 ether);
         assertEq(amountIn, 503013554203231561);
         assertEq(token0.balanceOf(alice), 1 ether - amountIn);
         assertEq(token2.balanceOf(bob), 0.5 ether);

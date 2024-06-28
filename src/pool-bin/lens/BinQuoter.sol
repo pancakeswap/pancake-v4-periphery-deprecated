@@ -166,8 +166,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
             );
 
             (cache.deltaIn, cache.deltaOut) = zeroForOne
-                ? (-cache.curDeltas.amount0(), -cache.curDeltas.amount1())
-                : (-cache.curDeltas.amount1(), -cache.curDeltas.amount0());
+                ? (cache.curDeltas.amount0(), cache.curDeltas.amount1())
+                : (cache.curDeltas.amount1(), cache.curDeltas.amount0());
             result.deltaAmounts[i] += cache.deltaIn;
             result.deltaAmounts[i + 1] += cache.deltaOut;
             result.activeIdAfterList[i] = cache.activeIdAfter;
@@ -188,8 +188,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
 
         int128[] memory deltaAmounts = new int128[](2);
 
-        deltaAmounts[0] = -deltas.amount0();
-        deltaAmounts[1] = -deltas.amount1();
+        deltaAmounts[0] = deltas.amount0();
+        deltaAmounts[1] = deltas.amount1();
 
         bytes memory result = abi.encode(deltaAmounts, activeIdAfter);
 
@@ -220,8 +220,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
 
             delete amountOutCached;
             (cache.deltaIn, cache.deltaOut) = !oneForZero
-                ? (-cache.curDeltas.amount0(), -cache.curDeltas.amount1())
-                : (-cache.curDeltas.amount1(), -cache.curDeltas.amount0());
+                ? (cache.curDeltas.amount0(), cache.curDeltas.amount1())
+                : (cache.curDeltas.amount1(), cache.curDeltas.amount0());
             result.deltaAmounts[i - 1] += cache.deltaIn;
             result.deltaAmounts[i] += cache.deltaOut;
             result.activeIdAfterList[i - 1] = cache.activeIdAfter;
@@ -245,8 +245,8 @@ contract BinQuoter is IBinQuoter, ILockCallback {
         if (amountOutCached != 0) delete amountOutCached;
         int128[] memory deltaAmounts = new int128[](2);
 
-        deltaAmounts[0] = -deltas.amount0();
-        deltaAmounts[1] = -deltas.amount1();
+        deltaAmounts[0] = deltas.amount0();
+        deltaAmounts[1] = deltas.amount1();
 
         bytes memory result = abi.encode(deltaAmounts, activeIdAfter);
         assembly ("memory-safe") {
@@ -262,10 +262,11 @@ contract BinQuoter is IBinQuoter, ILockCallback {
     {
         deltas = manager.swap(poolKey, zeroForOne, amountSpecified, hookData);
 
-        (activeIdAfter,,) = manager.getSlot0(poolKey.toId());
         // only exactOut case
         if (amountOutCached != 0 && amountOutCached != uint128(zeroForOne ? deltas.amount1() : deltas.amount0())) {
             revert InsufficientAmountOut();
         }
+
+        (activeIdAfter,,) = manager.getSlot0(poolKey.toId());
     }
 }
