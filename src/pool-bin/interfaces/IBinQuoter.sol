@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
+import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {IQuoter} from "../../interfaces/IQuoter.sol";
 
 /// @title IBinQuoter Interface
@@ -12,6 +13,20 @@ import {IQuoter} from "../../interfaces/IQuoter.sol";
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
 interface IBinQuoter is IQuoter {
+    struct QuoteResult {
+        int128[] deltaAmounts;
+        uint24[] activeIdAfterList;
+    }
+
+    struct QuoteCache {
+        BalanceDelta curDeltas;
+        uint128 prevAmount;
+        int128 deltaIn;
+        int128 deltaOut;
+        Currency prevCurrency;
+        uint24 activeIdAfter;
+    }
+
     struct QuoteExactSingleParams {
         PoolKey poolKey;
         bool zeroForOne;

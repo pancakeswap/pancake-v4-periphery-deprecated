@@ -3,8 +3,6 @@
 pragma solidity ^0.8.24;
 
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
-import {IPoolManager} from "pancake-v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {IQuoter} from "../interfaces/IQuoter.sol";
 

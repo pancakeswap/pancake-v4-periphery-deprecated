@@ -2,7 +2,6 @@
 // Copyright (C) 2024 PancakeSwap
 pragma solidity ^0.8.24;
 
-import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
 import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
