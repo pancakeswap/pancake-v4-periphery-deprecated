@@ -128,8 +128,8 @@ contract CLQuoter is Quoter, ICLQuoter {
             );
 
             (cache.deltaIn, cache.deltaOut) = zeroForOne
-                ? (-cache.curDeltas.amount0(), -cache.curDeltas.amount1())
-                : (-cache.curDeltas.amount1(), -cache.curDeltas.amount0());
+                ? (cache.curDeltas.amount0(), cache.curDeltas.amount1())
+                : (cache.curDeltas.amount1(), cache.curDeltas.amount0());
             result.deltaAmounts[i] += cache.deltaIn;
             result.deltaAmounts[i + 1] += cache.deltaOut;
 
@@ -166,8 +166,8 @@ contract CLQuoter is Quoter, ICLQuoter {
 
         int128[] memory deltaAmounts = new int128[](2);
 
-        deltaAmounts[0] = -deltas.amount0();
-        deltaAmounts[1] = -deltas.amount1();
+        deltaAmounts[0] = deltas.amount0();
+        deltaAmounts[1] = deltas.amount1();
 
         uint32 initializedTicksLoaded =
             PoolTicksCounter.countInitializedTicksLoaded(ICLPoolManager(manager), params.poolKey, tickBefore, tickAfter);
@@ -205,8 +205,8 @@ contract CLQuoter is Quoter, ICLQuoter {
             // always clear because sqrtPriceLimitX96 is set to 0 always
             delete amountOutCached;
             (cache.deltaIn, cache.deltaOut) = !oneForZero
-                ? (-cache.curDeltas.amount0(), -cache.curDeltas.amount1())
-                : (-cache.curDeltas.amount1(), -cache.curDeltas.amount0());
+                ? (cache.curDeltas.amount0(), cache.curDeltas.amount1())
+                : (cache.curDeltas.amount1(), cache.curDeltas.amount0());
             result.deltaAmounts[i - 1] += cache.deltaIn;
             result.deltaAmounts[i] += cache.deltaOut;
 
@@ -246,8 +246,8 @@ contract CLQuoter is Quoter, ICLQuoter {
         if (amountOutCached != 0) delete amountOutCached;
         int128[] memory deltaAmounts = new int128[](2);
 
-        deltaAmounts[0] = -deltas.amount0();
-        deltaAmounts[1] = -deltas.amount1();
+        deltaAmounts[0] = deltas.amount0();
+        deltaAmounts[1] = deltas.amount1();
 
         uint32 initializedTicksLoaded =
             PoolTicksCounter.countInitializedTicksLoaded(ICLPoolManager(manager), params.poolKey, tickBefore, tickAfter);
