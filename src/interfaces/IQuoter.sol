@@ -3,29 +3,18 @@
 pragma solidity ^0.8.24;
 
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
-import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
-import {IPoolManager} from "pancake-v4-core/src/interfaces/IPoolManager.sol";
+import {PathKey} from "../libraries/PathKey.sol";
 
 /// @title IQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
-interface IQuoter is ILockCallback {
+interface IQuoter {
     error InvalidLockAcquiredSender();
     error InsufficientAmountOut();
     error LockFailure();
     error NotSelf();
     error UnexpectedRevertBytes(bytes revertData);
-
-    struct PathKey {
-        Currency intermediateCurrency;
-        uint24 fee;
-        IHooks hooks;
-        IPoolManager poolManager;
-        bytes hookData;
-        bytes32 parameters;
-    }
 
     struct QuoteExactParams {
         Currency exactCurrency;

@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
-
+import {PathKey} from "../../libraries/PathKey.sol";
 import {ISwapRouterBase} from "../../interfaces/ISwapRouterBase.sol";
 
 interface ICLSwapRouterBase is ISwapRouterBase {

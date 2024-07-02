@@ -11,7 +11,7 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {SafeCast} from "pancake-v4-core/src/pool-bin/libraries/math/SafeCast.sol";
 import {PoolIdLibrary} from "pancake-v4-core/src/types/PoolId.sol";
 import {IBinQuoter} from "../interfaces/IBinQuoter.sol";
-import {PathKeyLib} from "../../libraries/PathKey.sol";
+import {PathKey, PathKeyLib} from "../../libraries/PathKey.sol";
 import {Quoter} from "../../base/Quoter.sol";
 
 contract BinQuoter is Quoter, IBinQuoter {

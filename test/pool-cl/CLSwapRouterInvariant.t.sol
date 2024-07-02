@@ -26,6 +26,7 @@ import {ICLSwapRouterBase} from "../../src/pool-cl/interfaces/ICLSwapRouterBase.
 import {ISwapRouterBase} from "../../src/interfaces/ISwapRouterBase.sol";
 import {NonfungiblePositionManager} from "../../src/pool-cl/NonfungiblePositionManager.sol";
 import {INonfungiblePositionManager} from "../../src/pool-cl/interfaces/INonfungiblePositionManager.sol";
+import {PathKey} from "../../src/libraries/PathKey.sol";
 
 contract CLSwapRouterHandler is Test {
     using PoolIdLibrary for PoolKey;
@@ -146,8 +147,8 @@ contract CLSwapRouterHandler is Test {
 
         // Step 3: swap
         PoolKey memory pk = isNativePool ? nativePoolKey : poolKey;
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: pk.fee,
             hooks: pk.hooks,
@@ -222,8 +223,8 @@ contract CLSwapRouterHandler is Test {
         vm.recordLogs();
 
         PoolKey memory pk = isNativePool ? nativePoolKey : poolKey;
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
             intermediateCurrency: isNativePool ? CurrencyLibrary.NATIVE : currency0,
             fee: pk.fee,
             hooks: pk.hooks,

@@ -5,7 +5,7 @@ pragma solidity ^0.8.19;
 import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {CurrencyLibrary, Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
-
+import {PathKey} from "./libraries/PathKey.sol";
 import {ISwapRouterBase} from "./interfaces/ISwapRouterBase.sol";
 
 /// @notice General idea of this contract is to provide a base for all swap routers

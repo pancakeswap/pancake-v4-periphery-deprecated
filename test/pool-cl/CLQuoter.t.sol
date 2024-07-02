@@ -23,6 +23,7 @@ import {ProtocolFeeControllerTest} from "pancake-v4-core/test/pool-cl/helpers/Pr
 import {IProtocolFeeController} from "pancake-v4-core/src/interfaces/IProtocolFeeController.sol";
 import {Currency, CurrencyLibrary} from "pancake-v4-core/src/types/Currency.sol";
 import {TickMath} from "pancake-v4-core/src/pool-cl/libraries/TickMath.sol";
+import {PathKey} from "../../src/libraries/PathKey.sol";
 
 contract CLQuoterTest is Test, Deployers {
     using SafeCast for *;
@@ -654,9 +655,9 @@ contract CLQuoterTest is Test, Deployers {
         view
         returns (ICLQuoter.QuoteExactParams memory params)
     {
-        IQuoter.PathKey[] memory path = new IQuoter.PathKey[](_tokenPath.length - 1);
+        PathKey[] memory path = new PathKey[](_tokenPath.length - 1);
         for (uint256 i = 0; i < _tokenPath.length - 1; i++) {
-            path[i] = IQuoter.PathKey(
+            path[i] = PathKey(
                 Currency.wrap(address(_tokenPath[i + 1])),
                 3000,
                 IHooks(address(0)),
@@ -676,9 +677,9 @@ contract CLQuoterTest is Test, Deployers {
         view
         returns (ICLQuoter.QuoteExactParams memory params)
     {
-        IQuoter.PathKey[] memory path = new IQuoter.PathKey[](_tokenPath.length - 1);
+        PathKey[] memory path = new PathKey[](_tokenPath.length - 1);
         for (uint256 i = _tokenPath.length - 1; i > 0; i--) {
-            path[i - 1] = IQuoter.PathKey(
+            path[i - 1] = PathKey(
                 Currency.wrap(address(_tokenPath[i - 1])),
                 3000,
                 IHooks(address(0)),

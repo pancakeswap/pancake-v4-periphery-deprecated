@@ -4,8 +4,9 @@ pragma solidity ^0.8.24;
 
 import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {IQuoter} from "../interfaces/IQuoter.sol";
+import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
 
-abstract contract Quoter is IQuoter {
+abstract contract Quoter is IQuoter, ILockCallback {
     /// @dev cache used to check a safety condition in exact output swaps.
     uint128 internal amountOutCached;
 
@@ -27,6 +28,7 @@ abstract contract Quoter is IQuoter {
         MINIMUM_VALID_RESPONSE_LENGTH = _minLength;
     }
 
+    /// @inheritdoc ILockCallback
     function lockAcquired(bytes calldata data) external override returns (bytes memory) {
         if (msg.sender != address(vault)) {
             revert InvalidLockAcquiredSender();

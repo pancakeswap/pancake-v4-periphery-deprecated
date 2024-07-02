@@ -25,6 +25,7 @@ import {BinSwapRouter} from "../../src/pool-bin/BinSwapRouter.sol";
 import {IBinFungiblePositionManager} from "../../src/pool-bin/interfaces/IBinFungiblePositionManager.sol";
 import {BinFungiblePositionManager} from "../../src/pool-bin/BinFungiblePositionManager.sol";
 import {ISwapRouterBase} from "../../src/interfaces/ISwapRouterBase.sol";
+import {PathKey} from "../../src/libraries/PathKey.sol";
 
 contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
     using BinPoolParametersHelper for bytes32;
@@ -138,8 +139,8 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         // Step 3: swap
         PoolKey memory pk = isNativePool ? nativePoolKey : poolKey;
         vm.prank(alice);
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: pk.fee,
             hooks: pk.hooks,
@@ -203,8 +204,8 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         // Step 3: swap
         PoolKey memory pk = isNativePool ? nativePoolKey : poolKey;
         vm.prank(alice);
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
             intermediateCurrency: isNativePool ? CurrencyLibrary.NATIVE : currency0,
             fee: pk.fee,
             hooks: pk.hooks,

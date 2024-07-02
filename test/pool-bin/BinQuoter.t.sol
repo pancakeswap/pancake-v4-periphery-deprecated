@@ -32,6 +32,7 @@ import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 import {IQuoter} from "../../src/interfaces/IQuoter.sol";
 import {IBinQuoter, BinQuoter} from "../../src/pool-bin/lens/BinQuoter.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {PathKey} from "../../src/libraries/PathKey.sol";
 
 contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
     using BinPoolParametersHelper for bytes32;
@@ -228,8 +229,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
 
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key.fee,
             hooks: key.hooks,
@@ -238,8 +239,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key.parameters
         });
 
-        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](1);
-        quoter_path[0] = IQuoter.PathKey({
+        PathKey[] memory quoter_path = new PathKey[](1);
+        quoter_path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key.fee,
             hooks: key.hooks,
@@ -289,8 +290,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
 
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](2);
+        path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key.fee,
             hooks: key.hooks,
@@ -298,7 +299,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             poolManager: key.poolManager,
             parameters: key.parameters
         });
-        path[1] = ISwapRouterBase.PathKey({
+        path[1] = PathKey({
             intermediateCurrency: Currency.wrap(address(token2)),
             fee: key2.fee,
             hooks: key2.hooks,
@@ -307,8 +308,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key2.parameters
         });
 
-        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](2);
-        quoter_path[0] = IQuoter.PathKey({
+        PathKey[] memory quoter_path = new PathKey[](2);
+        quoter_path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key.fee,
             hooks: key.hooks,
@@ -316,7 +317,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             poolManager: key.poolManager,
             parameters: key.parameters
         });
-        quoter_path[1] = IQuoter.PathKey({
+        quoter_path[1] = PathKey({
             intermediateCurrency: Currency.wrap(address(token2)),
             fee: key2.fee,
             hooks: key2.hooks,
@@ -464,8 +465,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
 
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](1);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token0)),
             fee: key.fee,
             hooks: key.hooks,
@@ -478,8 +479,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         assertEq(token0.balanceOf(alice), 1 ether);
         assertEq(token1.balanceOf(alice), 0);
 
-        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](1);
-        quoter_path[0] = IQuoter.PathKey({
+        PathKey[] memory quoter_path = new PathKey[](1);
+        quoter_path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token0)),
             fee: key.fee,
             hooks: key.hooks,
@@ -534,8 +535,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
         vm.startPrank(alice);
         token0.mint(alice, 1 ether);
 
-        ISwapRouterBase.PathKey[] memory path = new ISwapRouterBase.PathKey[](2);
-        path[0] = ISwapRouterBase.PathKey({
+        PathKey[] memory path = new PathKey[](2);
+        path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token0)),
             fee: key.fee,
             hooks: key.hooks,
@@ -543,7 +544,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             poolManager: key.poolManager,
             parameters: key.parameters
         });
-        path[1] = ISwapRouterBase.PathKey({
+        path[1] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key2.fee,
             hooks: key2.hooks,
@@ -552,8 +553,8 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             parameters: key2.parameters
         });
 
-        IQuoter.PathKey[] memory quoter_path = new IQuoter.PathKey[](2);
-        quoter_path[0] = IQuoter.PathKey({
+        PathKey[] memory quoter_path = new PathKey[](2);
+        quoter_path[0] = PathKey({
             intermediateCurrency: Currency.wrap(address(token0)),
             fee: key.fee,
             hooks: key.hooks,
@@ -561,7 +562,7 @@ contract BinQuoterTest is Test, GasSnapshot, LiquidityParamsHelper {
             poolManager: key.poolManager,
             parameters: key.parameters
         });
-        quoter_path[1] = IQuoter.PathKey({
+        quoter_path[1] = PathKey({
             intermediateCurrency: Currency.wrap(address(token1)),
             fee: key2.fee,
             hooks: key2.hooks,
