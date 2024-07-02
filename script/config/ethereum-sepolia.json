@@ -8,5 +8,7 @@
     "nonFungiblePositionManager": "0xB4f95604B4438b1dd6d696aF515B36bc870a64FE",
     "clSwapRouter": "0xdd4f24B3B49D67DF8964A99d67De08E0003Ef295",
     "binFungiblePositionManager": "0x42534Faa23f3C929b6bE13dbED3C4bF8DCd714C4",
-    "binSwapRouter": "0x9b6fe628e21f25BdBcd19c40947a91B35CEc2d6a"
+    "binSwapRouter": "0x9b6fe628e21f25BdBcd19c40947a91B35CEc2d6a",
+    "CLQuoter": "0x",
+    "binQuoter": "0x"
 }
