@@ -16,15 +16,6 @@ interface ISwapRouterBase {
     /// @notice throw when input token pool requests more than traders allowed amount
     error TooMuchRequested();
 
-    struct PathKey {
-        Currency intermediateCurrency;
-        uint24 fee;
-        IHooks hooks;
-        bytes hookData;
-        IPoolManager poolManager;
-        bytes32 parameters;
-    }
-
     /// @notice V4SettlementParams
     /// - payer: Address of the payer
     /// - settle: If true, transfer token from `payer` to Vault. If false, must perform the settle elsewhere

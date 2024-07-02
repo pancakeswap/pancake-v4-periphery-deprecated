@@ -4,31 +4,34 @@ pragma solidity ^0.8.24;
 
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-import {PathKey} from "../../libraries/PathKey.sol";
+import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
+import {IQuoter} from "../../interfaces/IQuoter.sol";
 
 /// @title IBinQuoter Interface
 /// @notice Supports quoting the delta amounts from exact input or exact output swaps.
 /// @notice For each pool also tells you the activeId of the pool after the swap.
 /// @dev These functions are not marked view because they rely on calling non-view functions and reverting
 /// to compute the result. They are also not gas efficient and should not be called on-chain.
-interface IBinQuoter {
-    error InvalidLockAcquiredSender();
-    error InsufficientAmountOut();
-    error LockFailure();
-    error NotSelf();
-    error UnexpectedRevertBytes(bytes revertData);
+interface IBinQuoter is IQuoter {
+    struct QuoteResult {
+        int128[] deltaAmounts;
+        uint24[] activeIdAfterList;
+    }
+
+    struct QuoteCache {
+        BalanceDelta curDeltas;
+        uint128 prevAmount;
+        int128 deltaIn;
+        int128 deltaOut;
+        Currency prevCurrency;
+        uint24 activeIdAfter;
+    }
 
     struct QuoteExactSingleParams {
         PoolKey poolKey;
         bool zeroForOne;
         uint128 exactAmount;
         bytes hookData;
-    }
-
-    struct QuoteExactParams {
-        Currency exactCurrency;
-        PathKey[] path;
-        uint128 exactAmount;
     }
 
     /// @notice Returns the delta amounts for a given exact input swap of a single pool
@@ -76,4 +79,8 @@ interface IBinQuoter {
     function quoteExactOutput(QuoteExactParams memory params)
         external
         returns (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList);
+
+    function _quoteExactInputSingle(QuoteExactSingleParams memory params) external returns (bytes memory);
+
+    function _quoteExactOutputSingle(QuoteExactSingleParams memory params) external returns (bytes memory);
 }

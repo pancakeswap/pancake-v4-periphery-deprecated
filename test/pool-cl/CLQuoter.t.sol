@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {PathKey} from "../../src/libraries/PathKey.sol";
+import {IQuoter} from "../../src/interfaces/IQuoter.sol";
 import {ICLQuoter} from "../../src/pool-cl/interfaces/ICLQuoter.sol";
 import {CLQuoter} from "../../src/pool-cl/lens/CLQuoter.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
@@ -23,6 +23,7 @@ import {ProtocolFeeControllerTest} from "pancake-v4-core/test/pool-cl/helpers/Pr
 import {IProtocolFeeController} from "pancake-v4-core/src/interfaces/IProtocolFeeController.sol";
 import {Currency, CurrencyLibrary} from "pancake-v4-core/src/types/Currency.sol";
 import {TickMath} from "pancake-v4-core/src/pool-cl/libraries/TickMath.sol";
+import {PathKey} from "../../src/libraries/PathKey.sol";
 
 contract CLQuoterTest is Test, Deployers {
     using SafeCast for *;
@@ -129,7 +130,7 @@ contract CLQuoterTest is Test, Deployers {
 
     // nested self-call into lockAcquired reverts
     function testCLQuoter_callLockAcquired_reverts() public {
-        vm.expectRevert(ICLQuoter.LockFailure.selector);
+        vm.expectRevert(IQuoter.LockFailure.selector);
         vm.prank(address(vault));
         quoter.lockAcquired(abi.encodeWithSelector(quoter.lockAcquired.selector, address(this), "0x"));
     }

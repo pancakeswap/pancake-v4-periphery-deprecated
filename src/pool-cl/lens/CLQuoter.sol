@@ -1,62 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.8.24;
 
-import {Hooks} from "pancake-v4-core/src/libraries/Hooks.sol";
 import {TickMath} from "pancake-v4-core/src/pool-cl/libraries/TickMath.sol";
-import {IHooks} from "pancake-v4-core/src/interfaces/IHooks.sol";
-import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
 import {IVault} from "pancake-v4-core/src/interfaces/IVault.sol";
 import {ICLPoolManager} from "pancake-v4-core/src/pool-cl/interfaces/ICLPoolManager.sol";
 import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
-import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {PoolIdLibrary} from "pancake-v4-core/src/types/PoolId.sol";
 import {ICLQuoter} from "../interfaces/ICLQuoter.sol";
 import {PoolTicksCounter} from "../libraries/PoolTicksCounter.sol";
 import {PathKey, PathKeyLib} from "../../libraries/PathKey.sol";
+import {Quoter} from "../../base/Quoter.sol";
 
-contract CLQuoter is ICLQuoter, ILockCallback {
-    using Hooks for IHooks;
+contract CLQuoter is Quoter, ICLQuoter {
     using PoolIdLibrary for PoolKey;
     using PathKeyLib for PathKey;
 
-    /// @dev cache used to check a safety condition in exact output swaps.
-    uint128 private amountOutCached;
-
-    IVault public immutable vault;
-    ICLPoolManager public immutable manager;
-
     /// @dev min valid reason is 3-words long
     /// @dev int128[2] + sqrtPriceX96After padded to 32bytes + intializeTicksLoaded padded to 32bytes
-    uint256 internal constant MINIMUM_VALID_RESPONSE_LENGTH = 96;
-
-    struct QuoteResult {
-        int128[] deltaAmounts;
-        uint160[] sqrtPriceX96AfterList;
-        uint32[] initializedTicksLoadedList;
-    }
-
-    struct QuoteCache {
-        BalanceDelta curDeltas;
-        uint128 prevAmount;
-        int128 deltaIn;
-        int128 deltaOut;
-        int24 tickBefore;
-        int24 tickAfter;
-        Currency prevCurrency;
-        uint160 sqrtPriceX96After;
-    }
-
-    /// @dev Only this address may call this function
-    modifier selfOnly() {
-        if (msg.sender != address(this)) revert NotSelf();
-        _;
-    }
-
-    constructor(IVault _vault, address _poolManager) {
-        vault = _vault;
-        manager = ICLPoolManager(_poolManager);
-    }
+    /// MINIMUM_VALID_RESPONSE_LENGTH = 96;
+    constructor(IVault _vault, address _poolManager) Quoter(_vault, _poolManager, 96) {}
 
     /// @inheritdoc ICLQuoter
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
@@ -73,6 +36,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
     /// @inheritdoc ICLQuoter
     function quoteExactInput(QuoteExactParams memory params)
         external
+        override
         returns (
             int128[] memory deltaAmounts,
             uint160[] memory sqrtPriceX96AfterList,
@@ -114,34 +78,10 @@ contract CLQuoter is ICLQuoter, ILockCallback {
         }
     }
 
-    /// @inheritdoc ILockCallback
-    function lockAcquired(bytes calldata data) external returns (bytes memory) {
-        if (msg.sender != address(vault)) {
-            revert InvalidLockAcquiredSender();
-        }
-
-        (bool success, bytes memory returnData) = address(this).call(data);
-        if (success) return returnData;
-        if (returnData.length == 0) revert LockFailure();
-        // if the call failed, bubble up the reason
-        /// @solidity memory-safe-assembly
-        assembly ("memory-safe") {
-            revert(add(returnData, 32), mload(returnData))
-        }
-    }
-
-    /// @dev check revert bytes and pass through if considered valid; otherwise revert with different message
-    function validateRevertReason(bytes memory reason) private pure returns (bytes memory) {
-        if (reason.length < MINIMUM_VALID_RESPONSE_LENGTH) {
-            revert UnexpectedRevertBytes(reason);
-        }
-        return reason;
-    }
-
     /// @dev parse revert bytes from a single-pool quote
     function _handleRevertSingle(bytes memory reason)
         private
-        pure
+        view
         returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
     {
         reason = validateRevertReason(reason);
@@ -151,7 +91,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
     /// @dev parse revert bytes from a potentially multi-hop quote and return the delta amounts, sqrtPriceX96After, and initializedTicksLoaded
     function _handleRevert(bytes memory reason)
         private
-        pure
+        view
         returns (
             int128[] memory deltaAmounts,
             uint160[] memory sqrtPriceX96AfterList,
@@ -164,7 +104,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactInput swap along a path of tokens, then revert with the result
-    function _quoteExactInput(QuoteExactParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactInput(QuoteExactParams memory params) public override selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
 
         QuoteResult memory result = QuoteResult({
@@ -177,7 +117,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
         for (uint256 i = 0; i < pathLength; i++) {
             (PoolKey memory poolKey, bool zeroForOne) =
                 params.path[i].getPoolAndSwapDirection(i == 0 ? params.exactCurrency : cache.prevCurrency);
-            (, cache.tickBefore,,) = manager.getSlot0(poolKey.toId());
+            (, cache.tickBefore,,) = ICLPoolManager(manager).getSlot0(poolKey.toId());
 
             (cache.curDeltas, cache.sqrtPriceX96After, cache.tickAfter) = _swap(
                 poolKey,
@@ -196,8 +136,9 @@ contract CLQuoter is ICLQuoter, ILockCallback {
             cache.prevAmount = zeroForOne ? uint128(cache.curDeltas.amount1()) : uint128(cache.curDeltas.amount0());
             cache.prevCurrency = params.path[i].intermediateCurrency;
             result.sqrtPriceX96AfterList[i] = cache.sqrtPriceX96After;
-            result.initializedTicksLoadedList[i] =
-                PoolTicksCounter.countInitializedTicksLoaded(manager, poolKey, cache.tickBefore, cache.tickAfter);
+            result.initializedTicksLoadedList[i] = PoolTicksCounter.countInitializedTicksLoaded(
+                ICLPoolManager(manager), poolKey, cache.tickBefore, cache.tickAfter
+            );
         }
         bytes memory r =
             abi.encode(result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
@@ -207,8 +148,13 @@ contract CLQuoter is ICLQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactInput swap on a pool, then revert with the result
-    function _quoteExactInputSingle(QuoteExactSingleParams memory params) public selfOnly returns (bytes memory) {
-        (, int24 tickBefore,,) = manager.getSlot0(params.poolKey.toId());
+    function _quoteExactInputSingle(QuoteExactSingleParams memory params)
+        public
+        override
+        selfOnly
+        returns (bytes memory)
+    {
+        (, int24 tickBefore,,) = ICLPoolManager(manager).getSlot0(params.poolKey.toId());
 
         (BalanceDelta deltas, uint160 sqrtPriceX96After, int24 tickAfter) = _swap(
             params.poolKey,
@@ -224,7 +170,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
         deltaAmounts[1] = deltas.amount1();
 
         uint32 initializedTicksLoaded =
-            PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
+            PoolTicksCounter.countInitializedTicksLoaded(ICLPoolManager(manager), params.poolKey, tickBefore, tickAfter);
         bytes memory result = abi.encode(deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
         assembly ("memory-safe") {
             revert(add(0x20, result), mload(result))
@@ -232,7 +178,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactOutput swap along a path of tokens, then revert with the result
-    function _quoteExactOutput(QuoteExactParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactOutput(QuoteExactParams memory params) public override selfOnly returns (bytes memory) {
         uint256 pathLength = params.path.length;
 
         QuoteResult memory result = QuoteResult({
@@ -251,7 +197,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
                 params.path[i - 1], i == pathLength ? params.exactCurrency : cache.prevCurrency
             );
 
-            (, cache.tickBefore,,) = manager.getSlot0(poolKey.toId());
+            (, cache.tickBefore,,) = ICLPoolManager(manager).getSlot0(poolKey.toId());
 
             (cache.curDeltas, cache.sqrtPriceX96After, cache.tickAfter) =
                 _swap(poolKey, !oneForZero, int256(uint256(curAmountOut)), 0, params.path[i - 1].hookData);
@@ -267,8 +213,9 @@ contract CLQuoter is ICLQuoter, ILockCallback {
             cache.prevAmount = !oneForZero ? uint128(-cache.curDeltas.amount0()) : uint128(-cache.curDeltas.amount1());
             cache.prevCurrency = params.path[i - 1].intermediateCurrency;
             result.sqrtPriceX96AfterList[i - 1] = cache.sqrtPriceX96After;
-            result.initializedTicksLoadedList[i - 1] =
-                PoolTicksCounter.countInitializedTicksLoaded(manager, poolKey, cache.tickBefore, cache.tickAfter);
+            result.initializedTicksLoadedList[i - 1] = PoolTicksCounter.countInitializedTicksLoaded(
+                ICLPoolManager(manager), poolKey, cache.tickBefore, cache.tickAfter
+            );
         }
         bytes memory r =
             abi.encode(result.deltaAmounts, result.sqrtPriceX96AfterList, result.initializedTicksLoadedList);
@@ -278,11 +225,16 @@ contract CLQuoter is ICLQuoter, ILockCallback {
     }
 
     /// @dev quote an ExactOutput swap on a pool, then revert with the result
-    function _quoteExactOutputSingle(QuoteExactSingleParams memory params) public selfOnly returns (bytes memory) {
+    function _quoteExactOutputSingle(QuoteExactSingleParams memory params)
+        public
+        override
+        selfOnly
+        returns (bytes memory)
+    {
         // if no price limit has been specified, cache the output amount for comparison in the swap callback
         if (params.sqrtPriceLimitX96 == 0) amountOutCached = params.exactAmount;
 
-        (, int24 tickBefore,,) = manager.getSlot0(params.poolKey.toId());
+        (, int24 tickBefore,,) = ICLPoolManager(manager).getSlot0(params.poolKey.toId());
         (BalanceDelta deltas, uint160 sqrtPriceX96After, int24 tickAfter) = _swap(
             params.poolKey,
             params.zeroForOne,
@@ -298,7 +250,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
         deltaAmounts[1] = deltas.amount1();
 
         uint32 initializedTicksLoaded =
-            PoolTicksCounter.countInitializedTicksLoaded(manager, params.poolKey, tickBefore, tickAfter);
+            PoolTicksCounter.countInitializedTicksLoaded(ICLPoolManager(manager), params.poolKey, tickBefore, tickAfter);
         bytes memory result = abi.encode(deltaAmounts, sqrtPriceX96After, initializedTicksLoaded);
         assembly ("memory-safe") {
             revert(add(0x20, result), mload(result))
@@ -314,7 +266,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
         uint160 sqrtPriceLimitX96,
         bytes memory hookData
     ) private returns (BalanceDelta deltas, uint160 sqrtPriceX96After, int24 tickAfter) {
-        deltas = manager.swap(
+        deltas = ICLPoolManager(manager).swap(
             poolKey,
             ICLPoolManager.SwapParams({
                 zeroForOne: zeroForOne,
@@ -327,7 +279,7 @@ contract CLQuoter is ICLQuoter, ILockCallback {
         if (amountOutCached != 0 && amountOutCached != uint128(zeroForOne ? deltas.amount1() : deltas.amount0())) {
             revert InsufficientAmountOut();
         }
-        (sqrtPriceX96After, tickAfter,,) = manager.getSlot0(poolKey.toId());
+        (sqrtPriceX96After, tickAfter,,) = ICLPoolManager(manager).getSlot0(poolKey.toId());
     }
 
     /// @dev return either the sqrtPriceLimit from user input, or the max/min value possible depending on trade direction
