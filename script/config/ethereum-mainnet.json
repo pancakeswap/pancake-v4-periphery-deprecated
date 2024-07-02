@@ -8,5 +8,7 @@
     "nonFungiblePositionManager": "0x",
     "clSwapRouter": "0x",
     "binFungiblePositionManager": "0x",
-    "binSwapRouter": "0x"
+    "binSwapRouter": "0x",
+    "CLQuoter": "0x",
+    "binQuoter": "0x"
 }
