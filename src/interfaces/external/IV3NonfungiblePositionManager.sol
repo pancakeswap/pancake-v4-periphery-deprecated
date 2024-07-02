@@ -1,55 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Copyright (C) 2024 PancakeSwap
-pragma solidity ^0.8.19;
-
-import {ILockCallback} from "pancake-v4-core/src/interfaces/ILockCallback.sol";
-import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
-import {PoolId} from "pancake-v4-core/src/types/PoolId.sol";
-import {Currency} from "pancake-v4-core/src/types/Currency.sol";
-
-import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-import {IERC721Enumerable} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {IERC721Permit} from "./IERC721Permit.sol";
-import {ICLPeripheryImmutableState} from "./ICLPeripheryImmutableState.sol";
-import {IPeripheryPayments} from "../../interfaces/IPeripheryPayments.sol";
-import {IMulticall} from "../../interfaces/IMulticall.sol";
+pragma solidity >=0.7.5;
+pragma abicoder v2;
 
 /// @title Non-fungible token for positions
-/// @notice Wraps PancakeSwap V4 positions in a non-fungible token interface which allows for them to be transferred
-/// and authorized.
-interface INonfungiblePositionManager is
-    IPeripheryPayments,
-    ILockCallback,
-    ICLPeripheryImmutableState,
-    IERC721Metadata,
-    IERC721Enumerable,
-    IERC721Permit,
-    IMulticall
-{
-    error NotOwnerOrOperator();
-    error InvalidLiquidityDecreaseAmount();
-    error NonEmptyPosition();
-    error InvalidTokenID();
-    error InvalidMaxCollectAmount();
-
-    error OnlyVaultCaller();
-    error InvalidCalldataType();
-
-    error NonexistentToken();
-
-    enum CallbackDataType {
-        Mint,
-        IncreaseLiquidity,
-        DecreaseLiquidity,
-        Collect
-    }
-
-    struct CallbackData {
-        address sender;
-        CallbackDataType callbackDataType;
-        bytes params;
-    }
-
+/// @notice Wraps PancakeSwap V3 positions in a non-fungible token interface which allows for them to be transferred
+/// and authorized. Copying from PancakeSwap-V3
+/// https://github.com/pancakeswap/pancake-v3-contracts/blob/main/projects/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol
+interface IV3NonfungiblePositionManager {
     /// @notice Emitted when liquidity is increased for a position NFT
     /// @dev Also emitted when a token is minted
     /// @param tokenId The ID of the token for which liquidity was increased
@@ -71,39 +28,29 @@ interface INonfungiblePositionManager is
     /// @param amount1 The amount of token1 owed to the position that was collected
     event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
 
-    /// @dev details about the pancake position
-    struct Position {
-        // the nonce for permits
-        uint96 nonce;
-        // TODO: confirm if this is still needed
-        // the address that is approved for spending this token
-        address operator;
-        // the hashed poolKey of the pool with which this token is connected
-        PoolId poolId;
-        // the tick range of the position
-        int24 tickLower;
-        int24 tickUpper;
-        // the liquidity of the position
-        uint128 liquidity;
-        // the fee growth of the aggregate position as of the last action on the individual position
-        uint256 feeGrowthInside0LastX128;
-        uint256 feeGrowthInside1LastX128;
-        // how many uncollected tokens are owed to the position, as of the last computation
-        uint128 tokensOwed0;
-        uint128 tokensOwed1;
-        bytes32 salt;
-    }
-
     /// @notice Returns the position information associated with a given token ID.
+    /// @dev Throws if the token ID is not valid.
+    /// @param tokenId The ID of the token that represents the position
+    /// @return nonce The nonce for permits
+    /// @return operator The address that is approved for spending
+    /// @return token0 The address of the token0 for a specific pool
+    /// @return token1 The address of the token1 for a specific pool
+    /// @return fee The fee associated with the pool
+    /// @return tickLower The lower end of the tick range for the position
+    /// @return tickUpper The higher end of the tick range for the position
+    /// @return liquidity The liquidity of the position
+    /// @return feeGrowthInside0LastX128 The fee growth of token0 as of the last action on the individual position
+    /// @return feeGrowthInside1LastX128 The fee growth of token1 as of the last action on the individual position
+    /// @return tokensOwed0 The uncollected amount of token0 owed to the position as of the last computation
+    /// @return tokensOwed1 The uncollected amount of token1 owed to the position as of the last computation
     function positions(uint256 tokenId)
         external
         view
         returns (
             uint96 nonce,
             address operator,
-            PoolId poolId,
-            Currency currency0,
-            Currency currency1,
+            address token0,
+            address token1,
             uint24 fee,
             int24 tickLower,
             int24 tickUpper,
@@ -111,26 +58,15 @@ interface INonfungiblePositionManager is
             uint256 feeGrowthInside0LastX128,
             uint256 feeGrowthInside1LastX128,
             uint128 tokensOwed0,
-            uint128 tokensOwed1,
-            bytes32 salt
+            uint128 tokensOwed1
         );
 
-    /// @notice Initialize the pool state for a given pool ID.
-    /// @dev Call this when the pool does not exist and is not initialized.
-    /// @param poolKey The pool key
-    /// @param sqrtPriceX96 The initial sqrt price of the pool
-    /// @param hookData Hook data for the pool
-    /// @return tick Pool tick
-    function initialize(PoolKey memory poolKey, uint160 sqrtPriceX96, bytes calldata hookData)
-        external
-        payable
-        returns (int24 tick);
-
     struct MintParams {
-        PoolKey poolKey;
+        address token0;
+        address token1;
+        uint24 fee;
         int24 tickLower;
         int24 tickUpper;
-        bytes32 salt;
         uint256 amount0Desired;
         uint256 amount1Desired;
         uint256 amount0Min;
@@ -204,9 +140,11 @@ interface INonfungiblePositionManager is
         uint128 amount1Max;
     }
 
-    /// @notice Collects the fees owed to a specific position to the recipient
+    /// @notice Collects up to a maximum amount of fees owed to a specific position to the recipient
     /// @param params tokenId The ID of the NFT for which tokens are being collected,
     /// recipient The account that should receive the tokens,
+    /// amount0Max The maximum amount of token0 to collect,
+    /// amount1Max The maximum amount of token1 to collect
     /// @return amount0 The amount of fees collected in token0
     /// @return amount1 The amount of fees collected in token1
     function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);
