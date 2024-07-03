@@ -35,10 +35,18 @@ contract BinFungibleTokenTest is Test, GasSnapshot {
         assertEq(token.balanceOf(alice, id), 0);
 
         // mint and verify bal
+        token.mint(alice, id, amt);
+        assertEq(token.balanceOf(alice, id), amt);
+    }
+
+    function testGas_Mint() public {
+        uint256 id = 5;
+        uint256 amt = 100;
+
+        // mint
         snapStart("BinFungibleTokenTest#testMint");
         token.mint(alice, id, amt);
         snapEnd();
-        assertEq(token.balanceOf(alice, id), amt);
     }
 
     function testMintMultiple(uint256 id, uint256 amt) public {
@@ -61,10 +69,20 @@ contract BinFungibleTokenTest is Test, GasSnapshot {
         assertEq(token.balanceOf(alice, id), amt);
 
         // burn and verify bal
+        token.burn(alice, id, amt);
+        assertEq(token.balanceOf(alice, id), 0);
+    }
+
+    function testGas_Burn() public {
+        uint256 id = 5;
+        uint256 amt = 100;
+
+        // before: mint and verify bal
+        token.mint(alice, id, amt);
+
         snapStart("BinFungibleTokenTest#testBurn");
         token.burn(alice, id, amt);
         snapEnd();
-        assertEq(token.balanceOf(alice, id), 0);
     }
 
     function testBurn_ExceedBalance(uint256 id, uint256 amt) public {
@@ -228,13 +246,30 @@ contract BinFungibleTokenTest is Test, GasSnapshot {
         // transfer
         vm.expectEmit();
         emit TransferBatch(alice, alice, bob, ids, amounts);
-        snapStart("BinFungibleTokenTest#testBatchTransferFrom_FromOwner");
         token.batchTransferFrom(alice, bob, ids, amounts);
-        snapEnd();
 
         // verify
         assertEq(token.balanceOf(alice, id), 0);
         assertEq(token.balanceOf(bob, id), amt);
+    }
+
+    function testGas_BatchTransferFrom_FromOwner() public {
+        uint256 id = 5;
+        uint256 amt = 100;
+
+        // pre-req mint some nft to alice
+        token.mint(alice, id, amt);
+
+        vm.startPrank(alice);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = id;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = amt;
+
+        // transfer
+        snapStart("BinFungibleTokenTest#testBatchTransferFrom_FromOwner");
+        token.batchTransferFrom(alice, bob, ids, amounts);
+        snapEnd();
     }
 
     function testBatchTransferFrom_FromBob(uint256 id, uint256 amt) public {
@@ -256,12 +291,33 @@ contract BinFungibleTokenTest is Test, GasSnapshot {
         // transfer
         vm.expectEmit();
         emit TransferBatch(bob, alice, bob, ids, amounts);
-        snapStart("BinFungibleTokenTest#testBatchTransferFrom_FromBob");
         token.batchTransferFrom(alice, bob, ids, amounts);
-        snapEnd();
 
         // verify
         assertEq(token.balanceOf(alice, id), 0);
         assertEq(token.balanceOf(bob, id), amt);
+    }
+
+    function testGas_BatchTransferFrom_FromBob() public {
+        uint256 id = 5;
+        uint256 amt = 100;
+
+        // pre-req mint some nft to alice
+        token.mint(alice, id, amt);
+
+        // alice give bob approval
+        vm.prank(alice);
+        token.approveForAll(bob, true);
+
+        // bob tries to transfer
+        vm.startPrank(bob);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = id;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = amt;
+
+        snapStart("BinFungibleTokenTest#testBatchTransferFrom_FromBob");
+        token.batchTransferFrom(alice, bob, ids, amounts);
+        snapEnd();
     }
 }
