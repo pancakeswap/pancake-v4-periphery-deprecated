@@ -1,14 +1,14 @@
 {
     "weth": "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd",
-    "vault": "0x1b896893dfc86bb67Cf57767298b9073D2c1bA2c",
-    "clPoolManager": "0xb3b166Ac12cd6C1e0093Cbde5810343DC28F17fD",
-    "binPoolManager": "0x20d39ad9C930fa7F0C90232101CCb9028280d063",
-    "nonFungibleTokenPositionDescriptorOffChain": "0xE9c7f3196Ab8C09F6616365E8873DaEb207C0391",
-    "NFTPositionDescriptorProxyAdmin": "0xb2d45dd7e71b2b4A8B43210D74a732F8A970E24B",
-    "nonFungiblePositionManager": "0x11f715c1E547fe657A6AB7a68FD988B953600652",
-    "clSwapRouter": "0x56200961C16E32cA197B772fade66B58676d346D",
-    "binFungiblePositionManager": "0x14a17dCf6d9BC6a5055D0aC58Deb64859643a196",
-    "binSwapRouter": "0x0F129A0097D27705D35b81D918f49978E0Ed5E72",
-    "CLQuoter:": "0x1f5E11079D17E1A4A007D590D1de44Ef76BcCb35",
-    "binQuoter": "0x8A0885223D1C9D3014e6de2f40680A6e814E66C9"
+    "vault": "0x79D5A618c43eCAda2BaaC65A9979cF120128f6Fa",
+    "clPoolManager": "0x40a081A39E9638fa6e2463B92A4eff4Bdf877179",
+    "binPoolManager": "0xc51DE4C65d6e3fb612050E383495e9457840d2c9",
+    "nonFungibleTokenPositionDescriptorOffChain": "0x86486E6Ad0bB71d48bc10dDd581386154B0CD797",
+    "NFTPositionDescriptorProxyAdmin": "0x3e0cC1a33538A580Ba024E7F7F4e41194CF3eb49",
+    "nonFungiblePositionManager": "0xe05b539447B17630Cb087473F6b50E5c5f73FDeb",
+    "clSwapRouter": "0xA1eA7A788E69161E717a2bF61b7fCb7547745F31",
+    "binFungiblePositionManager": "0x5168af9C61E569C2D5e0d1f5eFB633c0be07BbB3",
+    "binSwapRouter": "0xD0A3F3994ECc341f2E5c3Aa548C21aa1bDF886D8",
+    "CLQuoter:": "0x029D2EC6051720c6Bf5CA709671A8EDf684D0410",
+    "binQuoter": "0x936f1AF65ee79b5E06cd4E2232D2133C674a1c5F"
 }
