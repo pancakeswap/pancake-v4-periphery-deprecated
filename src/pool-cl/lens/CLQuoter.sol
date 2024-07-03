@@ -23,7 +23,7 @@ contract CLQuoter is Quoter, ICLQuoter {
 
     /// @inheritdoc ICLQuoter
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
-        public
+        external
         override
         returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
     {
@@ -51,7 +51,7 @@ contract CLQuoter is Quoter, ICLQuoter {
 
     /// @inheritdoc ICLQuoter
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
-        public
+        external
         override
         returns (int128[] memory deltaAmounts, uint160 sqrtPriceX96After, uint32 initializedTicksLoaded)
     {
@@ -64,7 +64,7 @@ contract CLQuoter is Quoter, ICLQuoter {
 
     /// @inheritdoc ICLQuoter
     function quoteExactOutput(QuoteExactParams memory params)
-        public
+        external
         override
         returns (
             int128[] memory deltaAmounts,

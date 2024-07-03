@@ -26,7 +26,7 @@ contract BinQuoter is Quoter, IBinQuoter {
 
     /// @inheritdoc IBinQuoter
     function quoteExactInputSingle(QuoteExactSingleParams memory params)
-        public
+        external
         override
         returns (int128[] memory deltaAmounts, uint24 activeIdAfter)
     {
@@ -39,6 +39,7 @@ contract BinQuoter is Quoter, IBinQuoter {
     /// @inheritdoc IBinQuoter
     function quoteExactInput(QuoteExactParams memory params)
         external
+        override
         returns (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList)
     {
         try vault.lock(abi.encodeWithSelector(this._quoteExactInput.selector, params)) {}
@@ -49,7 +50,7 @@ contract BinQuoter is Quoter, IBinQuoter {
 
     /// @inheritdoc IBinQuoter
     function quoteExactOutputSingle(QuoteExactSingleParams memory params)
-        public
+        external
         override
         returns (int128[] memory deltaAmounts, uint24 activeIdAfter)
     {
@@ -62,7 +63,7 @@ contract BinQuoter is Quoter, IBinQuoter {
 
     /// @inheritdoc IBinQuoter
     function quoteExactOutput(QuoteExactParams memory params)
-        public
+        external
         override
         returns (int128[] memory deltaAmounts, uint24[] memory activeIdAfterList)
     {
