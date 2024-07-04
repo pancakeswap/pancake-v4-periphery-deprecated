@@ -15,16 +15,23 @@ import {IBaseMigrator} from "../interfaces/IBaseMigrator.sol";
 
 contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, SelfPermit {
     error NOT_WETH9();
+    error INSUFFICIENT_AMOUNTS_RECEIVED();
 
     constructor(address _WETH9) PeripheryImmutableState(_WETH9) {}
 
-    function withdrawLiquidityFromV2(address pair, uint256 amount)
+    function withdrawLiquidityFromV2(V2PoolParams calldata v2PoolParams)
+        // function withdrawLiquidityFromV2(address pair, uint256 amount, uint256 amount0Min, uint256 amount1Min)
         internal
         returns (uint256 amount0Received, uint256 amount1Received)
     {
         // burn v2 liquidity to this address
-        IPancakePair(pair).transferFrom(msg.sender, pair, amount);
-        return IPancakePair(pair).burn(address(this));
+        IPancakePair(v2PoolParams.pair).transferFrom(msg.sender, v2PoolParams.pair, v2PoolParams.migrateAmount);
+        (amount0Received, amount1Received) = IPancakePair(v2PoolParams.pair).burn(address(this));
+
+        // same price slippage check as v3
+        if (amount0Received < v2PoolParams.amount0Min || amount1Received < v2PoolParams.amount1Min) {
+            revert INSUFFICIENT_AMOUNTS_RECEIVED();
+        }
     }
 
     function withdrawLiquidityFromV3(

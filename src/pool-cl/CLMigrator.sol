@@ -21,8 +21,7 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        (uint256 amount0Received, uint256 amount1Received) =
-            withdrawLiquidityFromV2(v2PoolParams.pair, v2PoolParams.migrateAmount);
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV2(v2PoolParams);
 
         /// @notice if user mannually specify the price range, they might need to send extra token
         batchAndNormalizeTokens(

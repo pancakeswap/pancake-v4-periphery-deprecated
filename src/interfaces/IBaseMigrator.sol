@@ -12,6 +12,9 @@ interface IBaseMigrator {
         address pair;
         // the amount of v2 lp token to be withdrawn
         uint256 migrateAmount;
+        // the amount of token0 and token1 to be received after burning must be no less than these
+        uint256 amount0Min;
+        uint256 amount1Min;
     }
 
     struct V3PoolParams {
