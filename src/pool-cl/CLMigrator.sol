@@ -17,7 +17,7 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
 
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
-        INonfungiblePositionManager.MintParams calldata v4MintParams,
+        V4CLPoolParams calldata v4MintParams,
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
@@ -28,7 +28,19 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
             v4MintParams.poolKey.currency0, v4MintParams.poolKey.currency1, extraAmount0, extraAmount1
         );
 
-        (,, uint256 amount0Consumed, uint256 amount1Consumed) = _addLiquidityToTargetPool(v4MintParams);
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: v4MintParams.poolKey,
+            tickLower: v4MintParams.tickLower,
+            tickUpper: v4MintParams.tickUpper,
+            salt: v4MintParams.salt,
+            amount0Desired: amount0Received + extraAmount0,
+            amount1Desired: amount1Received + extraAmount1,
+            amount0Min: v4MintParams.amount0Min,
+            amount1Min: v4MintParams.amount1Min,
+            recipient: v4MintParams.recipient,
+            deadline: v4MintParams.deadline
+        });
+        (,, uint256 amount0Consumed, uint256 amount1Consumed) = _addLiquidityToTargetPool(mintParams);
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
@@ -43,7 +55,7 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
 
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
-        INonfungiblePositionManager.MintParams calldata v4MintParams,
+        V4CLPoolParams calldata v4MintParams,
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
@@ -63,7 +75,19 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
             v4MintParams.poolKey.currency0, v4MintParams.poolKey.currency1, extraAmount0, extraAmount1
         );
 
-        (,, uint256 amount0Consumed, uint256 amount1Consumed) = _addLiquidityToTargetPool(v4MintParams);
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: v4MintParams.poolKey,
+            tickLower: v4MintParams.tickLower,
+            tickUpper: v4MintParams.tickUpper,
+            salt: v4MintParams.salt,
+            amount0Desired: amount0Received + extraAmount0,
+            amount1Desired: amount1Received + extraAmount1,
+            amount0Min: v4MintParams.amount0Min,
+            amount1Min: v4MintParams.amount1Min,
+            recipient: v4MintParams.recipient,
+            deadline: v4MintParams.deadline
+        });
+        (,, uint256 amount0Consumed, uint256 amount1Consumed) = _addLiquidityToTargetPool(mintParams);
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
@@ -76,7 +100,7 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
     }
 
-    function _addLiquidityToTargetPool(INonfungiblePositionManager.MintParams calldata params)
+    function _addLiquidityToTargetPool(INonfungiblePositionManager.MintParams memory params)
         internal
         returns (uint256 tokenId, uint128 liquidity, uint256 amount0Consumed, uint256 amount1Consumed)
     {

@@ -8,10 +8,22 @@ import {IV3NonfungiblePositionManager} from "../../interfaces/external/IV3Nonfun
 import {INonfungiblePositionManager} from "./INonfungiblePositionManager.sol";
 
 interface ICLMigrator is IBaseMigrator {
+    /// @notice same fields as INonfungiblePositionManager.MintParams
+    /// except amount0Desired/amount1Desired which will be calculated by migrator
+    struct V4CLPoolParams {
+        PoolKey poolKey;
+        int24 tickLower;
+        int24 tickUpper;
+        bytes32 salt;
+        uint256 amount0Min;
+        uint256 amount1Min;
+        address recipient;
+        uint256 deadline;
+    }
+
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
-        // exact target v4#clpool mintParams
-        INonfungiblePositionManager.MintParams calldata v4MintParams,
+        V4CLPoolParams calldata v4MintParams,
         // extra funds to be added
         uint256 extraAmount0,
         uint256 extraAmount1
@@ -19,8 +31,7 @@ interface ICLMigrator is IBaseMigrator {
 
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
-        // exact target v4#clpool mintParams
-        INonfungiblePositionManager.MintParams calldata v4MintParams,
+        V4CLPoolParams calldata v4MintParams,
         // extra funds to be added
         uint256 extraAmount0,
         uint256 extraAmount1
