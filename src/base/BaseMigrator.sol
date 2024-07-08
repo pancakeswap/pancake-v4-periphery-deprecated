@@ -97,9 +97,9 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
         }
     }
 
-    function approveMax(Currency currency, address to) internal {
+    function approveMaxIfNeeded(Currency currency, address to, uint256 amount) internal {
         ERC20 token = ERC20(Currency.unwrap(currency));
-        if (token.allowance(address(this), to) == type(uint256).max) {
+        if (token.allowance(address(this), to) >= amount) {
             return;
         }
         SafeTransferLib.safeApprove(token, to, type(uint256).max);

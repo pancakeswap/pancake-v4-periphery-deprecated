@@ -111,9 +111,9 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         /// @dev currency1 cant be NATIVE
         bool nativePair = params.poolKey.currency0.isNative();
         if (!nativePair) {
-            approveMax(params.poolKey.currency0, address(nonfungiblePositionManager));
+            approveMaxIfNeeded(params.poolKey.currency0, address(nonfungiblePositionManager), params.amount0Desired);
         }
-        approveMax(params.poolKey.currency1, address(nonfungiblePositionManager));
+        approveMaxIfNeeded(params.poolKey.currency1, address(nonfungiblePositionManager), params.amount1Desired);
 
         (tokenId, liquidity, amount0Consumed, amount1Consumed) =
             nonfungiblePositionManager.mint{value: nativePair ? params.amount0Desired : 0}(params);
