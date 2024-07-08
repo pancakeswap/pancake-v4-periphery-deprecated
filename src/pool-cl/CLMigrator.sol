@@ -111,13 +111,11 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
         approveMax(params.poolKey.currency1, address(nonfungiblePositionManager));
 
-        // TODO: compare the gas cost of multicall and two separate call
-        bytes[] memory data = new bytes[](2);
-        data[0] = abi.encodeWithSelector(nonfungiblePositionManager.mint.selector, params);
-        data[1] = abi.encodeWithSelector(nonfungiblePositionManager.refundETH.selector);
-        bytes[] memory ret = nonfungiblePositionManager.multicall{value: nativePair ? params.amount0Desired : 0}(data);
         (tokenId, liquidity, amount0Consumed, amount1Consumed) =
-            abi.decode(ret[0], (uint256, uint128, uint256, uint256));
+            nonfungiblePositionManager.mint{value: nativePair ? params.amount0Desired : 0}(params);
+        if (nativePair) {
+            nonfungiblePositionManager.refundETH();
+        }
     }
 
     /// @notice Planned to be batched with migration operations through multicall to save gas
@@ -128,5 +126,11 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         returns (int24 tick)
     {
         return nonfungiblePositionManager.initialize(poolKey, sqrtPriceX96, hookData);
+    }
+
+    receive() external payable {
+        if (msg.sender != address(nonfungiblePositionManager) && msg.sender != WETH9) {
+            revert INVALID_ETHER_SENDER();
+        }
     }
 }

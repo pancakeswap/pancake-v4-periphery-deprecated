@@ -3,8 +3,11 @@
 pragma solidity ^0.8.19;
 
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
+import {IPeripheryImmutableState} from "./IPeripheryImmutableState.sol";
+import {IMulticall} from "./IMulticall.sol";
+import {ISelfPermit} from "./ISelfPermit.sol";
 
-interface IBaseMigrator {
+interface IBaseMigrator is IPeripheryImmutableState, IMulticall, ISelfPermit {
     event MoreFundsAdded(address currency0, address currency1, uint256 extraAmount0, uint256 extraAmount1);
 
     struct V2PoolParams {

@@ -2,11 +2,13 @@
 pragma solidity >=0.7.5;
 pragma abicoder v2;
 
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
 /// @title Non-fungible token for positions
 /// @notice Wraps PancakeSwap V3 positions in a non-fungible token interface which allows for them to be transferred
 /// and authorized. Copying from PancakeSwap-V3
 /// https://github.com/pancakeswap/pancake-v3-contracts/blob/main/projects/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol
-interface IV3NonfungiblePositionManager {
+interface IV3NonfungiblePositionManager is IERC721 {
     /// @notice Emitted when liquidity is increased for a position NFT
     /// @dev Also emitted when a token is minted
     /// @param tokenId The ID of the token for which liquidity was increased
@@ -153,4 +155,9 @@ interface IV3NonfungiblePositionManager {
     /// must be collected first.
     /// @param tokenId The ID of the token that is being burned
     function burn(uint256 tokenId) external payable;
+
+    function createAndInitializePoolIfNecessary(address token0, address token1, uint24 fee, uint160 sqrtPriceX96)
+        external
+        payable
+        returns (address pool);
 }

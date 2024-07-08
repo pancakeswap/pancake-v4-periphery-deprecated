@@ -14,7 +14,7 @@ import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {IBaseMigrator} from "../interfaces/IBaseMigrator.sol";
 
 contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, SelfPermit {
-    error NOT_WETH9();
+    error INVALID_ETHER_SENDER();
     error INSUFFICIENT_AMOUNTS_RECEIVED();
 
     constructor(address _WETH9) PeripheryImmutableState(_WETH9) {}
@@ -32,6 +32,12 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
         if (amount0Received < v2PoolParams.amount0Min || amount1Received < v2PoolParams.amount1Min) {
             revert INSUFFICIENT_AMOUNTS_RECEIVED();
         }
+
+        /// @notice the order may mismatch with v4 pool when WETH is invovled
+        /// the following check makes sure that the output always match the order of v4 pool
+        if (IPancakePair(v2PoolParams.pair).token1() == WETH9) {
+            (amount0Received, amount1Received) = (amount1Received, amount0Received);
+        }
     }
 
     function withdrawLiquidityFromV3(
@@ -39,8 +45,6 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
         IV3NonfungiblePositionManager.DecreaseLiquidityParams memory decreaseLiquidityParams,
         bool collectFee
     ) internal returns (uint256 amount0Received, uint256 amount1Received) {
-        // TODO: consider batching decreaseLiquidity and collect
-
         /// @notice decrease liquidity from v3#nfp, make sure migrator has been approved
         (amount0Received, amount1Received) =
             IV3NonfungiblePositionManager(nfp).decreaseLiquidity(decreaseLiquidityParams);
@@ -52,7 +56,14 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
             amount1Max: collectFee ? type(uint128).max : SafeCast.toUint128(amount1Received)
         });
 
-        return IV3NonfungiblePositionManager(nfp).collect(collectParams);
+        (amount0Received, amount1Received) = IV3NonfungiblePositionManager(nfp).collect(collectParams);
+
+        /// @notice the order may mismatch with v4 pool when WETH is invovled
+        /// the following check makes sure that the output always match the order of v4 pool
+        (,,, address token1,,,,,,,,) = IV3NonfungiblePositionManager(nfp).positions(decreaseLiquidityParams.tokenId);
+        if (token1 == WETH9) {
+            (amount0Received, amount1Received) = (amount1Received, amount0Received);
+        }
     }
 
     /// @dev receive extra tokens from user if necessary and normalize all the WETH to native ETH
@@ -92,11 +103,5 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
             return;
         }
         SafeTransferLib.safeApprove(token, to, type(uint256).max);
-    }
-
-    receive() external payable {
-        if (msg.sender != WETH9) {
-            revert NOT_WETH9();
-        }
     }
 }
