@@ -28,13 +28,15 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
             v4MintParams.poolKey.currency0, v4MintParams.poolKey.currency1, extraAmount0, extraAmount1
         );
 
+        uint256 amount0Desired = amount0Received + extraAmount0;
+        uint256 amount1Desired = amount1Received + extraAmount1;
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
             poolKey: v4MintParams.poolKey,
             tickLower: v4MintParams.tickLower,
             tickUpper: v4MintParams.tickUpper,
             salt: v4MintParams.salt,
-            amount0Desired: amount0Received + extraAmount0,
-            amount1Desired: amount1Received + extraAmount1,
+            amount0Desired: amount0Desired,
+            amount1Desired: amount1Desired,
             amount0Min: v4MintParams.amount0Min,
             amount1Min: v4MintParams.amount1Min,
             recipient: v4MintParams.recipient,
@@ -44,11 +46,11 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
-            if (amount0Received > amount0Consumed) {
-                v4MintParams.poolKey.currency0.transfer(v4MintParams.recipient, amount0Received - amount0Consumed);
+            if (amount0Desired > amount0Consumed) {
+                v4MintParams.poolKey.currency0.transfer(v4MintParams.recipient, amount0Desired - amount0Consumed);
             }
-            if (amount1Received > amount1Consumed) {
-                v4MintParams.poolKey.currency1.transfer(v4MintParams.recipient, amount1Received - amount1Consumed);
+            if (amount1Desired > amount1Consumed) {
+                v4MintParams.poolKey.currency1.transfer(v4MintParams.recipient, amount1Desired - amount1Consumed);
             }
         }
     }
@@ -75,13 +77,15 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
             v4MintParams.poolKey.currency0, v4MintParams.poolKey.currency1, extraAmount0, extraAmount1
         );
 
+        uint256 amount0Desired = amount0Received + extraAmount0;
+        uint256 amount1Desired = amount1Received + extraAmount1;
         INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
             poolKey: v4MintParams.poolKey,
             tickLower: v4MintParams.tickLower,
             tickUpper: v4MintParams.tickUpper,
             salt: v4MintParams.salt,
-            amount0Desired: amount0Received + extraAmount0,
-            amount1Desired: amount1Received + extraAmount1,
+            amount0Desired: amount0Desired,
+            amount1Desired: amount1Desired,
             amount0Min: v4MintParams.amount0Min,
             amount1Min: v4MintParams.amount1Min,
             recipient: v4MintParams.recipient,
@@ -91,11 +95,11 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
-            if (amount0Received > amount0Consumed) {
-                v4MintParams.poolKey.currency0.transfer(v4MintParams.recipient, amount0Received - amount0Consumed);
+            if (amount0Desired > amount0Consumed) {
+                v4MintParams.poolKey.currency0.transfer(v4MintParams.recipient, amount0Desired - amount0Consumed);
             }
-            if (amount1Received > amount1Consumed) {
-                v4MintParams.poolKey.currency1.transfer(v4MintParams.recipient, amount1Received - amount1Consumed);
+            if (amount1Desired > amount1Consumed) {
+                v4MintParams.poolKey.currency1.transfer(v4MintParams.recipient, amount1Desired - amount1Consumed);
             }
         }
     }
