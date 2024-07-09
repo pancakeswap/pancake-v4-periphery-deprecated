@@ -137,7 +137,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 9.9 ether,
             amount1Min: 9.9 ether,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -218,7 +219,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 9.9 ether,
             amount1Min: 9.9 ether,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -297,7 +299,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 9.9 ether,
             amount1Min: 9.9 ether,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -375,7 +378,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 9.9 ether,
             amount1Min: 9.9 ether,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -463,7 +467,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 9.9 ether,
             amount1Min: 9.9 ether,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -553,7 +558,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 0,
             amount1Min: 0,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -640,7 +646,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before,
             amount0Min: 0,
             amount1Min: 0,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
@@ -729,7 +736,8 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
             liquidity: liquidityFromV3Before / 2,
             amount0Min: 9.9 ether / 2,
             amount1Min: 9.9 ether / 2,
-            collectFee: false
+            collectFee: false,
+            deadline: block.timestamp + 100
         });
 
         ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({

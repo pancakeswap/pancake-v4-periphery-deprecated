@@ -36,32 +36,41 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
         }
     }
 
-    function withdrawLiquidityFromV3(
-        address nfp,
-        IV3NonfungiblePositionManager.DecreaseLiquidityParams memory decreaseLiquidityParams,
-        bool collectFee
-    ) internal returns (uint256 amount0Received, uint256 amount1Received) {
+    function withdrawLiquidityFromV3(V3PoolParams calldata v3PoolParams)
+        internal
+        returns (uint256 amount0Received, uint256 amount1Received)
+    {
+        IV3NonfungiblePositionManager nfp = IV3NonfungiblePositionManager(v3PoolParams.nfp);
+        uint256 tokenId = v3PoolParams.tokenId;
         ///@dev make sure the caller is the owner of the token
         /// otherwise once the token is approved to migrator, anyone can steal money through this function
-        if (msg.sender != IV3NonfungiblePositionManager(nfp).ownerOf(decreaseLiquidityParams.tokenId)) {
+        if (msg.sender != nfp.ownerOf(tokenId)) {
             revert NOT_TOKEN_OWNER();
         }
+
         /// @notice decrease liquidity from v3#nfp, make sure migrator has been approved
-        (amount0Received, amount1Received) =
-            IV3NonfungiblePositionManager(nfp).decreaseLiquidity(decreaseLiquidityParams);
-
-        IV3NonfungiblePositionManager.CollectParams memory collectParams = IV3NonfungiblePositionManager.CollectParams({
-            tokenId: decreaseLiquidityParams.tokenId,
-            recipient: address(this),
-            amount0Max: collectFee ? type(uint128).max : SafeCast.toUint128(amount0Received),
-            amount1Max: collectFee ? type(uint128).max : SafeCast.toUint128(amount1Received)
+        IV3NonfungiblePositionManager.DecreaseLiquidityParams memory decreaseLiquidityParams =
+        IV3NonfungiblePositionManager.DecreaseLiquidityParams({
+            tokenId: tokenId,
+            liquidity: v3PoolParams.liquidity,
+            amount0Min: v3PoolParams.amount0Min,
+            amount1Min: v3PoolParams.amount1Min,
+            deadline: v3PoolParams.deadline
         });
+        (amount0Received, amount1Received) = nfp.decreaseLiquidity(decreaseLiquidityParams);
 
-        (amount0Received, amount1Received) = IV3NonfungiblePositionManager(nfp).collect(collectParams);
+        /// @notice collect tokens from v3#nfp (including fee if necessary)
+        IV3NonfungiblePositionManager.CollectParams memory collectParams = IV3NonfungiblePositionManager.CollectParams({
+            tokenId: tokenId,
+            recipient: address(this),
+            amount0Max: v3PoolParams.collectFee ? type(uint128).max : SafeCast.toUint128(amount0Received),
+            amount1Max: v3PoolParams.collectFee ? type(uint128).max : SafeCast.toUint128(amount1Received)
+        });
+        (amount0Received, amount1Received) = nfp.collect(collectParams);
 
         /// @notice the order may mismatch with v4 pool when WETH is invovled
         /// the following check makes sure that the output always match the order of v4 pool
-        (,,, address token1,,,,,,,,) = IV3NonfungiblePositionManager(nfp).positions(decreaseLiquidityParams.tokenId);
+        (,,, address token1,,,,,,,,) = nfp.positions(tokenId);
         if (token1 == WETH9) {
             (amount0Received, amount1Received) = (amount1Received, amount0Received);
         }

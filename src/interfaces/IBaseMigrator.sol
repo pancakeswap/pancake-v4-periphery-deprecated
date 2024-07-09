@@ -33,5 +33,6 @@ interface IBaseMigrator is IPeripheryImmutableState, IMulticall, ISelfPermit {
         uint256 amount1Min;
         // decide whether to collect fee
         bool collectFee;
+        uint256 deadline;
     }
 }
