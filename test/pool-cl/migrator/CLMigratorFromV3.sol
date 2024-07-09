@@ -709,6 +709,53 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
         assertApproxEqAbs(token1.balanceOf(address(vault)), 5 ether, 0.1 ether);
     }
 
+    function testMigrateFromV3FromNonOwner() public {
+        // 1. mint some liquidity to the v3 pool
+        _mintV3Liquidity(address(weth), address(token0));
+        assertEq(v3Nfpm.ownerOf(1), address(this));
+        (,,,,,,, uint128 liquidityFromV3Before,,,,) = v3Nfpm.positions(1);
+        assertGt(liquidityFromV3Before, 0);
+
+        // 2. make sure migrator can transfer user's v3 lp token
+        v3Nfpm.approve(address(migrator), 1);
+
+        // 3. init the pool
+        nonfungiblePoolManager.initialize(poolKey, INIT_SQRT_PRICE, bytes(""));
+
+        IBaseMigrator.V3PoolParams memory v3PoolParams = IBaseMigrator.V3PoolParams({
+            nfp: address(v3Nfpm),
+            tokenId: 1,
+            // half of the liquidity
+            liquidity: liquidityFromV3Before / 2,
+            amount0Min: 9.9 ether / 2,
+            amount1Min: 9.9 ether / 2,
+            collectFee: false
+        });
+
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKey,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: block.timestamp + 100
+        });
+
+        // 4. migrate half
+        migrator.migrateFromV3(v3PoolParams, v4MintParams, 0, 0);
+
+        // make sure there are still liquidity left in v3 position token
+        (,,,,,,, uint128 liquidityFromV3After,,,,) = v3Nfpm.positions(1);
+        assertEq(liquidityFromV3After, liquidityFromV3Before - liquidityFromV3Before / 2);
+
+        // 5. make sure non-owner can't migrate the rest
+        vm.expectRevert(IBaseMigrator.NOT_TOKEN_OWNER.selector);
+        vm.prank(makeAddr("someone"));
+        migrator.migrateFromV3(v3PoolParams, v4MintParams, 0, 0);
+    }
+
     function _mintV3Liquidity(address _token0, address _token1) internal {
         (_token0, _token1) = _token0 < _token1 ? (_token0, _token1) : (_token1, _token0);
         v3Nfpm.createAndInitializePoolIfNecessary(_token0, _token1, 500, INIT_SQRT_PRICE);

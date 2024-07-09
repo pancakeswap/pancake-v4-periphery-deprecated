@@ -14,13 +14,9 @@ import {Currency} from "pancake-v4-core/src/types/Currency.sol";
 import {IBaseMigrator} from "../interfaces/IBaseMigrator.sol";
 
 contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, SelfPermit {
-    error INVALID_ETHER_SENDER();
-    error INSUFFICIENT_AMOUNTS_RECEIVED();
-
     constructor(address _WETH9) PeripheryImmutableState(_WETH9) {}
 
     function withdrawLiquidityFromV2(V2PoolParams calldata v2PoolParams)
-        // function withdrawLiquidityFromV2(address pair, uint256 amount, uint256 amount0Min, uint256 amount1Min)
         internal
         returns (uint256 amount0Received, uint256 amount1Received)
     {
@@ -45,6 +41,11 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
         IV3NonfungiblePositionManager.DecreaseLiquidityParams memory decreaseLiquidityParams,
         bool collectFee
     ) internal returns (uint256 amount0Received, uint256 amount1Received) {
+        ///@dev make sure the caller is the owner of the token
+        /// otherwise once the token is approved to migrator, anyone can still money through this function
+        if (msg.sender != IV3NonfungiblePositionManager(nfp).ownerOf(decreaseLiquidityParams.tokenId)) {
+            revert NOT_TOKEN_OWNER();
+        }
         /// @notice decrease liquidity from v3#nfp, make sure migrator has been approved
         (amount0Received, amount1Received) =
             IV3NonfungiblePositionManager(nfp).decreaseLiquidity(decreaseLiquidityParams);
