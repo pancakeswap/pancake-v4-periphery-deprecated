@@ -93,7 +93,8 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
 
         // even if user sends native ETH, we still need to unwrap the part from source pool
         if (currency0.isNative()) {
-            IWETH9(WETH9).withdraw(ERC20(WETH9).balanceOf(address(this)));
+            uint256 wethBalance = ERC20(WETH9).balanceOf(address(this));
+            if (wethBalance > 0) IWETH9(WETH9).withdraw(wethBalance);
         }
     }
 
