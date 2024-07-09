@@ -65,16 +65,7 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        IV3NonfungiblePositionManager.DecreaseLiquidityParams memory decreaseLiquidityParams =
-        IV3NonfungiblePositionManager.DecreaseLiquidityParams({
-            tokenId: v3PoolParams.tokenId,
-            liquidity: v3PoolParams.liquidity,
-            amount0Min: v3PoolParams.amount0Min,
-            amount1Min: v3PoolParams.amount1Min,
-            deadline: v4MintParams.deadline
-        });
-        (uint256 amount0Received, uint256 amount1Received) =
-            withdrawLiquidityFromV3(v3PoolParams.nfp, decreaseLiquidityParams, v3PoolParams.collectFee);
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3(v3PoolParams);
 
         /// @notice if user mannually specify the price range, they need to send extra token
         batchAndNormalizeTokens(
@@ -113,7 +104,12 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
 
     function _addLiquidityToTargetPool(IBinFungiblePositionManager.AddLiquidityParams memory params)
         internal
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted)
+        returns (
+            uint128 amount0Consumed,
+            uint128 amount1Consumed,
+            uint256[] memory tokenIds,
+            uint256[] memory liquidityMinted
+        )
     {
         /// @dev currency1 cant be NATIVE
         bool nativePair = params.poolKey.currency0.isNative();
@@ -122,9 +118,11 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         }
         approveMaxIfNeeded(params.poolKey.currency1, address(binFungiblePositionManager), params.amount1);
 
-        (amount0, amount1, tokenIds, liquidityMinted) =
+        (amount0Consumed, amount1Consumed, tokenIds, liquidityMinted) =
             binFungiblePositionManager.addLiquidity{value: nativePair ? params.amount0 : 0}(params);
-        if (nativePair) {
+
+        // receive surplus ETH from positionManager
+        if (nativePair && params.amount0 > amount0Consumed) {
             binFungiblePositionManager.refundETH();
         }
     }
