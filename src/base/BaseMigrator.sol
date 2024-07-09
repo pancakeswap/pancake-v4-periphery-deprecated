@@ -42,7 +42,7 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
         bool collectFee
     ) internal returns (uint256 amount0Received, uint256 amount1Received) {
         ///@dev make sure the caller is the owner of the token
-        /// otherwise once the token is approved to migrator, anyone can still money through this function
+        /// otherwise once the token is approved to migrator, anyone can steal money through this function
         if (msg.sender != IV3NonfungiblePositionManager(nfp).ownerOf(decreaseLiquidityParams.tokenId)) {
             revert NOT_TOKEN_OWNER();
         }
