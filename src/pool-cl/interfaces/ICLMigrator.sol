@@ -23,7 +23,7 @@ interface ICLMigrator is IBaseMigrator {
 
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
-        V4CLPoolParams calldata v4MintParams,
+        V4CLPoolParams calldata v4PoolParams,
         // extra funds to be added
         uint256 extraAmount0,
         uint256 extraAmount1
@@ -31,7 +31,7 @@ interface ICLMigrator is IBaseMigrator {
 
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
-        V4CLPoolParams calldata v4MintParams,
+        V4CLPoolParams calldata v4PoolParams,
         // extra funds to be added
         uint256 extraAmount0,
         uint256 extraAmount1

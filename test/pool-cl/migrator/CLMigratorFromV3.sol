@@ -448,7 +448,6 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
     }
 
     function testMigrateFromV3AddExtraAmountThroughWETH() public {
-        // 1. mint some liquidity to the v2 pair
         // 1. mint some liquidity to the v3 pool
         _mintV3Liquidity(address(weth), address(token0));
         assertEq(v3Nfpm.ownerOf(1), address(this));
@@ -487,7 +486,7 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
 
         weth.approve(address(migrator), 20 ether);
         IERC20(address(token0)).approve(address(migrator), 20 ether);
-        // 4. migrate from v2 to v4, not sending ETH denotes pay by WETH
+        // 4. migrate from v3 to v4, not sending ETH denotes pay by WETH
         migrator.migrateFromV3(v3PoolParams, v4MintParams, 20 ether, 20 ether);
 
         // necessary checks
@@ -664,7 +663,7 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
         uint256 balance0Before = token0.balanceOf(address(this));
         uint256 balance1Before = token1.balanceOf(address(this));
 
-        // 4. migrate from v2 to v4
+        // 4. migrate from v3 to v4
         migrator.migrateFromV3(v3PoolParams, v4MintParams, 0, 0);
 
         // necessary checks
@@ -675,7 +674,6 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
         // WETH balance unchanged
         assertEq(weth.balanceOf(address(this)), 100 ether);
 
-        // v2 pair should be burned already
         // v3 liqudity should be 0
         (,,,,,,, uint128 liquidityFromV3After,,,,) = v3Nfpm.positions(1);
         assertEq(liquidityFromV3After, 0);
