@@ -6,8 +6,9 @@ import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {IPeripheryImmutableState} from "./IPeripheryImmutableState.sol";
 import {IMulticall} from "./IMulticall.sol";
 import {ISelfPermit} from "./ISelfPermit.sol";
+import {ISelfPermitERC721} from "./ISelfPermitERC721.sol";
 
-interface IBaseMigrator is IPeripheryImmutableState, IMulticall, ISelfPermit {
+interface IBaseMigrator is IPeripheryImmutableState, IMulticall, ISelfPermit, ISelfPermitERC721 {
     error TOKEN_NOT_MATCH();
     error INVALID_ETHER_SENDER();
     error INSUFFICIENT_AMOUNTS_RECEIVED();

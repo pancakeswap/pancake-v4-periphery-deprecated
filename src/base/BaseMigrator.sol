@@ -11,9 +11,10 @@ import {PeripheryImmutableState} from "./PeripheryImmutableState.sol";
 import {Multicall} from "./Multicall.sol";
 import {SelfPermit} from "./SelfPermit.sol";
 import {Currency, CurrencyLibrary} from "pancake-v4-core/src/types/Currency.sol";
+import {SelfPermitERC721} from "./SelfPermitERC721.sol";
 import {IBaseMigrator} from "../interfaces/IBaseMigrator.sol";
 
-contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, SelfPermit {
+contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, SelfPermit, SelfPermitERC721 {
     constructor(address _WETH9) PeripheryImmutableState(_WETH9) {}
 
     /// @notice refund native ETH to caller
