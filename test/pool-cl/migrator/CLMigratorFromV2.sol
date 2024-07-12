@@ -165,6 +165,59 @@ abstract contract CLMigratorFromV2 is OldVersionHelper, GasSnapshot {
         assertApproxEqAbs(token0.balanceOf(address(vault)), 10 ether, 0.000001 ether);
     }
 
+    function testMigrateFromV2TokenMismatch() public {
+        // 1. mint some liquidity to the v2 pair
+        _mintV2Liquidity(v2Pair);
+        uint256 lpTokenBefore = v2Pair.balanceOf(address(this));
+
+        // 2. make sure migrator can transfer user's v2 lp token
+        v2Pair.approve(address(migrator), lpTokenBefore);
+
+        IBaseMigrator.V2PoolParams memory v2PoolParams = IBaseMigrator.V2PoolParams({
+            pair: address(v2Pair),
+            migrateAmount: lpTokenBefore,
+            // minor precision loss is acceptable
+            amount0Min: 9.999 ether,
+            amount1Min: 9.999 ether
+        });
+
+        // v2 weth, token0
+        // v4 ETH, token1
+        PoolKey memory poolKeyMismatch = poolKey;
+        poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKeyMismatch,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: block.timestamp + 100
+        });
+
+        // 3. multicall, combine initialize and migrateFromV2
+        uint160 initSqrtPrice = 79228162514264337593543950336;
+        bytes[] memory data = new bytes[](2);
+        data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKeyMismatch, initSqrtPrice, bytes(""));
+        data[1] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4MintParams, 0, 0);
+        vm.expectRevert();
+        migrator.multicall(data);
+
+        {
+            // v2 weth, token0
+            // v4 token0, token1
+            poolKeyMismatch.currency0 = Currency.wrap(address(token0));
+            poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+            v4MintParams.poolKey = poolKeyMismatch;
+            data = new bytes[](2);
+            data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKeyMismatch, initSqrtPrice, bytes(""));
+            data[1] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4MintParams, 0, 0);
+            vm.expectRevert();
+            migrator.multicall(data);
+        }
+    }
+
     function testMigrateFromV2WithoutInit() public {
         // 1. mint some liquidity to the v2 pair
         _mintV2Liquidity(v2Pair);

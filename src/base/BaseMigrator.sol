@@ -16,6 +16,17 @@ import {IBaseMigrator} from "../interfaces/IBaseMigrator.sol";
 contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, SelfPermit {
     constructor(address _WETH9) PeripheryImmutableState(_WETH9) {}
 
+    function checkTokenMatchFromV2(address v2Pair, Currency token0, Currency token1) internal view {
+        address token0V2 = IPancakePair(v2Pair).token0();
+        address token1V2 = IPancakePair(v2Pair).token1();
+        _compare(token0V2, token1V2, Currency.unwrap(token0), Currency.unwrap(token1));
+    }
+
+    function checkTokenMatchFromV3(address nfp, uint256 tokenId, Currency token0, Currency token1) internal view {
+        (,, address token0V3, address token1V3,,,,,,,,) = IV3NonfungiblePositionManager(nfp).positions(tokenId);
+        _compare(token0V3, token1V3, Currency.unwrap(token0), Currency.unwrap(token1));
+    }
+
     function withdrawLiquidityFromV2(V2PoolParams calldata v2PoolParams)
         internal
         returns (uint256 amount0Received, uint256 amount1Received)
@@ -114,5 +125,24 @@ contract BaseMigrator is IBaseMigrator, PeripheryImmutableState, Multicall, Self
             return;
         }
         SafeTransferLib.safeApprove(token, to, type(uint256).max);
+    }
+
+    function _compare(address _token0, address _token1, address token0, address token1) private view {
+        if (token0 == address(0) && _token0 == WETH9) {
+            if (token1 != _token1) {
+                revert TOKEN_NOT_MATCH();
+            }
+        } else if (token0 == address(0) && _token1 == WETH9) {
+            if (token1 != _token0) {
+                revert TOKEN_NOT_MATCH();
+            }
+        } else {
+            /// @dev the order of token0 and token1 is always sorted
+            /// v2: https://github.com/pancakeswap/pancake-swap-core-v2/blob/38aad83854a46a82ea0e31988ff3cddb2bffb71a/contracts/PancakeFactory.sol#L27
+            /// v3: https://github.com/pancakeswap/pancake-v3-contracts/blob/5cc479f0c5a98966c74d94700057b8c3ca629afd/projects/v3-core/contracts/PancakeV3Factory.sol#L66
+            if (token0 != _token0 || token1 != _token1) {
+                revert TOKEN_NOT_MATCH();
+            }
+        }
     }
 }

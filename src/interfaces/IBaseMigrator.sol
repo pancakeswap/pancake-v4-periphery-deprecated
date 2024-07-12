@@ -8,6 +8,7 @@ import {IMulticall} from "./IMulticall.sol";
 import {ISelfPermit} from "./ISelfPermit.sol";
 
 interface IBaseMigrator is IPeripheryImmutableState, IMulticall, ISelfPermit {
+    error TOKEN_NOT_MATCH();
     error INVALID_ETHER_SENDER();
     error INSUFFICIENT_AMOUNTS_RECEIVED();
     error NOT_TOKEN_OWNER();

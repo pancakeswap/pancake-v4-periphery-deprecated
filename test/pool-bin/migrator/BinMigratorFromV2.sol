@@ -178,6 +178,64 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
         (poolId, currency0, currency1, fee, binId) = binFungiblePositionManager.positions(positionId3);
     }
 
+    function testMigrateFromV2TokenMismatch() public {
+        // 1. mint some liquidity to the v2 pair
+        _mintV2Liquidity(v2Pair);
+        uint256 lpTokenBefore = v2Pair.balanceOf(address(this));
+        assertGt(lpTokenBefore, 0);
+
+        // 2. make sure migrator can transfer user's v2 lp token
+        v2Pair.approve(address(migrator), lpTokenBefore);
+
+        IBaseMigrator.V2PoolParams memory v2PoolParams = IBaseMigrator.V2PoolParams({
+            pair: address(v2Pair),
+            migrateAmount: lpTokenBefore,
+            // minor precision loss is acceptable
+            amount0Min: 9.999 ether,
+            amount1Min: 9.999 ether
+        });
+
+        IBinFungiblePositionManager.AddLiquidityParams memory params =
+            _getAddParams(poolKey, getBinIds(ACTIVE_BIN_ID, 3), 10 ether, 10 ether, ACTIVE_BIN_ID, address(this));
+
+        // v2 weth, token0
+        // v4 ETH, token1
+        PoolKey memory poolKeyMismatch = poolKey;
+        poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+        IBinMigrator.V4BinPoolParams memory v4BinPoolParams = IBinMigrator.V4BinPoolParams({
+            poolKey: poolKeyMismatch,
+            amount0Min: params.amount0Min,
+            amount1Min: params.amount1Min,
+            activeIdDesired: params.activeIdDesired,
+            idSlippage: params.idSlippage,
+            deltaIds: params.deltaIds,
+            distributionX: params.distributionX,
+            distributionY: params.distributionY,
+            to: params.to,
+            deadline: params.deadline
+        });
+
+        // 3. multicall, combine initialize and migrateFromV2
+        bytes[] memory data = new bytes[](2);
+        data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKeyMismatch, ACTIVE_BIN_ID, bytes(""));
+        data[1] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4BinPoolParams, 0, 0);
+        vm.expectRevert();
+        migrator.multicall(data);
+
+        {
+            // v2 weth, token0
+            // v4 token0, token1
+            poolKeyMismatch.currency0 = Currency.wrap(address(token0));
+            poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+            v4BinPoolParams.poolKey = poolKeyMismatch;
+            data = new bytes[](2);
+            data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKeyMismatch, ACTIVE_BIN_ID, bytes(""));
+            data[1] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4BinPoolParams, 0, 0);
+            vm.expectRevert();
+            migrator.multicall(data);
+        }
+    }
+
     function testMigrateFromV2WithoutInit() public {
         // 1. mint some liquidity to the v2 pair
         _mintV2Liquidity(v2Pair);
