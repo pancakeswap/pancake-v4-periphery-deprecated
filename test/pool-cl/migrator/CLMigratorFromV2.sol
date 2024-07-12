@@ -354,17 +354,21 @@ abstract contract CLMigratorFromV2 is OldVersionHelper, GasSnapshot {
 
         IERC20(address(token0)).approve(address(migrator), 20 ether);
         // 4. migrate from v2 to v4
-        migrator.migrateFromV2{value: 20 ether}(v2PoolParams, v4MintParams, 20 ether, 20 ether);
+        uint256 ETH_Balance = 40 ether;
+        migrator.migrateFromV2{value: ETH_Balance}(v2PoolParams, v4MintParams, 20 ether, 20 ether);
 
         // necessary checks
         // consumed extra 20 ether from user
-        assertApproxEqAbs(balance0Before - address(this).balance, 20 ether, 0.000001 ether);
+        assertApproxEqAbs(balance0Before - address(this).balance, ETH_Balance, 0.000001 ether);
         assertEq(balance1Before - token0.balanceOf(address(this)), 20 ether);
         // WETH balance unchanged
         assertEq(weth.balanceOf(address(this)), 90 ether);
 
         // v2 pair should be burned already
         assertEq(v2Pair.balanceOf(address(this)), 0);
+
+        // migrator still have ETH left which means user will lose this part ETH
+        assertEq(address(migrator).balance, 20 ether);
 
         // make sure liuqidty is minted to the correct pool
         assertEq(nonfungiblePoolManager.ownerOf(1), address(this));
