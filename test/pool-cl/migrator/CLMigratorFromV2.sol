@@ -355,6 +355,8 @@ abstract contract CLMigratorFromV2 is OldVersionHelper, GasSnapshot {
         IERC20(address(token0)).approve(address(migrator), 20 ether);
         // 4. migrate from v2 to v4
         uint256 ETH_Balance = 40 ether;
+        // the migrator balance is zero before call migrateFromV2
+        assertEq(address(migrator).balance, 0);
         migrator.migrateFromV2{value: ETH_Balance}(v2PoolParams, v4MintParams, 20 ether, 20 ether);
 
         // necessary checks
