@@ -16,6 +16,7 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         binFungiblePositionManager = IBinFungiblePositionManager(_binFungiblePositionManager);
     }
 
+    /// @inheritdoc IBinMigrator
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
         V4BinPoolParams calldata v4PoolParams,
@@ -60,6 +61,7 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         }
     }
 
+    /// @inheritdoc IBinMigrator
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
         V4BinPoolParams calldata v4PoolParams,
@@ -106,6 +108,12 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         }
     }
 
+    /// @dev adding liquidity to target bin pool, collect surplus ETH if necessary
+    /// @param params  bin position manager add liquidity params
+    /// @return amount0Consumed the actual amount of token0 consumed
+    /// @return amount1Consumed the actual amount of token1 consumed
+    /// @return tokenIds the list of the id of the position token minted
+    /// @return liquidityMinted the list of the amount of the position token minted
     function _addLiquidityToTargetPool(IBinFungiblePositionManager.AddLiquidityParams memory params)
         internal
         returns (
@@ -131,6 +139,7 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         }
     }
 
+    /// @inheritdoc IBinMigrator
     /// @notice Planned to be batched with migration operations through multicall to save gas
     function initialize(PoolKey memory poolKey, uint24 activeId, bytes calldata hookData) external payable override {
         return binFungiblePositionManager.initialize(poolKey, activeId, hookData);

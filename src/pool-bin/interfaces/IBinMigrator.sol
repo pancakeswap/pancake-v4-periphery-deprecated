@@ -24,6 +24,11 @@ interface IBinMigrator is IBaseMigrator {
         uint256 deadline;
     }
 
+    /// @notice Migrate liquidity from v2 to v4
+    /// @param v2PoolParams ncessary info for removing liqudity the source v2 pool
+    /// @param v4PoolParams necessary info for adding liquidity the target v4 bin-pool
+    /// @param extraAmount0 the extra amount of token0 that user wants to add (optional, usually 0)
+    /// @param extraAmount1 the extra amount of token1 that user wants to add (optional, usually 0)
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
         V4BinPoolParams calldata v4PoolParams,
@@ -32,6 +37,11 @@ interface IBinMigrator is IBaseMigrator {
         uint256 extraAmount1
     ) external payable;
 
+    /// @notice Migrate liquidity from v3 to v4
+    /// @param v3PoolParams ncessary info for removing liqudity the source v3 pool
+    /// @param v4PoolParams necessary info for adding liquidity the target v4 bin-pool
+    /// @param extraAmount0 the extra amount of token0 that user wants to add (optional, usually 0)
+    /// @param extraAmount1 the extra amount of token1 that user wants to add (optional, usually 0)
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
         V4BinPoolParams calldata v4PoolParams,
@@ -40,7 +50,7 @@ interface IBinMigrator is IBaseMigrator {
         uint256 extraAmount1
     ) external payable;
 
-    /// @notice Initialize a new pool
+    /// @notice Initialize a pool for a given pool key, the function will forwards the call to the BinPoolManager
     /// @dev Call this when the pool does not exist and is not initialized
     /// @param poolKey The pool key
     /// @param activeId The active id of the pool

@@ -21,6 +21,11 @@ interface ICLMigrator is IBaseMigrator {
         uint256 deadline;
     }
 
+    /// @notice Migrate liquidity from v2 to v4
+    /// @param v2PoolParams ncessary info for removing liqudity the source v2 pool
+    /// @param v4PoolParams necessary info for adding liquidity the target v4 cl-pool
+    /// @param extraAmount0 the extra amount of token0 that user wants to add (optional, usually 0)
+    /// @param extraAmount1 the extra amount of token1 that user wants to add (optional, usually 0)
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
         V4CLPoolParams calldata v4PoolParams,
@@ -29,6 +34,11 @@ interface ICLMigrator is IBaseMigrator {
         uint256 extraAmount1
     ) external payable;
 
+    /// @notice Migrate liquidity from v3 to v4
+    /// @param v3PoolParams ncessary info for removing liqudity the source v3 pool
+    /// @param v4PoolParams necessary info for adding liquidity the target v4 cl-pool
+    /// @param extraAmount0 the extra amount of token0 that user wants to add (optional, usually 0)
+    /// @param extraAmount1 the extra amount of token1 that user wants to add (optional, usually 0)
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
         V4CLPoolParams calldata v4PoolParams,
@@ -37,7 +47,7 @@ interface ICLMigrator is IBaseMigrator {
         uint256 extraAmount1
     ) external payable;
 
-    /// @notice Initialize the pool state for a given pool ID.
+    /// @notice Initialize a pool for a given pool key, the function will forwards the call to the CLPoolManager
     /// @dev Call this when the pool does not exist and is not initialized.
     /// @param poolKey The pool key
     /// @param sqrtPriceX96 The initial sqrt price of the pool
