@@ -22,9 +22,11 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        checkTokenMatchFromV2(v2PoolParams.pair, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1);
+        bool shouldReversePair = checkTokensOrderAndMatchFromV2(
+            v2PoolParams.pair, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1
+        );
 
-        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV2(v2PoolParams);
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV2(v2PoolParams, shouldReversePair);
 
         /// @notice if user mannually specify the price range, they might need to send extra token
         batchAndNormalizeTokens(
@@ -65,10 +67,10 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        checkTokenMatchFromV3(
+        bool shouldReversePair = checkTokensOrderAndMatchFromV3(
             v3PoolParams.nfp, v3PoolParams.tokenId, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1
         );
-        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3(v3PoolParams);
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3(v3PoolParams, shouldReversePair);
 
         /// @notice if user mannually specify the price range, they need to send extra token
         batchAndNormalizeTokens(
