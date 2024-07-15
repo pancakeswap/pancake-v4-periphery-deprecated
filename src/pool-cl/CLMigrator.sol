@@ -65,10 +65,12 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        checkTokenMatchFromV3(
-            v3PoolParams.nfp, v3PoolParams.tokenId, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1
-        );
-        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3(v3PoolParams);
+        // checkTokenMatchFromV3(
+        //     v3PoolParams.nfp, v3PoolParams.tokenId, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1
+        // );
+        (,, address token0V3, address token1V3,,,,,,,,) = IV3NonfungiblePositionManager(v3PoolParams.nfp).positions(v3PoolParams.tokenId);
+        checkTokenMatchFromV3Test(token0V3, token1V3,  v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1);
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3Test(v3PoolParams, token1V3);
 
         /// @notice if user mannually specify the price range, they need to send extra token
         batchAndNormalizeTokens(
