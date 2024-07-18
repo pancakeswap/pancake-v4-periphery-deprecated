@@ -10,8 +10,10 @@ import {BalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {PoolKey} from "pancake-v4-core/src/types/PoolKey.sol";
 import {PoolId} from "pancake-v4-core/src/types/PoolId.sol";
 import {IBinFungibleToken} from "./IBinFungibleToken.sol";
+import {IPeripheryPayments} from "../../interfaces/IPeripheryPayments.sol";
+import {IMulticall} from "../../interfaces/IMulticall.sol";
 
-interface IBinFungiblePositionManager is IBinFungibleToken {
+interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, IMulticall {
     error OnlyVaultCaller();
     error IdOverflows(int256);
     error IdDesiredOverflows(uint24);

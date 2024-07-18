@@ -9,6 +9,7 @@ fs_permissions = [
     { access = "read-write", path = ".forge-snapshots/" },
     { access = "read", path = "./foundry-out" },
     { access = "read", path = "./script/config" },
+    { access = "read", path = "./test/bin/" },
 ]
 evm_version = 'cancun'
 
