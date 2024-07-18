@@ -15,13 +15,18 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         nonfungiblePositionManager = INonfungiblePositionManager(_nonfungiblePositionManager);
     }
 
+    /// @inheritdoc ICLMigrator
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
         V4CLPoolParams calldata v4PoolParams,
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV2(v2PoolParams);
+        bool shouldReversePair = checkTokensOrderAndMatchFromV2(
+            v2PoolParams.pair, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1
+        );
+
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV2(v2PoolParams, shouldReversePair);
 
         /// @notice if user mannually specify the price range, they might need to send extra token
         batchAndNormalizeTokens(
@@ -55,13 +60,17 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
     }
 
+    /// @inheritdoc ICLMigrator
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
         V4CLPoolParams calldata v4PoolParams,
         uint256 extraAmount0,
         uint256 extraAmount1
     ) external payable override {
-        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3(v3PoolParams);
+        bool shouldReversePair = checkTokensOrderAndMatchFromV3(
+            v3PoolParams.nfp, v3PoolParams.tokenId, v4PoolParams.poolKey.currency0, v4PoolParams.poolKey.currency1
+        );
+        (uint256 amount0Received, uint256 amount1Received) = withdrawLiquidityFromV3(v3PoolParams, shouldReversePair);
 
         /// @notice if user mannually specify the price range, they need to send extra token
         batchAndNormalizeTokens(
@@ -95,6 +104,12 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
     }
 
+    /// @dev adding liquidity to target cl pool, collect surplus ETH if necessary
+    /// @param params cl position manager add liquidity params
+    /// @return tokenId the id of the newly minted position token
+    /// @return liquidity the amount of liquidity minted
+    /// @return amount0Consumed the actual amount of token0 consumed
+    /// @return amount1Consumed the actual amount of token1 consumed
     function _addLiquidityToTargetPool(INonfungiblePositionManager.MintParams memory params)
         internal
         returns (uint256 tokenId, uint128 liquidity, uint256 amount0Consumed, uint256 amount1Consumed)
@@ -115,6 +130,7 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
     }
 
+    /// @inheritdoc ICLMigrator
     /// @notice Planned to be batched with migration operations through multicall to save gas
     function initialize(PoolKey memory poolKey, uint160 sqrtPriceX96, bytes calldata hookData)
         external

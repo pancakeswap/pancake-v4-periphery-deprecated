@@ -200,6 +200,61 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
         assertApproxEqAbs(token0.balanceOf(address(vault)), 10 ether, 0.000001 ether);
     }
 
+    function testMigrateFromV3TokenMismatch() public {
+        // 1. mint some liquidity to the v3 pool
+        _mintV3Liquidity(address(weth), address(token0));
+        assertEq(v3Nfpm.ownerOf(1), address(this));
+        (,,,,,,, uint128 liquidityFromV3Before,,,,) = v3Nfpm.positions(1);
+
+        // 2. make sure migrator can transfer user's v3 lp token
+        v3Nfpm.approve(address(migrator), 1);
+
+        IBaseMigrator.V3PoolParams memory v3PoolParams = IBaseMigrator.V3PoolParams({
+            nfp: address(v3Nfpm),
+            tokenId: 1,
+            liquidity: liquidityFromV3Before,
+            amount0Min: 9.9 ether,
+            amount1Min: 9.9 ether,
+            collectFee: false,
+            deadline: block.timestamp + 100
+        });
+
+        // v3 weth, token0
+        // v4 ETH, token1
+        PoolKey memory poolKeyMismatch = poolKey;
+        poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKeyMismatch,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: block.timestamp + 100
+        });
+
+        // 3. multicall, combine initialize and migrateFromV3
+        bytes[] memory data = new bytes[](2);
+        data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKey, INIT_SQRT_PRICE, bytes(""));
+        data[1] = abi.encodeWithSelector(migrator.migrateFromV3.selector, v3PoolParams, v4MintParams, 0, 0);
+        vm.expectRevert();
+        migrator.multicall(data);
+
+        {
+            // v3 weth, token0
+            // v4 token0, token1
+            poolKeyMismatch.currency0 = Currency.wrap(address(token0));
+            poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+            v4MintParams.poolKey = poolKeyMismatch;
+            data = new bytes[](2);
+            data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKey, INIT_SQRT_PRICE, bytes(""));
+            data[1] = abi.encodeWithSelector(migrator.migrateFromV3.selector, v3PoolParams, v4MintParams, 0, 0);
+            vm.expectRevert();
+            migrator.multicall(data);
+        }
+    }
+
     function testMigrateFromV3WithoutInit() public {
         // 1. mint some liquidity to the v3 pool
         _mintV3Liquidity(address(weth), address(token0));
@@ -760,6 +815,196 @@ abstract contract CLMigratorFromV3 is OldVersionHelper, GasSnapshot {
         vm.expectRevert(IBaseMigrator.NOT_TOKEN_OWNER.selector);
         vm.prank(makeAddr("someone"));
         migrator.migrateFromV3(v3PoolParams, v4MintParams, 0, 0);
+    }
+
+    function testMigrateFromV3ThroughOffchainSign() public {
+        // 1. mint some liquidity to the v3 pool
+        _mintV3Liquidity(address(weth), address(token0));
+        assertEq(v3Nfpm.ownerOf(1), address(this));
+        (uint96 nonce,,,,,,, uint128 liquidityFromV3Before,,,,) = v3Nfpm.positions(1);
+        assertGt(liquidityFromV3Before, 0);
+
+        // 2. make sure migrator can transfer user's v3 lp token through offchain sign
+        // v3Nfpm.approve(address(migrator), 1);
+        (address userAddr, uint256 userPrivateKey) = makeAddrAndKey("user");
+
+        // 2.a transfer the lp token to the user
+        v3Nfpm.transferFrom(address(this), userAddr, 1);
+
+        uint256 ddl = block.timestamp + 100;
+        // 2.b prepare the hash
+        bytes32 structHash = keccak256(abi.encode(v3Nfpm.PERMIT_TYPEHASH(), address(migrator), 1, nonce, ddl));
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", v3Nfpm.DOMAIN_SEPARATOR(), structHash));
+
+        // 2.c generate the signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
+
+        IBaseMigrator.V3PoolParams memory v3PoolParams = IBaseMigrator.V3PoolParams({
+            nfp: address(v3Nfpm),
+            tokenId: 1,
+            liquidity: liquidityFromV3Before,
+            amount0Min: 9.9 ether,
+            amount1Min: 9.9 ether,
+            collectFee: false,
+            deadline: block.timestamp + 100
+        });
+
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKey,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: block.timestamp + 100
+        });
+
+        // 3. multicall, combine selfPermitERC721, initialize and migrateFromV3
+        bytes[] memory data = new bytes[](3);
+        data[0] = abi.encodeWithSelector(migrator.selfPermitERC721.selector, v3Nfpm, 1, ddl, v, r, s);
+        data[1] = abi.encodeWithSelector(migrator.initialize.selector, poolKey, INIT_SQRT_PRICE, bytes(""));
+        data[2] = abi.encodeWithSelector(migrator.migrateFromV3.selector, v3PoolParams, v4MintParams, 0, 0);
+        vm.prank(userAddr);
+        migrator.multicall(data);
+
+        // necessary checks
+        // v3 liqudity should be 0
+        (,,,,,,, uint128 liquidityFromV3After,,,,) = v3Nfpm.positions(1);
+        assertEq(liquidityFromV3After, 0);
+
+        // make sure liuqidty is minted to the correct pool
+        assertEq(nonfungiblePoolManager.ownerOf(1), address(this));
+        (
+            ,
+            ,
+            PoolId poolId,
+            Currency currency0,
+            Currency currency1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1,
+            bytes32 salt
+        ) = nonfungiblePoolManager.positions(1);
+
+        assertEq(PoolId.unwrap(poolId), PoolId.unwrap(poolKey.toId()));
+        assertEq(Currency.unwrap(currency0), address(0));
+        assertEq(Currency.unwrap(currency1), address(token0));
+        assertEq(fee, 0);
+        assertEq(tickLower, -100);
+        assertEq(tickUpper, 100);
+        assertEq(liquidity, 2005104164790028032677);
+        assertEq(feeGrowthInside0LastX128, 0);
+        assertEq(feeGrowthInside1LastX128, 0);
+        assertEq(tokensOwed0, 0);
+        assertEq(tokensOwed1, 0);
+        assertEq(salt, bytes32(0));
+        assertApproxEqAbs(address(vault).balance, 10 ether, 0.000001 ether);
+        assertApproxEqAbs(token0.balanceOf(address(vault)), 10 ether, 0.000001 ether);
+    }
+
+    function testMigrateFromV3ThroughOffchainSignPayWithETH() public {
+        // 1. mint some liquidity to the v3 pool
+        _mintV3Liquidity(address(weth), address(token0));
+        assertEq(v3Nfpm.ownerOf(1), address(this));
+        (uint96 nonce,,,,,,, uint128 liquidityFromV3Before,,,,) = v3Nfpm.positions(1);
+        assertGt(liquidityFromV3Before, 0);
+
+        // 2. make sure migrator can transfer user's v3 lp token through offchain sign
+        // v3Nfpm.approve(address(migrator), 1);
+        (address userAddr, uint256 userPrivateKey) = makeAddrAndKey("user");
+
+        // 2.a transfer the lp token to the user
+        v3Nfpm.transferFrom(address(this), userAddr, 1);
+
+        uint256 ddl = block.timestamp + 100;
+        // 2.b prepare the hash
+        bytes32 structHash = keccak256(abi.encode(v3Nfpm.PERMIT_TYPEHASH(), address(migrator), 1, nonce, ddl));
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", v3Nfpm.DOMAIN_SEPARATOR(), structHash));
+
+        // 2.c generate the signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
+
+        IBaseMigrator.V3PoolParams memory v3PoolParams = IBaseMigrator.V3PoolParams({
+            nfp: address(v3Nfpm),
+            tokenId: 1,
+            liquidity: liquidityFromV3Before,
+            amount0Min: 9.9 ether,
+            amount1Min: 9.9 ether,
+            collectFee: false,
+            deadline: block.timestamp + 100
+        });
+
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKey,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0 ether,
+            amount1Min: 0 ether,
+            recipient: address(this),
+            deadline: block.timestamp + 100
+        });
+
+        // make the guy rich
+        token0.transfer(userAddr, 10 ether);
+        deal(userAddr, 10 ether);
+
+        vm.prank(userAddr);
+        token0.approve(address(migrator), 10 ether);
+
+        // 3. multicall, combine selfPermitERC721, initialize and migrateFromV3
+        bytes[] memory data = new bytes[](3);
+        data[0] = abi.encodeWithSelector(migrator.selfPermitERC721.selector, v3Nfpm, 1, ddl, v, r, s);
+        data[1] = abi.encodeWithSelector(migrator.initialize.selector, poolKey, INIT_SQRT_PRICE, bytes(""));
+        data[2] =
+            abi.encodeWithSelector(migrator.migrateFromV3.selector, v3PoolParams, v4MintParams, 10 ether, 10 ether);
+        vm.prank(userAddr);
+        migrator.multicall{value: 10 ether}(data);
+
+        // necessary checks
+        // v3 liqudity should be 0
+        (,,,,,,, uint128 liquidityFromV3After,,,,) = v3Nfpm.positions(1);
+        assertEq(liquidityFromV3After, 0);
+
+        // make sure liuqidty is minted to the correct pool
+        assertEq(nonfungiblePoolManager.ownerOf(1), address(this));
+        (
+            ,
+            ,
+            PoolId poolId,
+            Currency currency0,
+            Currency currency1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1,
+            bytes32 salt
+        ) = nonfungiblePoolManager.positions(1);
+
+        assertEq(PoolId.unwrap(poolId), PoolId.unwrap(poolKey.toId()));
+        assertEq(Currency.unwrap(currency0), address(0));
+        assertEq(Currency.unwrap(currency1), address(token0));
+        assertEq(fee, 0);
+        assertEq(tickLower, -100);
+        assertEq(tickUpper, 100);
+        assertEq(liquidity, 4010208329580056065555);
+        assertEq(feeGrowthInside0LastX128, 0);
+        assertEq(feeGrowthInside1LastX128, 0);
+        assertEq(tokensOwed0, 0);
+        assertEq(tokensOwed1, 0);
+        assertEq(salt, bytes32(0));
+        assertApproxEqAbs(address(vault).balance, 20 ether, 0.000001 ether);
+        assertApproxEqAbs(token0.balanceOf(address(vault)), 20 ether, 0.000001 ether);
     }
 
     function _mintV3Liquidity(address _token0, address _token1) internal {

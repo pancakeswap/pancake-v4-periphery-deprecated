@@ -165,6 +165,59 @@ abstract contract CLMigratorFromV2 is OldVersionHelper, GasSnapshot {
         assertApproxEqAbs(token0.balanceOf(address(vault)), 10 ether, 0.000001 ether);
     }
 
+    function testMigrateFromV2TokenMismatch() public {
+        // 1. mint some liquidity to the v2 pair
+        _mintV2Liquidity(v2Pair);
+        uint256 lpTokenBefore = v2Pair.balanceOf(address(this));
+
+        // 2. make sure migrator can transfer user's v2 lp token
+        v2Pair.approve(address(migrator), lpTokenBefore);
+
+        IBaseMigrator.V2PoolParams memory v2PoolParams = IBaseMigrator.V2PoolParams({
+            pair: address(v2Pair),
+            migrateAmount: lpTokenBefore,
+            // minor precision loss is acceptable
+            amount0Min: 9.999 ether,
+            amount1Min: 9.999 ether
+        });
+
+        // v2 weth, token0
+        // v4 ETH, token1
+        PoolKey memory poolKeyMismatch = poolKey;
+        poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKeyMismatch,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: block.timestamp + 100
+        });
+
+        // 3. multicall, combine initialize and migrateFromV2
+        uint160 initSqrtPrice = 79228162514264337593543950336;
+        bytes[] memory data = new bytes[](2);
+        data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKeyMismatch, initSqrtPrice, bytes(""));
+        data[1] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4MintParams, 0, 0);
+        vm.expectRevert();
+        migrator.multicall(data);
+
+        {
+            // v2 weth, token0
+            // v4 token0, token1
+            poolKeyMismatch.currency0 = Currency.wrap(address(token0));
+            poolKeyMismatch.currency1 = Currency.wrap(address(token1));
+            v4MintParams.poolKey = poolKeyMismatch;
+            data = new bytes[](2);
+            data[0] = abi.encodeWithSelector(migrator.initialize.selector, poolKeyMismatch, initSqrtPrice, bytes(""));
+            data[1] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4MintParams, 0, 0);
+            vm.expectRevert();
+            migrator.multicall(data);
+        }
+    }
+
     function testMigrateFromV2WithoutInit() public {
         // 1. mint some liquidity to the v2 pair
         _mintV2Liquidity(v2Pair);
@@ -665,6 +718,104 @@ abstract contract CLMigratorFromV2 is OldVersionHelper, GasSnapshot {
         assertEq(salt, bytes32(0));
         assertApproxEqAbs(token0.balanceOf(address(vault)), 5 ether, 0.000001 ether);
         assertApproxEqAbs(token1.balanceOf(address(vault)), 5 ether, 0.000001 ether);
+    }
+
+    function testMigrateFromV2ThroughOffchainSign() public {
+        // 1. mint some liquidity to the v2 pair
+        _mintV2Liquidity(v2Pair);
+        uint256 lpTokenBefore = v2Pair.balanceOf(address(this));
+        assertGt(lpTokenBefore, 0);
+
+        // 2. instead of approve, we generate a offchain signature here
+        // v2Pair.approve(address(migrator), lpTokenBefore);
+        (address userAddr, uint256 userPrivateKey) = makeAddrAndKey("user");
+
+        // 2.a transfer the lp token to the user
+        v2Pair.transfer(userAddr, lpTokenBefore);
+
+        uint256 ddl = block.timestamp + 100;
+
+        // 2.b prepare the hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                userAddr,
+                address(migrator),
+                lpTokenBefore,
+                v2Pair.nonces(userAddr),
+                ddl
+            )
+        );
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", v2Pair.DOMAIN_SEPARATOR(), structHash));
+
+        // 2.c generate the signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
+
+        IBaseMigrator.V2PoolParams memory v2PoolParams = IBaseMigrator.V2PoolParams({
+            pair: address(v2Pair),
+            migrateAmount: lpTokenBefore,
+            // minor precision loss is acceptable
+            amount0Min: 9.999 ether,
+            amount1Min: 9.999 ether
+        });
+
+        ICLMigrator.V4CLPoolParams memory v4MintParams = ICLMigrator.V4CLPoolParams({
+            poolKey: poolKey,
+            tickLower: -100,
+            tickUpper: 100,
+            salt: bytes32(0),
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: ddl
+        });
+
+        // 3. multicall, combine permit, initialize and migrateFromV2
+        uint160 initSqrtPrice = 79228162514264337593543950336;
+        bytes[] memory data = new bytes[](3);
+        data[0] = abi.encodeWithSelector(migrator.selfPermit.selector, v2Pair, lpTokenBefore, ddl, v, r, s);
+        data[1] = abi.encodeWithSelector(migrator.initialize.selector, poolKey, initSqrtPrice, bytes(""));
+        data[2] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4MintParams, 0, 0);
+        vm.prank(userAddr);
+        migrator.multicall(data);
+
+        // necessary checks
+        // v2 pair should be burned already
+        assertEq(v2Pair.balanceOf(address(this)), 0);
+
+        // make sure liuqidty is minted to the correct pool
+        assertEq(nonfungiblePoolManager.ownerOf(1), address(this));
+        (
+            ,
+            ,
+            PoolId poolId,
+            Currency currency0,
+            Currency currency1,
+            uint24 fee,
+            int24 tickLower,
+            int24 tickUpper,
+            uint128 liquidity,
+            uint256 feeGrowthInside0LastX128,
+            uint256 feeGrowthInside1LastX128,
+            uint128 tokensOwed0,
+            uint128 tokensOwed1,
+            bytes32 salt
+        ) = nonfungiblePoolManager.positions(1);
+
+        assertEq(PoolId.unwrap(poolId), PoolId.unwrap(poolKey.toId()));
+        assertEq(Currency.unwrap(currency0), address(0));
+        assertEq(Currency.unwrap(currency1), address(token0));
+        assertEq(fee, 0);
+        assertEq(tickLower, -100);
+        assertEq(tickUpper, 100);
+        assertEq(liquidity, 2005104164790027832367);
+        assertEq(feeGrowthInside0LastX128, 0);
+        assertEq(feeGrowthInside1LastX128, 0);
+        assertEq(tokensOwed0, 0);
+        assertEq(tokensOwed1, 0);
+        assertEq(salt, bytes32(0));
+        assertApproxEqAbs(address(vault).balance, 10 ether, 0.000001 ether);
+        assertApproxEqAbs(token0.balanceOf(address(vault)), 10 ether, 0.000001 ether);
     }
 
     function _mintV2Liquidity(IPancakePair pair) public {
