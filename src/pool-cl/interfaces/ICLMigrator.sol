@@ -25,6 +25,8 @@ interface ICLMigrator is IBaseMigrator {
     /// @param v2PoolParams ncessary info for removing liqudity the source v2 pool
     /// @param v4PoolParams necessary info for adding liquidity the target v4 cl-pool
     /// @param extraAmount0 the extra amount of token0 that user wants to add (optional, usually 0)
+    /// if pool token0 is ETH and msg.value == 0, WETH will be taken from sender.
+    /// Otherwise if pool token0 is ETH and msg.value !=0, method will assume user have sent extraAmount0 in msg.value
     /// @param extraAmount1 the extra amount of token1 that user wants to add (optional, usually 0)
     function migrateFromV2(
         V2PoolParams calldata v2PoolParams,
@@ -38,6 +40,8 @@ interface ICLMigrator is IBaseMigrator {
     /// @param v3PoolParams ncessary info for removing liqudity the source v3 pool
     /// @param v4PoolParams necessary info for adding liquidity the target v4 cl-pool
     /// @param extraAmount0 the extra amount of token0 that user wants to add (optional, usually 0)
+    /// if pool token0 is ETH and msg.value == 0, WETH will be taken from sender.
+    /// Otherwise if pool token0 is ETH and msg.value !=0, method will assume user have sent extraAmount0 in msg.value
     /// @param extraAmount1 the extra amount of token1 that user wants to add (optional, usually 0)
     function migrateFromV3(
         V3PoolParams calldata v3PoolParams,
