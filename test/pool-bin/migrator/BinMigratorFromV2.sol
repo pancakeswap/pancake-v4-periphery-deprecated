@@ -799,6 +799,111 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
         (poolId, currency0, currency1, fee, binId) = binFungiblePositionManager.positions(positionId3);
     }
 
+    function testMigrateFromV2ThroughOffchainSign() public {
+        // 1. mint some liquidity to the v2 pair
+        _mintV2Liquidity(v2Pair);
+        uint256 lpTokenBefore = v2Pair.balanceOf(address(this));
+        assertGt(lpTokenBefore, 0);
+
+        // 2. make sure migrator can transfer user's v2 lp token
+        // v2Pair.approve(address(migrator), lpTokenBefore);
+        (address userAddr, uint256 userPrivateKey) = makeAddrAndKey("user");
+
+        // 2.a transfer the lp token to the user
+        v2Pair.transfer(userAddr, lpTokenBefore);
+
+        uint256 ddl = block.timestamp + 100;
+        // 2.b prepare the hash
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                userAddr,
+                address(migrator),
+                lpTokenBefore,
+                v2Pair.nonces(userAddr),
+                ddl
+            )
+        );
+        bytes32 hash = keccak256(abi.encodePacked("\x19\x01", v2Pair.DOMAIN_SEPARATOR(), structHash));
+
+        // 2.c generate the signature
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivateKey, hash);
+
+        IBaseMigrator.V2PoolParams memory v2PoolParams = IBaseMigrator.V2PoolParams({
+            pair: address(v2Pair),
+            migrateAmount: lpTokenBefore,
+            // minor precision loss is acceptable
+            amount0Min: 9.999 ether,
+            amount1Min: 9.999 ether
+        });
+
+        IBinFungiblePositionManager.AddLiquidityParams memory params =
+            _getAddParams(poolKey, getBinIds(ACTIVE_BIN_ID, 3), 10 ether, 10 ether, ACTIVE_BIN_ID, address(this));
+
+        IBinMigrator.V4BinPoolParams memory v4BinPoolParams = IBinMigrator.V4BinPoolParams({
+            poolKey: params.poolKey,
+            amount0Min: params.amount0Min,
+            amount1Min: params.amount1Min,
+            activeIdDesired: params.activeIdDesired,
+            idSlippage: params.idSlippage,
+            deltaIds: params.deltaIds,
+            distributionX: params.distributionX,
+            distributionY: params.distributionY,
+            to: params.to,
+            deadline: params.deadline
+        });
+
+        // 3. multicall, combine permit, initialize and migrateFromV2
+        bytes[] memory data = new bytes[](3);
+        data[0] = abi.encodeWithSelector(migrator.selfPermit.selector, v2Pair, lpTokenBefore, ddl, v, r, s);
+        data[1] = abi.encodeWithSelector(migrator.initialize.selector, poolKey, ACTIVE_BIN_ID, bytes(""));
+        data[2] = abi.encodeWithSelector(migrator.migrateFromV2.selector, v2PoolParams, v4BinPoolParams, 0, 0);
+        vm.prank(userAddr);
+        migrator.multicall(data);
+
+        // necessary checks
+        // v2 pair should be burned already
+        assertEq(v2Pair.balanceOf(address(this)), 0);
+
+        // make sure liuqidty is minted to the correct pool
+        assertApproxEqAbs(address(vault).balance, 10 ether, 0.000001 ether);
+        assertApproxEqAbs(token0.balanceOf(address(vault)), 10 ether, 0.000001 ether);
+
+        uint256 positionId0 = poolKey.toId().toTokenId(ACTIVE_BIN_ID - 1);
+        uint256 positionId1 = poolKey.toId().toTokenId(ACTIVE_BIN_ID);
+        uint256 positionId2 = poolKey.toId().toTokenId(ACTIVE_BIN_ID + 1);
+        uint256 positionId3 = poolKey.toId().toTokenId(ACTIVE_BIN_ID + 2);
+        assertGt(binFungiblePositionManager.balanceOf(address(this), positionId0), 0);
+        assertGt(binFungiblePositionManager.balanceOf(address(this), positionId1), 0);
+        assertGt(binFungiblePositionManager.balanceOf(address(this), positionId2), 0);
+        assertEq(binFungiblePositionManager.balanceOf(address(this), positionId3), 0);
+
+        (PoolId poolId, Currency currency0, Currency currency1, uint24 fee, uint24 binId) =
+            binFungiblePositionManager.positions(positionId0);
+        assertEq(PoolId.unwrap(poolId), PoolId.unwrap(poolKey.toId()));
+        assertEq(Currency.unwrap(currency0), address(0));
+        assertEq(Currency.unwrap(currency1), address(token0));
+        assertEq(fee, 0);
+        assertEq(binId, ACTIVE_BIN_ID - 1);
+
+        (poolId, currency0, currency1, fee, binId) = binFungiblePositionManager.positions(positionId1);
+        assertEq(PoolId.unwrap(poolId), PoolId.unwrap(poolKey.toId()));
+        assertEq(Currency.unwrap(currency0), address(0));
+        assertEq(Currency.unwrap(currency1), address(token0));
+        assertEq(fee, 0);
+        assertEq(binId, ACTIVE_BIN_ID);
+
+        (poolId, currency0, currency1, fee, binId) = binFungiblePositionManager.positions(positionId2);
+        assertEq(PoolId.unwrap(poolId), PoolId.unwrap(poolKey.toId()));
+        assertEq(Currency.unwrap(currency0), address(0));
+        assertEq(Currency.unwrap(currency1), address(token0));
+        assertEq(fee, 0);
+        assertEq(binId, ACTIVE_BIN_ID + 1);
+
+        vm.expectRevert(IBinFungiblePositionManager.InvalidTokenID.selector);
+        (poolId, currency0, currency1, fee, binId) = binFungiblePositionManager.positions(positionId3);
+    }
+
     function _mintV2Liquidity(IPancakePair pair) public {
         IERC20(pair.token0()).transfer(address(pair), 10 ether);
         IERC20(pair.token1()).transfer(address(pair), 10 ether);
