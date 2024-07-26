@@ -22,6 +22,7 @@ contract NonfungibleTokenPositionDescriptorOffChain is INonfungibleTokenPosition
         override
         returns (string memory)
     {
+        delete positionManager;
         return bytes(_baseTokenURI).length > 0 ? string.concat(_baseTokenURI, tokenId.toString()) : "";
     }
 }
