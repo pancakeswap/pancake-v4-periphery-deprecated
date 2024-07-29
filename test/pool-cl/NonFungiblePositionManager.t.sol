@@ -782,6 +782,210 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         }
     }
 
+    function testMulticallMintAndIncreaseLiquidity() external {
+        bytes32 salt = keccak256("salt");
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: key,
+            tickLower: 46053,
+            tickUpper: 46055,
+            salt: salt,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: type(uint256).max
+        });
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+        // nonfungiblePoolManager.mint(mintParams);
+
+        // generate multicall data
+        bytes[] memory data = new bytes[](2);
+        data[0] = abi.encodeWithSelector(INonfungiblePositionManager.mint.selector, mintParams);
+
+        INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
+            .IncreaseLiquidityParams({
+            tokenId: 1,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        data[1] = abi.encodeWithSelector(INonfungiblePositionManager.increaseLiquidity.selector, increaseParams);
+
+        // multicall
+        snapStart("NonfungiblePositionManager#multicallMintAndIncreaseLiquidity");
+        nonfungiblePoolManager.multicall(data);
+        snapEnd();
+
+        {
+            (
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                uint128 _liquidity,
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint128 tokensOwed0,
+                uint128 tokensOwed1,
+            ) = nonfungiblePoolManager.positions(1);
+
+            uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+                sqrtPriceX96, TickMath.getSqrtRatioAtTick(46053), TickMath.getSqrtRatioAtTick(46055), 1 ether, 1 ether
+            );
+
+            assertEq(_liquidity, 1991375027067913587988 + liquidityExpected, "Unexpected liquidity");
+            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
+            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
+            assertEq(tokensOwed0, 0, "Unexpected feesOwed0");
+            assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
+        }
+        assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
+        assertEq(
+            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, salt),
+            1991375027067913587988 * 2,
+            "Unexpected liquidity for current position"
+        );
+
+        assertEq(
+            nonfungiblePoolManager.balanceOf(address(this)), 1, "Unexpected balance of the position owner after mint"
+        );
+
+        assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
+
+        {
+            (
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                uint128 _liquidity,
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint128 tokensOwed0,
+                uint128 tokensOwed1,
+            ) = nonfungiblePoolManager.positions(1);
+            assertEq(_liquidity, 1991375027067913587988 * 2, "Unexpected liquidity");
+            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
+            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
+            assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
+            assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
+        }
+    }
+
+    function testMulticallMintIncreaseAndDecreaseLiquidity() external {
+        bytes32 salt = keccak256("salt");
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: key,
+            tickLower: 46053,
+            tickUpper: 46055,
+            salt: salt,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: type(uint256).max
+        });
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+        // nonfungiblePoolManager.mint(mintParams);
+
+        // generate multicall data
+        bytes[] memory data = new bytes[](3);
+        data[0] = abi.encodeWithSelector(INonfungiblePositionManager.mint.selector, mintParams);
+
+        INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
+            .IncreaseLiquidityParams({
+            tokenId: 1,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        data[1] = abi.encodeWithSelector(INonfungiblePositionManager.increaseLiquidity.selector, increaseParams);
+
+        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
+            .DecreaseLiquidityParams({
+            tokenId: 1,
+            liquidity: 1991375027067913587988 + 1991375027067913587987,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+
+        data[2] = abi.encodeWithSelector(INonfungiblePositionManager.decreaseLiquidity.selector, decreaseParams);
+
+        // multicall
+        snapStart("NonfungiblePositionManager#multicallMintIncreaseAndDecreaseLiquidity");
+        nonfungiblePoolManager.multicall(data);
+        snapEnd();
+
+        {
+            (
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                ,
+                uint128 _liquidity,
+                uint256 feeGrowthInside0LastX128,
+                uint256 feeGrowthInside1LastX128,
+                uint128 tokensOwed0,
+                uint128 tokensOwed1,
+            ) = nonfungiblePoolManager.positions(1);
+
+            // uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+            //     sqrtPriceX96, TickMath.getSqrtRatioAtTick(46053), TickMath.getSqrtRatioAtTick(46055), 1 ether, 1 ether
+            // );
+
+            assertEq(_liquidity, 1, "Unexpected liquidity");
+            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
+            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
+            assertEq(tokensOwed0, 0, "Unexpected feesOwed0");
+            assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
+        }
+    }
+
     function testIncreaseLiquidity_gas() external {
         PoolKey memory key = PoolKey({
             currency0: currency0,

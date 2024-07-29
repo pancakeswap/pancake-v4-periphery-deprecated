@@ -41,7 +41,9 @@ interface INonfungiblePositionManager is
         Mint,
         IncreaseLiquidity,
         DecreaseLiquidity,
-        Collect
+        Collect,
+        BatchModifyLiquidity,
+        CloseCurrency
     }
 
     struct CallbackData {
@@ -138,6 +140,12 @@ interface INonfungiblePositionManager is
         address recipient;
         uint256 deadline;
     }
+
+    /// @notice Batches many liquidity modification calls to pool manager
+    /// @param payload is an encoding of actions, and parameters for those actions
+    /// @param deadline is the deadline for the batched actions to be executed
+    /// @return returnData is the endocing of each actions return information
+    function modifyLiquidities(bytes calldata payload, uint256 deadline) external payable returns (bytes[] memory);
 
     /// @notice Creates a new position wrapped in a NFT
     /// @dev Call this when the pool does exist and is initialized. Note that if the pool is created but not initialized
