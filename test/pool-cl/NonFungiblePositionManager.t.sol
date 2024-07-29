@@ -75,6 +75,59 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         IERC20(Currency.unwrap(currency1)).approve(address(nonfungiblePoolManager), type(uint256).max);
     }
 
+    function mint(INonfungiblePositionManager.MintParams memory mintParams) internal returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) {
+        // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
+
+        return abi.decode(nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100)[0], (uint256, uint128, uint256, uint256));
+    }
+
+    function increaseLiquidity(INonfungiblePositionManager.IncreaseLiquidityParams memory params) internal returns (uint128 liquidity, uint256 amount0, uint256 amount1) {
+        // generate modifyLiquidities data
+        bytes memory increaseLiquidityData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity, abi.encode(params)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = increaseLiquidityData;
+
+        return abi.decode(nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline)[0], (uint128, uint256, uint256));
+
+    }
+
+    function collect(INonfungiblePositionManager.CollectParams memory params) internal returns (uint256 amount0, uint256 amount1) {
+        // generate modifyLiquidities data
+        bytes memory collectData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(params)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = collectData;
+
+        return abi.decode(nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp+100)[0], (uint256, uint256));
+    }
+
+    function decreaseLiquidity(INonfungiblePositionManager.DecreaseLiquidityParams memory params) internal returns (uint256 amount0, uint256 amount1) {
+        // generate modifyLiquidities data
+        bytes memory decreaseLiquidityData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(params)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = decreaseLiquidityData;
+
+        return abi.decode(nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline)[0], (uint256, uint256));
+    }
+
     function testPositions() external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
@@ -107,7 +160,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             // (, int24 tick,,,) = poolManager.getSlot0(key.toId());
             // price = 100 i.e. tick 46054
             // console2.log("tick", tick);
-            nonfungiblePoolManager.mint(mintParams);
+            mint(mintParams);
 
             // make the LPing balance of the position non-zero
             router.donate(key, 1 ether, 1 ether, "");
@@ -115,12 +168,12 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             // mint another position in the same price range but different recipient
             INonfungiblePositionManager.MintParams memory mintParams2 = mintParams;
             mintParams2.recipient = address(this);
-            nonfungiblePoolManager.mint(mintParams2);
+            mint(mintParams2);
 
             // mint another position in the same price range but different salt
             INonfungiblePositionManager.MintParams memory mintParams3 = mintParams;
             mintParams3.salt = bytes32(uint256(0xABCD));
-            nonfungiblePoolManager.mint(mintParams3);
+            mint(mintParams3);
         }
 
         {
@@ -240,7 +293,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // modifyPosition 0 to refresh position(1)'s LPing
         vm.prank(makeAddr("someone"));
-        nonfungiblePoolManager.increaseLiquidity(
+        increaseLiquidity(
             INonfungiblePositionManager.IncreaseLiquidityParams({
                 tokenId: 1,
                 amount0Desired: 0,
@@ -337,7 +390,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
         }
 
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = nonfungiblePoolManager.mint(
+        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = mint(
             INonfungiblePositionManager.MintParams({
                 poolKey: key,
                 tickLower: tickLower,
@@ -403,7 +456,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             parameters: bytes32(uint256(0x10000))
         });
 
-        int24 tickLower = 46053;
+        {
+            int24 tickLower = 46053;
         int24 tickUpper = 46055;
         uint256 amount0Desired = 1 ether;
         uint256 amount1Desired = 2 ether;
@@ -411,22 +465,34 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        snapStart("NonfungiblePositionManager#mint");
-        nonfungiblePoolManager.mint(
-            INonfungiblePositionManager.MintParams({
-                poolKey: key,
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                salt: bytes32(0),
-                amount0Desired: amount0Desired,
-                amount1Desired: amount1Desired,
-                amount0Min: 0,
-                amount1Min: 0,
-                recipient: address(this),
-                deadline: type(uint256).max
-            })
+        // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint,
+                abi.encode(
+                    INonfungiblePositionManager.MintParams({
+                        poolKey: key,
+                        tickLower: tickLower,
+                        tickUpper: tickUpper,
+                        salt: bytes32(0),
+                        amount0Desired: amount0Desired,
+                        amount1Desired: amount1Desired,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        recipient: address(this),
+                        deadline: type(uint256).max
+                    })
+                )
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
+
+        bytes memory lockData = abi.encode(data);
+        snapStart("NonfungiblePositionManager#mint");
+        nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp + 100);
         snapEnd();
+        }
     }
 
     function testMint_multiPositionsInSamePriceRange() external {
@@ -461,7 +527,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // console2.log("tick", tick);
 
         // make the LPing balance of the position non-zero
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         router.donate(key, 1 ether, 1 ether, "");
 
         uint256 token0Before = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
@@ -470,7 +536,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         INonfungiblePositionManager.MintParams memory mintParams2 = mintParams;
         mintParams2.recipient = address(this);
         (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) =
-            nonfungiblePoolManager.mint(mintParams2);
+            mint(mintParams2);
 
         uint256 token0After = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
         uint256 token1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
@@ -502,7 +568,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // mint another position in the same price range but different salt
         INonfungiblePositionManager.MintParams memory mintParams3 = mintParams;
         mintParams3.salt = bytes32(uint256(0xABCD));
-        nonfungiblePoolManager.mint(mintParams3);
+        mint(mintParams3);
 
         assertEq(
             nonfungiblePoolManager.balanceOf(address(this)),
@@ -553,8 +619,17 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
+         // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
         vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
-        nonfungiblePoolManager.mint(mintParams);
+        // mint(mintParams);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
     }
 
     function testMint_SamePersonMintTokensInSamePriceRange() external {
@@ -589,13 +664,13 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // console2.log("tick", tick);
 
         // make the LPing balance of the position non-zero
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         router.donate(key, 1 ether, 1 ether, "");
 
         uint256 token0Before = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
         uint256 token1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
-        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = nonfungiblePoolManager.mint(mintParams);
+        (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1) = mint(mintParams);
 
         uint256 token0After = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
         uint256 token1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
@@ -682,7 +757,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         {
             (
@@ -719,7 +794,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             emit IncreaseLiquidity(1, liquidityExpected, 9912256854193146, 1000000000000000000);
 
             // adding into exactly the same position
-            (uint128 liquidity, uint256 amount0, uint256 amount1) = nonfungiblePoolManager.increaseLiquidity(
+            (uint128 liquidity, uint256 amount0, uint256 amount1) = increaseLiquidity(
                 INonfungiblePositionManager.IncreaseLiquidityParams({
                     tokenId: 1,
                     amount0Desired: 1 ether,
@@ -782,210 +857,6 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         }
     }
 
-    function testMulticallMintAndIncreaseLiquidity() external {
-        bytes32 salt = keccak256("salt");
-        PoolKey memory key = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            hooks: IHooks(address(0)),
-            poolManager: poolManager,
-            fee: uint24(3000),
-            // 0 ~ 15  hookRegistrationMap = nil
-            // 16 ~ 24 tickSpacing = 1
-            parameters: bytes32(uint256(0x10000))
-        });
-
-        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
-            poolKey: key,
-            tickLower: 46053,
-            tickUpper: 46055,
-            salt: salt,
-            amount0Desired: 1 ether,
-            amount1Desired: 1 ether,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
-        });
-
-        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
-        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        // nonfungiblePoolManager.mint(mintParams);
-
-        // generate multicall data
-        bytes[] memory data = new bytes[](2);
-        data[0] = abi.encodeWithSelector(INonfungiblePositionManager.mint.selector, mintParams);
-
-        INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
-            .IncreaseLiquidityParams({
-            tokenId: 1,
-            amount0Desired: 1 ether,
-            amount1Desired: 1 ether,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
-        data[1] = abi.encodeWithSelector(INonfungiblePositionManager.increaseLiquidity.selector, increaseParams);
-
-        // multicall
-        snapStart("NonfungiblePositionManager#multicallMintAndIncreaseLiquidity");
-        nonfungiblePoolManager.multicall(data);
-        snapEnd();
-
-        {
-            (
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                uint128 _liquidity,
-                uint256 feeGrowthInside0LastX128,
-                uint256 feeGrowthInside1LastX128,
-                uint128 tokensOwed0,
-                uint128 tokensOwed1,
-            ) = nonfungiblePoolManager.positions(1);
-
-            uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
-                sqrtPriceX96, TickMath.getSqrtRatioAtTick(46053), TickMath.getSqrtRatioAtTick(46055), 1 ether, 1 ether
-            );
-
-            assertEq(_liquidity, 1991375027067913587988 + liquidityExpected, "Unexpected liquidity");
-            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
-            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
-            assertEq(tokensOwed0, 0, "Unexpected feesOwed0");
-            assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
-        }
-        assertEq(poolManager.getLiquidity(key.toId()), 2 * 1991375027067913587988, "Unexpected liquidity for the pool");
-        assertEq(
-            poolManager.getLiquidity(key.toId(), address(nonfungiblePoolManager), 46053, 46055, salt),
-            1991375027067913587988 * 2,
-            "Unexpected liquidity for current position"
-        );
-
-        assertEq(
-            nonfungiblePoolManager.balanceOf(address(this)), 1, "Unexpected balance of the position owner after mint"
-        );
-
-        assertEq(nonfungiblePoolManager.ownerOf(1), address(this), "Unexpected owner of the position");
-
-        {
-            (
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                uint128 _liquidity,
-                uint256 feeGrowthInside0LastX128,
-                uint256 feeGrowthInside1LastX128,
-                uint128 tokensOwed0,
-                uint128 tokensOwed1,
-            ) = nonfungiblePoolManager.positions(1);
-            assertEq(_liquidity, 1991375027067913587988 * 2, "Unexpected liquidity");
-            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
-            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
-            assertEq(tokensOwed0, 0, "Unexpected tokensOwed0");
-            assertEq(tokensOwed1, 0, "Unexpected tokensOwed1");
-        }
-    }
-
-    function testMulticallMintIncreaseAndDecreaseLiquidity() external {
-        bytes32 salt = keccak256("salt");
-        PoolKey memory key = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            hooks: IHooks(address(0)),
-            poolManager: poolManager,
-            fee: uint24(3000),
-            // 0 ~ 15  hookRegistrationMap = nil
-            // 16 ~ 24 tickSpacing = 1
-            parameters: bytes32(uint256(0x10000))
-        });
-
-        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
-            poolKey: key,
-            tickLower: 46053,
-            tickUpper: 46055,
-            salt: salt,
-            amount0Desired: 1 ether,
-            amount1Desired: 1 ether,
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
-        });
-
-        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
-        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        // nonfungiblePoolManager.mint(mintParams);
-
-        // generate multicall data
-        bytes[] memory data = new bytes[](3);
-        data[0] = abi.encodeWithSelector(INonfungiblePositionManager.mint.selector, mintParams);
-
-        INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
-            .IncreaseLiquidityParams({
-            tokenId: 1,
-            amount0Desired: 1 ether,
-            amount1Desired: 1 ether,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
-        data[1] = abi.encodeWithSelector(INonfungiblePositionManager.increaseLiquidity.selector, increaseParams);
-
-        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-            tokenId: 1,
-            liquidity: 1991375027067913587988 + 1991375027067913587987,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
-
-        data[2] = abi.encodeWithSelector(INonfungiblePositionManager.decreaseLiquidity.selector, decreaseParams);
-
-        // multicall
-        snapStart("NonfungiblePositionManager#multicallMintIncreaseAndDecreaseLiquidity");
-        nonfungiblePoolManager.multicall(data);
-        snapEnd();
-
-        {
-            (
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                ,
-                uint128 _liquidity,
-                uint256 feeGrowthInside0LastX128,
-                uint256 feeGrowthInside1LastX128,
-                uint128 tokensOwed0,
-                uint128 tokensOwed1,
-            ) = nonfungiblePoolManager.positions(1);
-
-            // uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
-            //     sqrtPriceX96, TickMath.getSqrtRatioAtTick(46053), TickMath.getSqrtRatioAtTick(46055), 1 ether, 1 ether
-            // );
-
-            assertEq(_liquidity, 1, "Unexpected liquidity");
-            assertEq(feeGrowthInside0LastX128, 0, "Unexpected feeGrowthInside0LastX128");
-            assertEq(feeGrowthInside1LastX128, 0, "Unexpected feeGrowthInside1LastX128");
-            assertEq(tokensOwed0, 0, "Unexpected feesOwed0");
-            assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
-        }
-    }
-
     function testIncreaseLiquidity_gas() external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
@@ -1013,19 +884,40 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
+
+        // generate modifyLiquidities data
+        bytes memory increaseData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
+                abi.encode(
+                    INonfungiblePositionManager.IncreaseLiquidityParams({
+                        tokenId: 1,
+                        amount0Desired: 1 ether,
+                        amount1Desired: 1 ether,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        deadline: type(uint256).max
+                    })
+                )
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = increaseData;
+        bytes memory lockData = abi.encode(data);
 
         snapStart("NonfungiblePositionManager#increaseLiquidity");
-        nonfungiblePoolManager.increaseLiquidity(
-            INonfungiblePositionManager.IncreaseLiquidityParams({
-                tokenId: 1,
-                amount0Desired: 1 ether,
-                amount1Desired: 1 ether,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
-            })
-        );
+        // increaseLiquidity(
+        //     INonfungiblePositionManager.IncreaseLiquidityParams({
+        //         tokenId: 1,
+        //         amount0Desired: 1 ether,
+        //         amount1Desired: 1 ether,
+        //         amount0Min: 0,
+        //         amount1Min: 0,
+        //         deadline: type(uint256).max
+        //     })
+        // );
+        nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp + 100);
         snapEnd();
     }
 
@@ -1056,7 +948,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         {
             (
@@ -1094,7 +986,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             emit IncreaseLiquidity(1, liquidityExpected, 9912256854193146, 1000000000000000000);
 
             // adding into exactly the same position
-            (uint128 liquidity, uint256 amount0, uint256 amount1) = nonfungiblePoolManager.increaseLiquidity(
+            (uint128 liquidity, uint256 amount0, uint256 amount1) = increaseLiquidity(
                 INonfungiblePositionManager.IncreaseLiquidityParams({
                     tokenId: 1,
                     amount0Desired: 1 ether,
@@ -1191,10 +1083,10 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // (, int24 tick,,,) = poolManager.getSlot0(key.toId());
         // price = 100 i.e. tick 46054
         // console2.log("tick", tick);
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         // adding into exactly the same position
-        nonfungiblePoolManager.increaseLiquidity(
+        increaseLiquidity(
             INonfungiblePositionManager.IncreaseLiquidityParams({
                 tokenId: 1,
                 amount0Desired: 1 ether,
@@ -1236,19 +1128,36 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         // (, int24 tick,,,) = poolManager.getSlot0(key.toId());
         // price = 100 i.e. tick 46054
         // console2.log("tick", tick);
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
-        nonfungiblePoolManager.increaseLiquidity(
-            INonfungiblePositionManager.IncreaseLiquidityParams({
-                tokenId: 1,
-                amount0Desired: 1 ether,
-                amount1Desired: 1 ether,
-                amount0Min: 0.01 ether,
-                amount1Min: 0,
-                deadline: type(uint256).max
-            })
+         // generate modifyLiquidities data
+         INonfungiblePositionManager.IncreaseLiquidityParams memory params = INonfungiblePositionManager.IncreaseLiquidityParams({
+            tokenId: 1,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0.01 ether,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        bytes memory increaseLiquidityData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity, abi.encode(params)
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = increaseLiquidityData;
+        vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
+        // increaseLiquidity(
+        //     INonfungiblePositionManager.IncreaseLiquidityParams({
+        //         tokenId: 1,
+        //         amount0Desired: 1 ether,
+        //         amount1Desired: 1 ether,
+        //         amount0Min: 0.01 ether,
+        //         amount1Min: 0,
+        //         deadline: type(uint256).max
+        //     })
+        // );
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline);
     }
 
     function testDecreaseLiquidity(bytes32 salt) external {
@@ -1279,7 +1188,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         (
             ,
             ,
@@ -1306,7 +1215,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             vm.expectEmit(true, true, true, true);
             emit DecreaseLiquidity(1, 1991375027067913587988, 9912256854193145, 999999999999999999);
 
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.decreaseLiquidity(
+            (uint256 amount0, uint256 amount1) = decreaseLiquidity(
                 INonfungiblePositionManager.DecreaseLiquidityParams({
                     tokenId: 1,
                     liquidity: 1991375027067913587988,
@@ -1375,17 +1284,36 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
-        snapStart("NonfungiblePositionManager#decreaseLiquidity");
-        nonfungiblePoolManager.decreaseLiquidity(
-            INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: 1,
-                liquidity: 1991375027067913587988,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
-            })
+        mint(mintParams);
+
+        // generate modifyLiquidities data
+        bytes memory decreaseData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
+                abi.encode(
+                    INonfungiblePositionManager.DecreaseLiquidityParams({
+                        tokenId: 1,
+                        liquidity: 1991375027067913587988,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        deadline: type(uint256).max
+                    })
+                )
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = decreaseData;
+        snapStart("NonfungiblePositionManager#decreaseLiquidity");
+        // decreaseLiquidity(
+        //     INonfungiblePositionManager.DecreaseLiquidityParams({
+        //         tokenId: 1,
+        //         liquidity: 1991375027067913587988,
+        //         amount0Min: 0,
+        //         amount1Min: 0,
+        //         deadline: type(uint256).max
+        //     })
+        // );
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
         snapEnd();
     }
 
@@ -1417,18 +1345,34 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        vm.expectRevert(INonfungiblePositionManager.NotOwnerOrOperator.selector);
-        nonfungiblePoolManager.decreaseLiquidity(
-            INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: 1,
-                liquidity: 1991375027067913587988,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
-            })
+         // generate modifyLiquidities data
+        INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager.DecreaseLiquidityParams({
+            tokenId: 1,
+            liquidity: 1991375027067913587988,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        bytes memory decreaseLiquidityData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(params)
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = decreaseLiquidityData;
+        vm.expectRevert(INonfungiblePositionManager.NotOwnerOrOperator.selector);
+        // decreaseLiquidity(
+        //     INonfungiblePositionManager.DecreaseLiquidityParams({
+        //         tokenId: 1,
+        //         liquidity: 1991375027067913587988,
+        //         amount0Min: 0,
+        //         amount1Min: 0,
+        //         deadline: type(uint256).max
+        //     })
+        // );
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline);
     }
 
     function testDecreaseLiquidity_forSomeoneElse_withoutApprove() external {
@@ -1459,11 +1403,11 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         vm.prank(makeAddr("someone"));
         nonfungiblePoolManager.approve(address(this), 1);
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -1502,19 +1446,25 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
-        nonfungiblePoolManager.decreaseLiquidity(
-            INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: 1,
-                liquidity: 1991375027067913587988,
-                // price 100
-                amount0Min: 0.01 ether,
-                amount1Min: 0,
-                deadline: type(uint256).max
-            })
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager.DecreaseLiquidityParams({
+            tokenId: 1,
+            liquidity: 1991375027067913587988,
+            amount0Min: 0.01 ether,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+       bytes memory decreaseLiquidityData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(params)
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = decreaseLiquidityData;
+        vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline);
     }
 
     function testDecreaseLiquidity_AccumulatedLPing() external {
@@ -1544,7 +1494,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         (
             ,
             ,
@@ -1574,7 +1524,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 token1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
             console2.log("about to decrease liquidity");
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.decreaseLiquidity(
+            (uint256 amount0, uint256 amount1) = decreaseLiquidity(
                 INonfungiblePositionManager.DecreaseLiquidityParams({
                     tokenId: 1,
                     liquidity: 1991375027067913587988,
@@ -1645,9 +1595,9 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -1700,9 +1650,9 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -1744,12 +1694,12 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         vm.prank(makeAddr("someone"));
         nonfungiblePoolManager.approve(address(this), 1);
 
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -1797,12 +1747,12 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         vm.prank(makeAddr("someone"));
         nonfungiblePoolManager.approve(address(this), 1);
 
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -1847,9 +1797,9 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988 - 1,
@@ -1894,12 +1844,12 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -1950,7 +1900,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
@@ -1982,7 +1932,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             vm.expectEmit(true, true, true, true);
             emit Collect(1, address(this), 999999999999999999, 999999999999999999);
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.collect(
+            (uint256 amount0, uint256 amount1) = collect(
                 INonfungiblePositionManager.CollectParams({
                     tokenId: 1,
                     recipient: address(this),
@@ -2052,7 +2002,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -2078,7 +2028,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
 
         // decrease liquidity to 0
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: _liquidity,
@@ -2097,7 +2047,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             vm.expectEmit(true, true, true, true);
             emit Collect(1, address(this), 999999999999999999, 999999999999999999);
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.collect(
+            (uint256 amount0, uint256 amount1) = collect(
                 INonfungiblePositionManager.CollectParams({
                     tokenId: 1,
                     recipient: address(this),
@@ -2161,19 +2111,34 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
-        snapStart("NonfungiblePositionManager#collect");
-        nonfungiblePoolManager.collect(
-            INonfungiblePositionManager.CollectParams({
-                tokenId: 1,
-                recipient: address(this),
-                amount0Max: 999999999999999999,
-                amount1Max: 999999999999999999
-            })
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.CollectParams memory collectParams = INonfungiblePositionManager.CollectParams({
+            tokenId: 1,
+            recipient: address(this),
+            amount0Max: 999999999999999999,
+            amount1Max: 999999999999999999
+        });
+        bytes memory collectData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = collectData;
+        snapStart("NonfungiblePositionManager#collect");
+        // collect(
+        //     INonfungiblePositionManager.CollectParams({
+        //         tokenId: 1,
+        //         recipient: address(this),
+        //         amount0Max: 999999999999999999,
+        //         amount1Max: 999999999999999999
+        //     })
+        // );
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp+100);
         snapEnd();
     }
 
@@ -2205,7 +2170,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -2230,15 +2195,30 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(tokensOwed0, 0, "Unexpected feesOwed0");
         assertEq(tokensOwed1, 0, "Unexpected feesOwed1");
 
-        vm.expectRevert(INonfungiblePositionManager.InvalidMaxCollectAmount.selector);
-        nonfungiblePoolManager.collect(
-            INonfungiblePositionManager.CollectParams({
-                tokenId: 1,
-                recipient: address(this),
-                amount0Max: 0,
-                amount1Max: 0
-            })
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.CollectParams memory collectParams = INonfungiblePositionManager.CollectParams({
+            tokenId: 1,
+            recipient: address(this),
+            amount0Max: 0,
+            amount1Max: 0
+        });
+        bytes memory collectData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = collectData;
+        vm.expectRevert(INonfungiblePositionManager.InvalidMaxCollectAmount.selector);
+        // collect(
+        //     INonfungiblePositionManager.CollectParams({
+        //         tokenId: 1,
+        //         recipient: address(this),
+        //         amount0Max: 0,
+        //         amount1Max: 0
+        //     })
+        // );
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp+100);
     }
 
     function testCollect_partialAmount() external {
@@ -2269,7 +2249,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -2300,7 +2280,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             vm.expectEmit(true, true, true, true);
             emit Collect(1, address(this), 0.5 ether, 0.5 ether);
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.collect(
+            (uint256 amount0, uint256 amount1) = collect(
                 INonfungiblePositionManager.CollectParams({
                     tokenId: 1,
                     recipient: address(this),
@@ -2369,7 +2349,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -2395,16 +2375,31 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             uint256 token0Before = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
             uint256 token1Before = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
 
+            // generate modifyLiquidities data
+            INonfungiblePositionManager.CollectParams memory collectParams = INonfungiblePositionManager.CollectParams({
+                tokenId: 1,
+                recipient: address(0),
+                amount0Max: 999999999999999999,
+                amount1Max: 999999999999999999
+            });
+            bytes memory collectData = abi.encode(
+                INonfungiblePositionManager.CallbackData(
+                    INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
+                )
+            );
+            bytes[] memory data = new bytes[](1);
+            data[0] = collectData;
             vm.expectEmit(true, true, true, true);
             emit Collect(1, address(this), 999999999999999999, 999999999999999999);
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.collect(
-                INonfungiblePositionManager.CollectParams({
-                    tokenId: 1,
-                    recipient: address(0),
-                    amount0Max: 999999999999999999,
-                    amount1Max: 999999999999999999
-                })
-            );
+            // (uint256 amount0, uint256 amount1) = collect(
+            //     INonfungiblePositionManager.CollectParams({
+            //         tokenId: 1,
+            //         recipient: address(0),
+            //         amount0Max: 999999999999999999,
+            //         amount1Max: 999999999999999999
+            //     })
+            // );
+            (uint256 amount0, uint256 amount1) = abi.decode(nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp+100)[0], (uint256, uint256));
 
             uint256 token0After = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
             uint256 token1After = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
@@ -2463,7 +2458,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -2494,7 +2489,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             nonfungiblePoolManager.approve(address(this), 1);
             vm.expectEmit(true, true, true, true);
             emit Collect(1, makeAddr("someone"), 999999999999999999, 999999999999999999);
-            (uint256 amount0, uint256 amount1) = nonfungiblePoolManager.collect(
+            (uint256 amount0, uint256 amount1) = collect(
                 INonfungiblePositionManager.CollectParams({
                     tokenId: 1,
                     recipient: makeAddr("someone"),
@@ -2567,17 +2562,36 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        mint(mintParams);
 
-        vm.expectRevert(INonfungiblePositionManager.NotOwnerOrOperator.selector);
-        nonfungiblePoolManager.collect(
+        // vm.expectRevert(INonfungiblePositionManager.NotOwnerOrOperator.selector);
+        // collect(
+        //     INonfungiblePositionManager.CollectParams({
+        //         tokenId: 1,
+        //         recipient: makeAddr("someone"),
+        //         amount0Max: 999999999999999999,
+        //         amount1Max: 999999999999999999
+        //     })
+        // );
+         // generate modifyLiquidities data
+        INonfungiblePositionManager.CollectParams memory params =
             INonfungiblePositionManager.CollectParams({
                 tokenId: 1,
                 recipient: makeAddr("someone"),
                 amount0Max: 999999999999999999,
                 amount1Max: 999999999999999999
-            })
+            });
+        bytes memory collectData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(params)
+            )
         );
+        bytes[] memory data = new bytes[](1);
+        data[0] = collectData;
+
+        vm.expectRevert(INonfungiblePositionManager.NotOwnerOrOperator.selector);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+
     }
 
     function testCollect_positionWithoutRewardsAndLiquidity() external {
@@ -2608,8 +2622,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
-        nonfungiblePoolManager.decreaseLiquidity(
+        mint(mintParams);
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -2619,7 +2633,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             })
         );
 
-        nonfungiblePoolManager.collect(
+        collect(
             INonfungiblePositionManager.CollectParams({
                 tokenId: 1,
                 recipient: address(this),
@@ -2648,7 +2662,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(poolKey, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(
+        mint(
             INonfungiblePositionManager.MintParams({
                 poolKey: poolKey,
                 tickLower: 46053,
@@ -2680,7 +2694,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         router.donate(poolKey, 1 ether, 1 ether, "");
 
         // 3. withdraw all liquidity, it's the only position in both ticks so ticks are cleared
-        nonfungiblePoolManager.decreaseLiquidity(
+        decreaseLiquidity(
             INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
@@ -2730,7 +2744,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         }
 
         // 5. addLiquidity to the position again should not revert and work as expected
-        nonfungiblePoolManager.increaseLiquidity(
+        increaseLiquidity(
             INonfungiblePositionManager.IncreaseLiquidityParams({
                 tokenId: 1,
                 amount0Desired: 1 ether,
@@ -2788,7 +2802,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(poolKey, sqrtPriceX96, new bytes(0));
 
-        (, uint128 liquidity1,,) = nonfungiblePoolManager.mint(
+        (, uint128 liquidity1,,) = mint(
             INonfungiblePositionManager.MintParams({
                 poolKey: poolKey,
                 tickLower: 46053,
@@ -2805,7 +2819,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // decrease liquidity to 1 to better manipulate feeGrowthGlobal
         {
-            nonfungiblePoolManager.decreaseLiquidity(
+            decreaseLiquidity(
                 INonfungiblePositionManager.DecreaseLiquidityParams({
                     tokenId: 1,
                     liquidity: liquidity1 - 1,
@@ -2840,7 +2854,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // 4. another position
         // Consuming 1 ether amount0 & 0 ether amount1 because tick lower > active tick
-        nonfungiblePoolManager.mint(
+        mint(
             INonfungiblePositionManager.MintParams({
                 poolKey: poolKey,
                 tickLower: 46055,
@@ -2879,7 +2893,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             CLPosition.Info memory info =
                 poolManager.getPosition(poolKey.toId(), address(nonfungiblePoolManager), 46055, 46058, bytes32(0));
 
-            nonfungiblePoolManager.decreaseLiquidity(
+            decreaseLiquidity(
                 INonfungiblePositionManager.DecreaseLiquidityParams({
                     tokenId: 2,
                     liquidity: info.liquidity - 1,
@@ -2925,7 +2939,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         {
             // add(0) to trigger position info sync
-            nonfungiblePoolManager.increaseLiquidity(
+            increaseLiquidity(
                 INonfungiblePositionManager.IncreaseLiquidityParams({
                     tokenId: 2,
                     amount0Desired: 0 ether,

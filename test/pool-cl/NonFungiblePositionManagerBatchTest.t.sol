@@ -75,6 +75,19 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         IERC20(Currency.unwrap(currency1)).approve(address(nonfungiblePoolManager), type(uint256).max);
     }
 
+    function mintHelper(INonfungiblePositionManager.MintParams memory mintParams) internal returns (bytes[] memory) {
+        // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
+
+        return nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+    }
+
     function testBatchMint() external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
@@ -107,7 +120,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             // generate modifyLiquidities data
             bytes memory mintData = abi.encode(
                 INonfungiblePositionManager.CallbackData(
-                    address(this), INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+                    INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
                 )
             );
             bytes[] memory data = new bytes[](3);
@@ -115,12 +128,12 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             // set current close data
             data[1] = abi.encode(
                 INonfungiblePositionManager.CallbackData(
-                    address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                   INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
                 )
             );
             data[2] = abi.encode(
                 INonfungiblePositionManager.CallbackData(
-                    address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+                    INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
                 )
             );
             snapStart("NonFungiblePositionManagerBatch#mint");
@@ -199,7 +212,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             // generate modifyLiquidities data
             bytes memory mintData = abi.encode(
                 INonfungiblePositionManager.CallbackData(
-                    address(this), INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+                    INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
                 )
             );
             bytes[] memory data = new bytes[](1);
@@ -281,7 +294,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         bytes[] memory data = new bytes[](4);
         data[0] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
             )
         );
 
@@ -296,7 +309,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
                 abi.encode(increaseParams)
             )
@@ -305,12 +317,12 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // set currency close data
         data[2] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
             )
         );
         data[3] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
             )
         );
 
@@ -416,7 +428,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         bytes[] memory data = new bytes[](5);
         data[0] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
             )
         );
 
@@ -431,7 +443,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
                 abi.encode(increaseParams)
             )
@@ -448,7 +459,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         data[2] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
                 abi.encode(decreaseParams)
             )
@@ -457,12 +467,12 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // set currency close data
         data[3] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
             )
         );
         data[4] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
             )
         );
 
@@ -523,7 +533,8 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        // nonfungiblePoolManager.mint(mintParams);
+        mintHelper(mintParams);
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
@@ -537,7 +548,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory increaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
                 abi.encode(increaseParams)
             )
@@ -577,7 +587,8 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        nonfungiblePoolManager.mint(mintParams);
+        // nonfungiblePoolManager.mint(mintParams);
+        mintHelper(mintParams);
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
@@ -591,7 +602,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory increaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
                 abi.encode(increaseParams)
             )
@@ -601,12 +611,12 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // set current close data
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
             )
         );
         data[2] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
             )
         );
 
@@ -643,7 +653,8 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        // nonfungiblePoolManager.mint(mintParams);
+        mintHelper(mintParams);
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
@@ -656,7 +667,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory decreaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
                 abi.encode(decreaseParams)
             )
@@ -697,7 +707,8 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        // nonfungiblePoolManager.mint(mintParams);
+        mintHelper(mintParams);
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
@@ -710,7 +721,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory decreaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this),
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
                 abi.encode(decreaseParams)
             )
@@ -721,12 +731,12 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // set current close data
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
             )
         );
         data[2] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
             )
         );
 
@@ -763,7 +773,8 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        // nonfungiblePoolManager.mint(mintParams);
+        mintHelper(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -776,7 +787,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // generate modifyLiquidities data
         bytes memory collectData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
+                INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
             )
         );
         bytes[] memory data = new bytes[](1);
@@ -814,7 +825,8 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
 
-        nonfungiblePoolManager.mint(mintParams);
+        // nonfungiblePoolManager.mint(mintParams);
+        mintHelper(mintParams);
         // make the LPing balance of the position non-zero
         router.donate(key, 1 ether, 1 ether, "");
 
@@ -827,7 +839,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // generate modifyLiquidities data
         bytes memory collectData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
+                INonfungiblePositionManager.CallbackDataType.Collect, abi.encode(collectParams)
             )
         );
         bytes[] memory data = new bytes[](3);
@@ -835,12 +847,12 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         // set current close data
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
             )
         );
         data[2] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
             )
         );
         snapStart("NonFungiblePositionManagerBatch#collect");
