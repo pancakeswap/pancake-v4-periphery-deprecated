@@ -234,6 +234,7 @@ contract NonfungiblePositionManager is
         for (uint256 i; i < length; i++) {
             CallbackData memory data = abi.decode(params[i], (CallbackData));
             data.sender = sender;
+            // TODO:
             returnData[i] = _handleSingleAction(data, shouldSettle);
         }
 
@@ -368,6 +369,10 @@ contract NonfungiblePositionManager is
 
     function _handleDecreaseLiquidity(CallbackData memory data, bool shouldSettle) internal returns (bytes memory) {
         DecreaseLiquidityParams memory params = abi.decode(data.params, (DecreaseLiquidityParams));
+        if (params.liquidity == 0) {
+            revert InvalidLiquidityDecreaseAmount();
+        }
+        // TODO: add isAuthorizedForToken check for modifyLiquidities
         Position storage nftPosition = _positions[params.tokenId];
         PoolId poolId = nftPosition.poolId;
         uint128 liquidity = nftPosition.liquidity;
@@ -437,6 +442,12 @@ contract NonfungiblePositionManager is
 
     function _handleCollect(CallbackData memory data, bool shouldSettle) internal returns (bytes memory) {
         CollectParams memory params = abi.decode(data.params, (CollectParams));
+        // check for modifyLiquidities
+        if (params.amount0Max == 0 && params.amount1Max == 0) {
+            revert InvalidMaxCollectAmount();
+        }
+        params.recipient = params.recipient == address(0) ? address(msg.sender) : params.recipient;
+        // TODO: add isAuthorizedForToken check for modifyLiquidities
         Position storage nftPosition = _positions[params.tokenId];
         Position memory nftPositionCache = _positions[params.tokenId];
         PoolId poolId = nftPositionCache.poolId;
