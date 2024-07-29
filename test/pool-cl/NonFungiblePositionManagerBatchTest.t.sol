@@ -496,6 +496,245 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         }
     }
 
+    function testBatchIncreaseLiquidityWithoutCloseCurrency() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: key,
+            tickLower: 46053,
+            tickUpper: 46055,
+            salt: bytes32(0),
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: type(uint256).max
+        });
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+        nonfungiblePoolManager.mint(mintParams);
+
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
+            .IncreaseLiquidityParams({
+            tokenId: 1,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        bytes memory increaseData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this),
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
+                abi.encode(increaseParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = increaseData;
+
+        snapStart("NonFungiblePositionManagerBatch#increaseLiquidityWithoutCloseCurrency");
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        snapEnd();
+    }
+
+    function testBatchIncreaseLiquidity() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: key,
+            tickLower: 46053,
+            tickUpper: 46055,
+            salt: bytes32(0),
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: type(uint256).max
+        });
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+        nonfungiblePoolManager.mint(mintParams);
+
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.IncreaseLiquidityParams memory increaseParams = INonfungiblePositionManager
+            .IncreaseLiquidityParams({
+            tokenId: 1,
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        bytes memory increaseData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this),
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
+                abi.encode(increaseParams)
+            )
+        );
+        bytes[] memory data = new bytes[](3);
+        data[0] = increaseData;
+        // set current close data
+        data[1] = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+            )
+        );
+        data[2] = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+            )
+        );
+
+        snapStart("NonFungiblePositionManagerBatch#increaseLiquidity");
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        snapEnd();
+    }
+
+    function testBatchDecreaseLiquidityWithoutCloseCurrency() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: key,
+            tickLower: 46053,
+            tickUpper: 46055,
+            salt: bytes32(0),
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: type(uint256).max
+        });
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+        nonfungiblePoolManager.mint(mintParams);
+
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
+            .DecreaseLiquidityParams({
+            tokenId: 1,
+            liquidity: 1991375027067913587988,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        bytes memory decreaseData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this),
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
+                abi.encode(decreaseParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = decreaseData;
+
+        snapStart("NonFungiblePositionManagerBatch#decreaseLiquidityWithoutCloseCurrency");
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        snapEnd();
+    }
+
+    function testBatchDecreaseLiquidity() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        INonfungiblePositionManager.MintParams memory mintParams = INonfungiblePositionManager.MintParams({
+            poolKey: key,
+            tickLower: 46053,
+            tickUpper: 46055,
+            salt: bytes32(0),
+            amount0Desired: 1 ether,
+            amount1Desired: 1 ether,
+            amount0Min: 0,
+            amount1Min: 0,
+            recipient: address(this),
+            deadline: type(uint256).max
+        });
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+        nonfungiblePoolManager.mint(mintParams);
+
+        // generate modifyLiquidities data
+        INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
+            .DecreaseLiquidityParams({
+            tokenId: 1,
+            liquidity: 1991375027067913587988,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: type(uint256).max
+        });
+        bytes memory decreaseData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this),
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
+                abi.encode(decreaseParams)
+            )
+        );
+        bytes[] memory data = new bytes[](3);
+        data[0] = decreaseData;
+
+        // set current close data
+        data[1] = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+            )
+        );
+        data[2] = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                address(this), INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+            )
+        );
+
+        snapStart("NonFungiblePositionManagerBatch#decreaseLiquidity");
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        snapEnd();
+    }
+
     function testBatchCollectWithoutCloseCurrency() external {
         PoolKey memory key = PoolKey({
             currency0: currency0,
