@@ -125,9 +125,7 @@ contract NonfungiblePositionManager is
         // return abi.decode(
         //     vault.lock(abi.encode(CallbackData(msg.sender, CallbackDataType.BatchModifyLiquidity, lockData))), (bytes[])
         // );
-        return abi.decode(
-            vault.lock(abi.encode(msg.sender, lockData)), (bytes[])
-        );
+        return abi.decode(vault.lock(abi.encode(msg.sender, lockData)), (bytes[]));
     }
 
     /// @inheritdoc INonfungiblePositionManager
@@ -246,7 +244,10 @@ contract NonfungiblePositionManager is
         return abi.encode(returnData);
     }
 
-    function _handleSingleAction(CallbackData memory data, address sender, bool shouldSettle) internal returns (bytes memory) {
+    function _handleSingleAction(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
         if (data.callbackDataType == CallbackDataType.Mint) {
             return _handleMint(data, sender, shouldSettle);
         } else if (data.callbackDataType == CallbackDataType.IncreaseLiquidity) {
@@ -257,11 +258,10 @@ contract NonfungiblePositionManager is
             return _handleCollect(data, sender, shouldSettle);
         } else if (data.callbackDataType == CallbackDataType.CloseCurrency) {
             return _close(data.params, sender);
-        } else if(data.callbackDataType == CallbackDataType.Burn){
+        } else if (data.callbackDataType == CallbackDataType.Burn) {
             uint256 tokenId = abi.decode(data.params, (uint256));
-           return _handleBurn(tokenId, sender);
-        } 
-        else {
+            return _handleBurn(tokenId, sender);
+        } else {
             revert InvalidCalldataType();
         }
     }
@@ -289,9 +289,8 @@ contract NonfungiblePositionManager is
         uint256 tokenId = _nextId++;
         _mint(params.recipient, tokenId);
 
-        CLPosition.Info memory positionInfo = poolManager.getPosition(
-            poolId, address(this), tickLower, tickUpper, params.salt
-        );
+        CLPosition.Info memory positionInfo =
+            poolManager.getPosition(poolId, address(this), tickLower, tickUpper, params.salt);
         _positions[tokenId] = Position({
             nonce: 0,
             operator: address(0),
@@ -320,7 +319,10 @@ contract NonfungiblePositionManager is
         return abi.encode(tokenId, liquidity, amount0, amount1);
     }
 
-    function _handleIncreaseLiquidity(CallbackData memory data, address sender, bool shouldSettle) internal returns (bytes memory) {
+    function _handleIncreaseLiquidity(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
         IncreaseLiquidityParams memory params = abi.decode(data.params, (IncreaseLiquidityParams));
         Position storage nftPosition = _positions[params.tokenId];
         PoolId poolId = nftPosition.poolId;
@@ -387,7 +389,10 @@ contract NonfungiblePositionManager is
         return abi.encode(liquidity, amount0, amount1);
     }
 
-    function _handleDecreaseLiquidity(CallbackData memory data, address sender, bool shouldSettle) internal returns (bytes memory) {
+    function _handleDecreaseLiquidity(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
         DecreaseLiquidityParams memory params = abi.decode(data.params, (DecreaseLiquidityParams));
         _checkAuthorizedForToken(sender, params.tokenId);
         if (params.liquidity == 0) {
@@ -462,7 +467,10 @@ contract NonfungiblePositionManager is
         return abi.encode(delta.amount0(), delta.amount1());
     }
 
-    function _handleCollect(CallbackData memory data, address sender, bool shouldSettle) internal returns (bytes memory) {
+    function _handleCollect(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
         CollectParams memory params = abi.decode(data.params, (CollectParams));
         _checkAuthorizedForToken(sender, params.tokenId);
         if (params.amount0Max == 0 && params.amount1Max == 0) {

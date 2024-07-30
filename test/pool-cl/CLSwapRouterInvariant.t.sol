@@ -276,14 +276,13 @@ contract CLSwapRouterHandler is Test {
 
         vm.startPrank(alice);
         //generate modifyLiquidities data
-            bytes memory mintData = abi.encode(
-                INonfungiblePositionManager.CallbackData(
-                    INonfungiblePositionManager.CallbackDataType.Mint,
-                    abi.encode(mintParams)
-                )
-            );
-            bytes[] memory data = new bytes[](1);
-            data[0] = mintData;
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
 
         if (isNativePool) {
             // positionManager.mint{value: amt}(mintParams);
@@ -395,9 +394,8 @@ contract CLSwapRouterInvariant is Test {
             );
             bytes[] memory data = new bytes[](1);
             data[0] = collectData;
-            (uint256 _realFee0Accrued, uint256 _realFee1Accrued)  = abi.decode(
-                positionManager.modifyLiquidities(abi.encode(data), block.timestamp + 100)[0],
-                (uint256, uint256)
+            (uint256 _realFee0Accrued, uint256 _realFee1Accrued) = abi.decode(
+                positionManager.modifyLiquidities(abi.encode(data), block.timestamp + 100)[0], (uint256, uint256)
             );
             realFee0Accrued += _realFee0Accrued;
             realFee1Accrued += _realFee1Accrued;

@@ -128,7 +128,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             // set current close data
             data[1] = abi.encode(
                 INonfungiblePositionManager.CallbackData(
-                   INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
+                    INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency0)
                 )
             );
             data[2] = abi.encode(
@@ -309,8 +309,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
-                abi.encode(increaseParams)
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity, abi.encode(increaseParams)
             )
         );
 
@@ -443,8 +442,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
-                abi.encode(increaseParams)
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity, abi.encode(increaseParams)
             )
         );
 
@@ -459,8 +457,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         data[2] = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
-                abi.encode(decreaseParams)
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(decreaseParams)
             )
         );
 
@@ -548,8 +545,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory increaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
-                abi.encode(increaseParams)
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity, abi.encode(increaseParams)
             )
         );
         bytes[] memory data = new bytes[](1);
@@ -602,8 +598,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory increaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity,
-                abi.encode(increaseParams)
+                INonfungiblePositionManager.CallbackDataType.IncreaseLiquidity, abi.encode(increaseParams)
             )
         );
         bytes[] memory data = new bytes[](3);
@@ -667,8 +662,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory decreaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
-                abi.encode(decreaseParams)
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(decreaseParams)
             )
         );
         bytes[] memory data = new bytes[](1);
@@ -721,8 +715,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         });
         bytes memory decreaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
-                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity,
-                abi.encode(decreaseParams)
+                INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(decreaseParams)
             )
         );
         bytes[] memory data = new bytes[](3);
