@@ -270,8 +270,7 @@ contract CLSwapRouterHandler is Test {
             amount1Desired: amt,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: alice,
-            deadline: block.timestamp
+            recipient: alice
         });
 
         vm.startPrank(alice);
@@ -286,10 +285,10 @@ contract CLSwapRouterHandler is Test {
 
         if (isNativePool) {
             // positionManager.mint{value: amt}(mintParams);
-            positionManager.modifyLiquidities{value: amt}(abi.encode(data), mintParams.deadline);
+            positionManager.modifyLiquidities{value: amt}(abi.encode(data), block.timestamp);
         } else {
             // positionManager.mint(mintParams);
-            positionManager.modifyLiquidities(abi.encode(data), mintParams.deadline);
+            positionManager.modifyLiquidities(abi.encode(data), block.timestamp);
         }
         vm.stopPrank();
     }

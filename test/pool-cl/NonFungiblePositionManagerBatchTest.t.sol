@@ -85,7 +85,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         bytes[] memory data = new bytes[](1);
         data[0] = mintData;
 
-        return nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        return nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testBatchMint() external {
@@ -110,8 +110,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
                 amount1Desired: 1 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: makeAddr("someone"),
-                deadline: type(uint256).max
+                recipient: makeAddr("someone")
             });
 
             uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -137,7 +136,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
                 )
             );
             snapStart("NonFungiblePositionManagerBatch#mint");
-            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
             snapEnd();
         }
 
@@ -201,8 +200,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
                 amount1Desired: 1 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: makeAddr("someone"),
-                deadline: type(uint256).max
+                recipient: makeAddr("someone")
             });
 
             uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -219,7 +217,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             data[0] = mintData;
 
             snapStart("NonFungiblePositionManagerBatch#mintWithoutCloseCurrency");
-            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
             snapEnd();
         }
 
@@ -283,8 +281,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -304,8 +301,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
+            amount1Min: 0
         });
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
@@ -327,7 +323,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         // batch mint and increase liquidity
         snapStart("NonFungiblePositionManagerBatch#BatchMintAndIncreaseLiquidity");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
 
         {
@@ -415,8 +411,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -437,8 +432,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
+            amount1Min: 0
         });
         data[1] = abi.encode(
             INonfungiblePositionManager.CallbackData(
@@ -451,8 +445,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             tokenId: 1,
             liquidity: 1991375027067913587988 + 1991375027067913587987,
             amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
+            amount1Min: 0
         });
 
         data[2] = abi.encode(
@@ -475,7 +468,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         // batch mint and increase liquidity, then decrease liquidity
         snapStart("NonFungiblePositionManagerBatch#batchMintIncreaseAndDecreaseLiquidity");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
 
         {
@@ -524,8 +517,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -540,8 +532,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
+            amount1Min: 0
         });
         bytes memory increaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
@@ -552,7 +543,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         data[0] = increaseData;
 
         snapStart("NonFungiblePositionManagerBatch#increaseLiquidityWithoutCloseCurrency");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
     }
 
@@ -577,8 +568,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -593,8 +583,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
+            amount1Min: 0
         });
         bytes memory increaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
@@ -616,7 +605,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         );
 
         snapStart("NonFungiblePositionManagerBatch#increaseLiquidity");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
     }
 
@@ -641,8 +630,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -653,13 +641,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-            tokenId: 1,
-            liquidity: 1991375027067913587988,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
+            .DecreaseLiquidityParams({tokenId: 1, liquidity: 1991375027067913587988, amount0Min: 0, amount1Min: 0});
         bytes memory decreaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(decreaseParams)
@@ -669,7 +651,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         data[0] = decreaseData;
 
         snapStart("NonFungiblePositionManagerBatch#decreaseLiquidityWithoutCloseCurrency");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
     }
 
@@ -694,8 +676,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -706,13 +687,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-            tokenId: 1,
-            liquidity: 1991375027067913587988,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
+            .DecreaseLiquidityParams({tokenId: 1, liquidity: 1991375027067913587988, amount0Min: 0, amount1Min: 0});
         bytes memory decreaseData = abi.encode(
             INonfungiblePositionManager.CallbackData(
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(decreaseParams)
@@ -734,7 +709,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         );
 
         snapStart("NonFungiblePositionManagerBatch#decreaseLiquidity");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
     }
 
@@ -759,8 +734,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -786,7 +760,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
         bytes[] memory data = new bytes[](1);
         data[0] = collectData;
         snapStart("NonFungiblePositionManagerBatch#collectWithoutCloseCurrency");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
     }
 
@@ -811,8 +785,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -849,7 +822,7 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
             )
         );
         snapStart("NonFungiblePositionManagerBatch#collect");
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
         snapEnd();
     }
 }

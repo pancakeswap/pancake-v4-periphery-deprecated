@@ -89,7 +89,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         data[0] = mintData;
 
         return abi.decode(
-            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100)[0],
+            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max)[0],
             (uint256, uint128, uint256, uint256)
         );
     }
@@ -108,7 +108,8 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         data[0] = increaseLiquidityData;
 
         return abi.decode(
-            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline)[0], (uint128, uint256, uint256)
+            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max)[0],
+            (uint128, uint256, uint256)
         );
     }
 
@@ -126,7 +127,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         data[0] = collectData;
 
         return abi.decode(
-            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100)[0], (uint256, uint256)
+            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max)[0], (uint256, uint256)
         );
     }
 
@@ -144,7 +145,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         data[0] = decreaseLiquidityData;
 
         return abi.decode(
-            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline)[0], (uint256, uint256)
+            nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max)[0], (uint256, uint256)
         );
     }
 
@@ -170,8 +171,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount1Desired: 1 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: makeAddr("someone"),
-                deadline: type(uint256).max
+                recipient: makeAddr("someone")
             });
 
             uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -319,8 +319,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount0Desired: 0,
                 amount1Desired: 0,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -420,8 +419,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount1Desired: amount1Desired,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: address(this),
-                deadline: type(uint256).max
+                recipient: address(this)
             })
         );
 
@@ -499,8 +497,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                             amount1Desired: amount1Desired,
                             amount0Min: 0,
                             amount1Min: 0,
-                            recipient: address(this),
-                            deadline: type(uint256).max
+                            recipient: address(this)
                         })
                     )
                 )
@@ -510,7 +507,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
             bytes memory lockData = abi.encode(data);
             snapStart("NonfungiblePositionManager#mint");
-            nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp + 100);
+            nonfungiblePoolManager.modifyLiquidities(lockData, type(uint256).max);
             snapEnd();
         }
     }
@@ -536,8 +533,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -631,8 +627,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             // hence setting both amount0Min and amount1Min to 1 ether will cause slippage check failed
             amount0Min: 1 ether,
             amount1Min: 1 ether,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -648,7 +643,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         data[0] = mintData;
         vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
         // mint(mintParams);
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testMint_SamePersonMintTokensInSamePriceRange() external {
@@ -672,8 +667,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -770,8 +764,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -819,8 +812,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     amount0Desired: 1 ether,
                     amount1Desired: 1 ether,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 
@@ -897,8 +889,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -915,8 +906,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                         amount0Desired: 1 ether,
                         amount1Desired: 1 ether,
                         amount0Min: 0,
-                        amount1Min: 0,
-                        deadline: type(uint256).max
+                        amount1Min: 0
                     })
                 )
             )
@@ -936,7 +926,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         //         deadline: type(uint256).max
         //     })
         // );
-        nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(lockData, type(uint256).max);
         snapEnd();
     }
 
@@ -961,8 +951,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1011,8 +1000,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     amount0Desired: 1 ether,
                     amount1Desired: 1 ether,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 
@@ -1093,8 +1081,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1111,8 +1098,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount0Desired: 1 ether,
                 amount1Desired: 1 ether,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
     }
@@ -1138,8 +1124,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1156,8 +1141,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount0Desired: 1 ether,
             amount1Desired: 1 ether,
             amount0Min: 0.01 ether,
-            amount1Min: 0,
-            deadline: type(uint256).max
+            amount1Min: 0
         });
         bytes memory increaseLiquidityData = abi.encode(
             INonfungiblePositionManager.CallbackData(
@@ -1177,7 +1161,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         //         deadline: type(uint256).max
         //     })
         // );
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testDecreaseLiquidity(bytes32 salt) external {
@@ -1201,8 +1185,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1240,8 +1223,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     tokenId: 1,
                     liquidity: 1991375027067913587988,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 
@@ -1297,8 +1279,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1315,8 +1296,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                         tokenId: 1,
                         liquidity: 1991375027067913587988,
                         amount0Min: 0,
-                        amount1Min: 0,
-                        deadline: type(uint256).max
+                        amount1Min: 0
                     })
                 )
             )
@@ -1334,7 +1314,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         //         deadline: type(uint256).max
         //     })
         // );
-        nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(lockData, type(uint256).max);
         snapEnd();
     }
 
@@ -1359,8 +1339,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1370,13 +1349,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-            tokenId: 1,
-            liquidity: 1991375027067913587988,
-            amount0Min: 0,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
+            .DecreaseLiquidityParams({tokenId: 1, liquidity: 1991375027067913587988, amount0Min: 0, amount1Min: 0});
         bytes memory decreaseLiquidityData = abi.encode(
             INonfungiblePositionManager.CallbackData(
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(params)
@@ -1394,7 +1367,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         //         deadline: type(uint256).max
         //     })
         // );
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testDecreaseLiquidity_forSomeoneElse_withoutApprove() external {
@@ -1418,8 +1391,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1434,8 +1406,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
     }
@@ -1461,8 +1432,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0 ether,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1472,13 +1442,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
 
         // generate modifyLiquidities data
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
-            .DecreaseLiquidityParams({
-            tokenId: 1,
-            liquidity: 1991375027067913587988,
-            amount0Min: 0.01 ether,
-            amount1Min: 0,
-            deadline: type(uint256).max
-        });
+            .DecreaseLiquidityParams({tokenId: 1, liquidity: 1991375027067913587988, amount0Min: 0.01 ether, amount1Min: 0});
         bytes memory decreaseLiquidityData = abi.encode(
             INonfungiblePositionManager.CallbackData(
                 INonfungiblePositionManager.CallbackDataType.DecreaseLiquidity, abi.encode(params)
@@ -1487,7 +1451,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         bytes[] memory data = new bytes[](1);
         data[0] = decreaseLiquidityData;
         vm.expectRevert(LiquidityManagement.PriceSlippageCheckFailed.selector);
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), params.deadline);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testDecreaseLiquidity_AccumulatedLPing() external {
@@ -1511,8 +1475,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1552,8 +1515,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     tokenId: 1,
                     liquidity: 1991375027067913587988,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 
@@ -1611,8 +1573,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1625,8 +1586,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -1666,8 +1626,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1680,8 +1639,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -1711,8 +1669,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1727,8 +1684,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -1764,8 +1720,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1780,8 +1735,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -1813,8 +1767,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1827,8 +1780,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988 - 1,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -1860,8 +1812,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -1877,8 +1828,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -1916,8 +1866,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2018,8 +1967,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2056,8 +2004,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: _liquidity,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -2127,8 +2074,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2162,7 +2108,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         //         amount1Max: 999999999999999999
         //     })
         // );
-        nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(lockData, type(uint256).max);
         snapEnd();
     }
 
@@ -2187,8 +2133,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2242,7 +2187,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         //         amount1Max: 0
         //     })
         // );
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testCollect_partialAmount() external {
@@ -2266,8 +2211,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2366,8 +2310,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2424,7 +2367,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             //     })
             // );
             (uint256 amount0, uint256 amount1) = abi.decode(
-                nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100)[0], (uint256, uint256)
+                nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max)[0], (uint256, uint256)
             );
 
             uint256 token0After = IERC20(Currency.unwrap(currency0)).balanceOf(address(this));
@@ -2477,8 +2420,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2581,8 +2523,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: makeAddr("someone"),
-            deadline: type(uint256).max
+            recipient: makeAddr("someone")
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2615,7 +2556,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         data[0] = collectData;
 
         vm.expectRevert(INonfungiblePositionManager.NotOwnerOrOperator.selector);
-        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), block.timestamp + 100);
+        nonfungiblePoolManager.modifyLiquidities(abi.encode(data), type(uint256).max);
     }
 
     function testCollect_positionWithoutRewardsAndLiquidity() external {
@@ -2639,8 +2580,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             amount1Desired: 1 ether,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: address(this),
-            deadline: type(uint256).max
+            recipient: address(this)
         });
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
@@ -2652,8 +2592,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -2696,8 +2635,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount1Desired: 1 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: address(this),
-                deadline: type(uint256).max
+                recipient: address(this)
             })
         );
 
@@ -2723,8 +2661,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 tokenId: 1,
                 liquidity: 1991375027067913587988,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -2774,8 +2711,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount0Desired: 1 ether,
                 amount1Desired: 1 ether,
                 amount0Min: 0,
-                amount1Min: 0,
-                deadline: type(uint256).max
+                amount1Min: 0
             })
         );
 
@@ -2836,8 +2772,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount1Desired: 1 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: address(this),
-                deadline: type(uint256).max
+                recipient: address(this)
             })
         );
 
@@ -2848,8 +2783,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     tokenId: 1,
                     liquidity: liquidity1 - 1,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 
@@ -2888,8 +2822,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                 amount1Desired: 1 ether,
                 amount0Min: 0,
                 amount1Min: 0,
-                recipient: address(this),
-                deadline: type(uint256).max
+                recipient: address(this)
             })
         );
 
@@ -2922,8 +2855,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     tokenId: 2,
                     liquidity: info.liquidity - 1,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 
@@ -2969,8 +2901,7 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
                     amount0Desired: 0 ether,
                     amount1Desired: 0 ether,
                     amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: type(uint256).max
+                    amount1Min: 0
                 })
             );
 

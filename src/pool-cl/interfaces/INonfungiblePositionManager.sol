@@ -139,7 +139,6 @@ interface INonfungiblePositionManager is
         uint256 amount0Min;
         uint256 amount1Min;
         address recipient;
-        uint256 deadline;
     }
 
     /// @notice Batches many liquidity modification calls to pool manager
@@ -167,7 +166,6 @@ interface INonfungiblePositionManager is
         uint256 amount1Desired;
         uint256 amount0Min;
         uint256 amount1Min;
-        uint256 deadline;
     }
 
     /// @notice Increases the amount of liquidity in a position, with tokens paid by the `msg.sender`
@@ -190,7 +188,6 @@ interface INonfungiblePositionManager is
         uint128 liquidity;
         uint256 amount0Min;
         uint256 amount1Min;
-        uint256 deadline;
     }
 
     /// @notice Decreases the amount of liquidity in a position and accounts it to the position
