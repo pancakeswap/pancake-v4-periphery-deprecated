@@ -122,8 +122,6 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
         approveMaxIfNeeded(params.poolKey.currency1, address(nonfungiblePositionManager), params.amount1Desired);
 
-        // (tokenId, liquidity, amount0Consumed, amount1Consumed) =
-        //     nonfungiblePositionManager.mint{value: nativePair ? params.amount0Desired : 0}(params);
         bytes memory mintData = abi.encode(
             INonfungiblePositionManager.CallbackData(
                 INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(params)
