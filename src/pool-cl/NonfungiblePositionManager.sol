@@ -477,7 +477,7 @@ contract NonfungiblePositionManager is
 
         settleOrTake(currency, sender, int128(currencyDelta));
         // if there are native tokens left over after settling, return to sender
-        if (currency.isNative() && address(this).balance > 0) {
+        if (address(this).balance > 0 && currency.isNative()) {
             CurrencyLibrary.NATIVE.transfer(sender, address(this).balance);
         }
 
