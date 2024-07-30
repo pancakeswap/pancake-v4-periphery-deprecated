@@ -416,7 +416,6 @@ contract NonFungiblePositionManagerBatchTest is TokenFixture, Test, GasSnapshot 
 
         uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
         poolManager.initialize(key, sqrtPriceX96, new bytes(0));
-        // nonfungiblePoolManager.mint(mintParams);
 
         // generate multicall data
         bytes[] memory data = new bytes[](5);

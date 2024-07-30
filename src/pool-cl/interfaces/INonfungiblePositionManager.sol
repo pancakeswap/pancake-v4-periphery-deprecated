@@ -142,6 +142,14 @@ interface INonfungiblePositionManager is
 
     /// @notice Batches many liquidity modification calls to pool manager
     /// @param payload is an encoding of actions, and parameters for those actions
+    /// @dev The payload is a byte array that represents the encoded form of the CallbackData struct
+    /// for example to mint a position the payload would be:
+    /// bytes[] memory payloadArray = new bytes[](1);
+    /// bytes memory mintData = abi.encode(INonfungiblePositionManager.CallbackData(
+    ///     INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(INonfungiblePositionManager.MintParams({...}))
+    /// ))
+    /// payloadArray[0] = mintData;
+    /// bytes memory payload = abi.encode(payloadArray);
     /// @param deadline is the deadline for the batched actions to be executed
     /// @return returnData is the endocing of each actions return information
     function modifyLiquidities(bytes calldata payload, uint256 deadline) external payable returns (bytes[] memory);
