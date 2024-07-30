@@ -463,6 +463,264 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
         assertEq(nonfungiblePoolManager.ownerOf(tokenId), address(this), "Unexpected owner of the position");
     }
 
+    function testMint_nativeToken() external {
+        vm.deal(address(this), 1000 ether);
+
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(address(0)),
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        int24 tickLower = 46053;
+        int24 tickUpper = 46055;
+        uint256 amount0Desired = 1 ether;
+        uint256 amount1Desired = 2 ether;
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+        uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            amount0Desired,
+            amount1Desired
+        );
+
+        // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint,
+                abi.encode(
+                    INonfungiblePositionManager.MintParams({
+                        poolKey: key,
+                        tickLower: tickLower,
+                        tickUpper: tickUpper,
+                        salt: bytes32(0),
+                        amount0Desired: amount0Desired,
+                        amount1Desired: amount1Desired,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        recipient: address(this)
+                    })
+                )
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
+
+        bytes memory lockData = abi.encode(data);
+        vm.expectEmit(true, true, true, false);
+        emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
+        uint256 nativeTokenBalanceBefore = address(this).balance;
+        (,, uint256 amount0, uint256 amount1) = abi.decode(
+            nonfungiblePoolManager.modifyLiquidities{value: 19824513708386292}(lockData, type(uint256).max)[0],
+            (uint256, uint128, uint256, uint256)
+        );
+
+        // token consumed
+        {
+            uint256 token0Left = address(this).balance;
+            uint256 token1Left = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
+
+            // 1.982e16 roughly 0.02 ether
+            assertEq(nativeTokenBalanceBefore - token0Left, 19824513708386292, "Unexpected currency0 consumed");
+            assertEq(amount0, 19824513708386292, "Actual consumed currency0 mismatch");
+            // 1e18 i.e. 2 ether, make sense because price is 100
+            assertEq(1000 ether - token1Left, 2000000000000000000, "Unexpected currency1 consumed");
+            assertEq(amount1, 2000000000000000000, "Actual consumed currency1 mismatch");
+        }
+    }
+
+    function testMint_nativeToken_withoutRefund() external {
+        vm.deal(address(this), 1000 ether);
+
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(address(0)),
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        int24 tickLower = 46053;
+        int24 tickUpper = 46055;
+        uint256 amount0Desired = 1 ether;
+        uint256 amount1Desired = 2 ether;
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+        uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            amount0Desired,
+            amount1Desired
+        );
+
+        // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint,
+                abi.encode(
+                    INonfungiblePositionManager.MintParams({
+                        poolKey: key,
+                        tickLower: tickLower,
+                        tickUpper: tickUpper,
+                        salt: bytes32(0),
+                        amount0Desired: amount0Desired,
+                        amount1Desired: amount1Desired,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        recipient: address(this)
+                    })
+                )
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
+
+        bytes memory lockData = abi.encode(data);
+        vm.expectEmit(true, true, true, false);
+        emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
+        uint256 nativeTokenBalanceBefore = address(this).balance;
+        uint256 nonfungiblePoolManagerBalance = address(nonfungiblePoolManager).balance;
+        assertEq(nonfungiblePoolManagerBalance, 0, "Unexpected nonfungiblePoolManager balance");
+
+        (,, uint256 amount0, uint256 amount1) = abi.decode(
+            nonfungiblePoolManager.modifyLiquidities{value: 1 ether}(lockData, type(uint256).max)[0],
+            (uint256, uint128, uint256, uint256)
+        );
+
+        // token consumed
+        {
+            uint256 token0Left = address(this).balance;
+            uint256 token1Left = IERC20(Currency.unwrap(currency1)).balanceOf(address(this));
+            uint256 nonfungiblePoolManagerBalanceAfter = address(nonfungiblePoolManager).balance;
+
+            assertEq(
+                nonfungiblePoolManagerBalanceAfter,
+                1 ether - 19824513708386292,
+                "Unexpected nonfungiblePoolManager balance"
+            );
+
+            // 1.982e16 roughly 0.02 ether
+            assertEq(nativeTokenBalanceBefore - token0Left, 1 ether, "Unexpected currency0 consumed");
+            assertEq(amount0, 19824513708386292, "Actual consumed currency0 mismatch");
+            // 1e18 i.e. 2 ether, make sense because price is 100
+            assertEq(1000 ether - token1Left, 2000000000000000000, "Unexpected currency1 consumed");
+            assertEq(amount1, 2000000000000000000, "Actual consumed currency1 mismatch");
+        }
+    }
+
+    function testMint_nativeToken_refund() external {
+        address alice = makeAddr("alice");
+        vm.deal(alice, 1000 ether);
+        currency1.transfer(alice, 1000 ether);
+
+        vm.startPrank(alice);
+        IERC20(Currency.unwrap(currency1)).approve(address(nonfungiblePoolManager), type(uint256).max);
+
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(address(0)),
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        int24 tickLower = 46053;
+        int24 tickUpper = 46055;
+        uint256 amount0Desired = 1 ether;
+        uint256 amount1Desired = 2 ether;
+
+        uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+        poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+        uint128 liquidityExpected = LiquidityAmounts.getLiquidityForAmounts(
+            sqrtPriceX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            amount0Desired,
+            amount1Desired
+        );
+
+        // generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint,
+                abi.encode(
+                    INonfungiblePositionManager.MintParams({
+                        poolKey: key,
+                        tickLower: tickLower,
+                        tickUpper: tickUpper,
+                        salt: bytes32(0),
+                        amount0Desired: amount0Desired,
+                        amount1Desired: amount1Desired,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        recipient: address(this)
+                    })
+                )
+            )
+        );
+        bytes[] memory data = new bytes[](3);
+        data[0] = mintData;
+
+        // set current close data
+        data[1] = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(Currency.wrap(address(0)))
+            )
+        );
+        data[2] = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+            )
+        );
+
+        bytes memory lockData = abi.encode(data);
+        vm.expectEmit(true, true, true, false);
+        emit IncreaseLiquidity(1, liquidityExpected, 0, 0);
+        uint256 nativeTokenBalanceBefore = address(alice).balance;
+        uint256 nonfungiblePoolManagerBalance = address(nonfungiblePoolManager).balance;
+        assertEq(nonfungiblePoolManagerBalance, 0, "Unexpected nonfungiblePoolManager balance");
+
+        (,, uint256 amount0, uint256 amount1) = abi.decode(
+            nonfungiblePoolManager.modifyLiquidities{value: 1 ether}(lockData, type(uint256).max)[0],
+            (uint256, uint128, uint256, uint256)
+        );
+
+        // token consumed
+        {
+            uint256 token0Left = address(alice).balance;
+            uint256 token1Left = IERC20(Currency.unwrap(currency1)).balanceOf(alice);
+            uint256 nonfungiblePoolManagerBalanceAfter = address(nonfungiblePoolManager).balance;
+
+            assertEq(nonfungiblePoolManagerBalanceAfter, 0, "Unexpected nonfungiblePoolManager balance");
+
+            // 1.982e16 roughly 0.02 ether
+            assertEq(nativeTokenBalanceBefore - token0Left, 19824513708386292, "Unexpected currency0 consumed");
+            assertEq(amount0, 19824513708386292, "Actual consumed currency0 mismatch");
+            // 1e18 i.e. 2 ether, make sense because price is 100
+            assertEq(1000 ether - token1Left, 2000000000000000000, "Unexpected currency1 consumed");
+            assertEq(amount1, 2000000000000000000, "Actual consumed currency1 mismatch");
+        }
+    }
+
     function testMint_gas() external {
         PoolKey memory key = PoolKey({
             currency0: currency0,

@@ -10,7 +10,7 @@ import {FullMath} from "pancake-v4-core/src/pool-cl/libraries/FullMath.sol";
 import {CLPosition} from "pancake-v4-core/src/pool-cl/libraries/CLPosition.sol";
 import {BalanceDelta, toBalanceDelta} from "pancake-v4-core/src/types/BalanceDelta.sol";
 import {FixedPoint128} from "pancake-v4-core/src/pool-cl/libraries/FixedPoint128.sol";
-import {Currency} from "pancake-v4-core/src/types/Currency.sol";
+import {Currency, CurrencyLibrary} from "pancake-v4-core/src/types/Currency.sol";
 
 import {INonfungiblePositionManager} from "./interfaces/INonfungiblePositionManager.sol";
 import {INonfungibleTokenPositionDescriptor} from "./interfaces/INonfungibleTokenPositionDescriptor.sol";
@@ -35,6 +35,7 @@ contract NonfungiblePositionManager is
     Multicall
 {
     using PoolIdLibrary for PoolKey;
+    using CurrencyLibrary for Currency;
 
     /// @dev The ID of the next token that will be minted. Skips 0
     uint256 private _nextId = 1;
@@ -475,7 +476,10 @@ contract NonfungiblePositionManager is
         int256 currencyDelta = vault.currencyDelta(address(this), currency);
 
         settleOrTake(currency, sender, int128(currencyDelta));
-        //TODO: add refund logic for the remaining native currency
+        // if there are native tokens left over after settling, return to sender
+        if (currency.isNative() && address(this).balance > 0) {
+            CurrencyLibrary.NATIVE.transfer(sender, address(this).balance);
+        }
 
         return abi.encode(currencyDelta);
     }
