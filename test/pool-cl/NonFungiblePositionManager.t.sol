@@ -30,6 +30,7 @@ import {NonfungiblePositionManager} from "../../src/pool-cl/NonfungiblePositionM
 import {INonfungiblePositionManager} from "../../src/pool-cl/interfaces/INonfungiblePositionManager.sol";
 import {LiquidityAmounts} from "../../src/pool-cl/libraries/LiquidityAmounts.sol";
 import {LiquidityManagement} from "../../src/pool-cl/base/LiquidityManagement.sol";
+import {PeripheryValidation} from "../../src/base/PeripheryValidation.sol";
 
 contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
     using PoolIdLibrary for PoolKey;
@@ -509,6 +510,55 @@ contract NonFungiblePositionManagerTest is TokenFixture, Test, GasSnapshot {
             snapStart("NonfungiblePositionManager#mint");
             nonfungiblePoolManager.modifyLiquidities(lockData, type(uint256).max);
             snapEnd();
+        }
+    }
+
+    function test_transactionTooOld() external {
+        PoolKey memory key = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            hooks: IHooks(address(0)),
+            poolManager: poolManager,
+            fee: uint24(3000),
+            // 0 ~ 15  hookRegistrationMap = nil
+            // 16 ~ 24 tickSpacing = 1
+            parameters: bytes32(uint256(0x10000))
+        });
+
+        {
+            int24 tickLower = 46053;
+            int24 tickUpper = 46055;
+            uint256 amount0Desired = 1 ether;
+            uint256 amount1Desired = 2 ether;
+
+            uint160 sqrtPriceX96 = uint160(10 * FixedPoint96.Q96);
+            poolManager.initialize(key, sqrtPriceX96, new bytes(0));
+
+            // generate modifyLiquidities data
+            bytes memory mintData = abi.encode(
+                INonfungiblePositionManager.CallbackData(
+                    INonfungiblePositionManager.CallbackDataType.Mint,
+                    abi.encode(
+                        INonfungiblePositionManager.MintParams({
+                            poolKey: key,
+                            tickLower: tickLower,
+                            tickUpper: tickUpper,
+                            salt: bytes32(0),
+                            amount0Desired: amount0Desired,
+                            amount1Desired: amount1Desired,
+                            amount0Min: 0,
+                            amount1Min: 0,
+                            recipient: address(this)
+                        })
+                    )
+                )
+            );
+            bytes[] memory data = new bytes[](1);
+            data[0] = mintData;
+
+            bytes memory lockData = abi.encode(data);
+            vm.expectRevert(PeripheryValidation.TransactionTooOld.selector);
+            nonfungiblePoolManager.modifyLiquidities(lockData, block.timestamp - 1);
         }
     }
 
