@@ -126,9 +126,9 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         }
     }
 
-    function burnAndTake(Currency currency, address to, uint256 amount, bool shouldSettle) internal {
+    function burnAndTake(Currency currency, address to, uint256 amount, bool shouldTake) internal {
         vault.burn(address(this), currency, amount);
-        if (shouldSettle) {
+        if (shouldTake) {
             vault.take(currency, to, amount);
         }
     }
