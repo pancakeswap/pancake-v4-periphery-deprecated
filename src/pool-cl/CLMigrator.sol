@@ -127,12 +127,12 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
                 INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(params)
             )
         );
-        bytes[] memory data = new bytes[](1);
-        data[0] = mintData;
+        bytes[] memory lockData = new bytes[](1);
+        lockData[0] = mintData;
 
         (tokenId, liquidity, amount0Consumed, amount1Consumed) = abi.decode(
             nonfungiblePositionManager.modifyLiquidities{value: nativePair ? params.amount0Desired : 0}(
-                abi.encode(data), deadline
+                abi.encode(lockData), deadline
             )[0],
             (uint256, uint128, uint256, uint256)
         );
