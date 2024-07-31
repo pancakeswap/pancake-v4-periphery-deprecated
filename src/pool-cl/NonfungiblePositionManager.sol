@@ -129,8 +129,8 @@ contract NonfungiblePositionManager is
             revert OnlyVaultCaller();
         }
 
-        (address sender, bytes memory data) = abi.decode(rawData, (address, bytes));
-        bytes[] memory params = abi.decode(data, (bytes[]));
+        (address sender, bytes memory lockData) = abi.decode(rawData, (address, bytes));
+        bytes[] memory params = abi.decode(lockData, (bytes[]));
         return _dispatch(params, sender);
     }
 
@@ -370,7 +370,7 @@ contract NonfungiblePositionManager is
         return abi.encode(delta.amount0(), delta.amount1());
     }
 
-    function _handleCollect(CallbackData memory data, address sender, bool shouldSettle)
+    function _handleCollect(CallbackData memory data, address sender, bool shouldTake)
         internal
         returns (bytes memory)
     {
@@ -445,8 +445,8 @@ contract NonfungiblePositionManager is
         );
 
         // cash out from vault
-        burnAndTake(poolKey.currency0, params.recipient, amount0Collect, shouldSettle);
-        burnAndTake(poolKey.currency1, params.recipient, amount1Collect, shouldSettle);
+        burnAndTake(poolKey.currency0, params.recipient, amount0Collect, shouldTake);
+        burnAndTake(poolKey.currency1, params.recipient, amount1Collect, shouldTake);
 
         emit Collect(params.tokenId, params.recipient, amount0Collect, amount1Collect);
 
