@@ -270,15 +270,23 @@ contract CLSwapRouterHandler is Test {
             amount1Desired: amt,
             amount0Min: 0,
             amount1Min: 0,
-            recipient: alice,
-            deadline: block.timestamp
+            recipient: alice
         });
 
         vm.startPrank(alice);
+        //generate modifyLiquidities data
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(mintParams)
+            )
+        );
+        bytes[] memory data = new bytes[](1);
+        data[0] = mintData;
+
         if (isNativePool) {
-            positionManager.mint{value: amt}(mintParams);
+            positionManager.modifyLiquidities{value: amt}(abi.encode(data), block.timestamp);
         } else {
-            positionManager.mint(mintParams);
+            positionManager.modifyLiquidities(abi.encode(data), block.timestamp);
         }
         vm.stopPrank();
     }
@@ -359,14 +367,25 @@ contract CLSwapRouterInvariant is Test {
             uint256 tokenId = positionManager.tokenOfOwnerByIndex(_handler.alice(), i);
             vm.prank(_handler.alice());
             positionManager.approve(address(this), tokenId);
-            (uint256 _realFee0Accrued, uint256 _realFee1Accrued) = positionManager.collect(
-                INonfungiblePositionManager.CollectParams({
-                    tokenId: tokenId,
-                    recipient: _handler.alice(),
-                    amount0Max: type(uint128).max,
-                    amount1Max: type(uint128).max
-                })
+
+            // generate modifyLiquidities data
+            bytes memory collectData = abi.encode(
+                INonfungiblePositionManager.CallbackData(
+                    INonfungiblePositionManager.CallbackDataType.Collect,
+                    abi.encode(
+                        INonfungiblePositionManager.CollectParams({
+                            tokenId: tokenId,
+                            recipient: _handler.alice(),
+                            amount0Max: type(uint128).max,
+                            amount1Max: type(uint128).max
+                        })
+                    )
+                )
             );
+            bytes[] memory data = new bytes[](1);
+            data[0] = collectData;
+            (uint256 _realFee0Accrued, uint256 _realFee1Accrued) =
+                abi.decode(positionManager.modifyLiquidities(abi.encode(data), block.timestamp)[0], (uint256, uint256));
             realFee0Accrued += _realFee0Accrued;
             realFee1Accrued += _realFee1Accrued;
         }

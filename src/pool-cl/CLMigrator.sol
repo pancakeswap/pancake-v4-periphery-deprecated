@@ -44,10 +44,10 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
             amount1Desired: amount1In,
             amount0Min: v4PoolParams.amount0Min,
             amount1Min: v4PoolParams.amount1Min,
-            recipient: v4PoolParams.recipient,
-            deadline: v4PoolParams.deadline
+            recipient: v4PoolParams.recipient
         });
-        (,, uint256 amount0Consumed, uint256 amount1Consumed) = _addLiquidityToTargetPool(mintParams);
+        (,, uint256 amount0Consumed, uint256 amount1Consumed) =
+            _addLiquidityToTargetPool(mintParams, v4PoolParams.deadline);
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
@@ -88,10 +88,10 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
             amount1Desired: amount1In,
             amount0Min: v4PoolParams.amount0Min,
             amount1Min: v4PoolParams.amount1Min,
-            recipient: v4PoolParams.recipient,
-            deadline: v4PoolParams.deadline
+            recipient: v4PoolParams.recipient
         });
-        (,, uint256 amount0Consumed, uint256 amount1Consumed) = _addLiquidityToTargetPool(mintParams);
+        (,, uint256 amount0Consumed, uint256 amount1Consumed) =
+            _addLiquidityToTargetPool(mintParams, v4PoolParams.deadline);
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
@@ -106,11 +106,12 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
 
     /// @dev adding liquidity to target cl pool, collect surplus ETH if necessary
     /// @param params cl position manager add liquidity params
+    /// @param deadline the deadline for the transaction
     /// @return tokenId the id of the newly minted position token
     /// @return liquidity the amount of liquidity minted
     /// @return amount0Consumed the actual amount of token0 consumed
     /// @return amount1Consumed the actual amount of token1 consumed
-    function _addLiquidityToTargetPool(INonfungiblePositionManager.MintParams memory params)
+    function _addLiquidityToTargetPool(INonfungiblePositionManager.MintParams memory params, uint256 deadline)
         internal
         returns (uint256 tokenId, uint128 liquidity, uint256 amount0Consumed, uint256 amount1Consumed)
     {
@@ -121,8 +122,20 @@ contract CLMigrator is ICLMigrator, BaseMigrator {
         }
         approveMaxIfNeeded(params.poolKey.currency1, address(nonfungiblePositionManager), params.amount1Desired);
 
-        (tokenId, liquidity, amount0Consumed, amount1Consumed) =
-            nonfungiblePositionManager.mint{value: nativePair ? params.amount0Desired : 0}(params);
+        bytes memory mintData = abi.encode(
+            INonfungiblePositionManager.CallbackData(
+                INonfungiblePositionManager.CallbackDataType.Mint, abi.encode(params)
+            )
+        );
+        bytes[] memory lockData = new bytes[](1);
+        lockData[0] = mintData;
+
+        (tokenId, liquidity, amount0Consumed, amount1Consumed) = abi.decode(
+            nonfungiblePositionManager.modifyLiquidities{value: nativePair ? params.amount0Desired : 0}(
+                abi.encode(lockData), deadline
+            )[0],
+            (uint256, uint128, uint256, uint256)
+        );
 
         // receive surplus ETH from positionManager
         if (nativePair && params.amount0Desired > amount0Consumed) {

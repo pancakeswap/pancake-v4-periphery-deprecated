@@ -126,33 +126,28 @@ abstract contract LiquidityManagement is CLPeripheryImmutableState, PeripheryPay
         }
     }
 
-    function burnAndTake(Currency currency, address to, uint256 amount) internal {
+    function burnAndTake(Currency currency, address to, uint256 amount, bool shouldTake) internal {
         vault.burn(address(this), currency, amount);
-        vault.take(currency, to, amount);
+        if (shouldTake) {
+            vault.take(currency, to, amount);
+        }
     }
 
     function settleDeltas(address sender, PoolKey memory poolKey, BalanceDelta delta) internal {
-        if (delta.amount0() > 0) {
-            vault.take(poolKey.currency0, sender, uint128(delta.amount0()));
-        } else if (delta.amount0() < 0) {
-            if (poolKey.currency0.isNative()) {
-                vault.settle{value: uint256(int256(-delta.amount0()))}(poolKey.currency0);
-            } else {
-                vault.sync(poolKey.currency0);
-                pay(poolKey.currency0, sender, address(vault), uint256(int256(-delta.amount0())));
-                vault.settle(poolKey.currency0);
-            }
-        }
+        settleOrTake(poolKey.currency0, sender, delta.amount0());
+        settleOrTake(poolKey.currency1, sender, delta.amount1());
+    }
 
-        if (delta.amount1() > 0) {
-            vault.take(poolKey.currency1, sender, uint128(delta.amount1()));
-        } else if (delta.amount1() < 0) {
-            if (poolKey.currency1.isNative()) {
-                vault.settle{value: uint256(int256(-delta.amount1()))}(poolKey.currency1);
+    function settleOrTake(Currency currency, address sender, int128 amount) internal {
+        if (amount > 0) {
+            vault.take(currency, sender, uint128(amount));
+        } else if (amount < 0) {
+            if (currency.isNative()) {
+                vault.settle{value: uint256(int256(-amount))}(currency);
             } else {
-                vault.sync(poolKey.currency1);
-                pay(poolKey.currency1, sender, address(vault), uint256(int256(-delta.amount1())));
-                vault.settle(poolKey.currency1);
+                vault.sync(currency);
+                pay(currency, sender, address(vault), uint256(int256(-amount)));
+                vault.settle(currency);
             }
         }
     }
