@@ -217,6 +217,139 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         }
     }
 
+    function testBatch_RemoveLiquidityWithActiveId_ThreeBins_WithoutCloseCurrency() public {
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+
+        // Pre-req: Add liquidity, 1 eth on each side
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+        addParams = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
+        (,, uint256[] memory tokenIdsMinted, uint256[] memory liquidityMinted) =
+            binFungiblePositionManager.addLiquidity(addParams);
+
+        // check token/nft balance of alice
+        assertEq(token0.balanceOf(alice), 0);
+        assertEq(token1.balanceOf(alice), 0);
+        for (uint256 i; i < tokenIdsMinted.length; i++) {
+            assertEq(key1.toId().toTokenId(binIds[i]), tokenIdsMinted[i]);
+            assertEq(binFungiblePositionManager.balanceOf(alice, tokenIdsMinted[i]), liquidityMinted[i]);
+            assertGt(liquidityMinted[i], 0);
+        }
+
+        // Expect emitted events
+        uint256[] memory _tokenIds = new uint256[](binIds.length);
+        for (uint256 i; i < binIds.length; i++) {
+            _tokenIds[i] = key1.toId().toTokenId(binIds[i]);
+        }
+        vm.expectEmit();
+        emit TransferBatch(alice, alice, address(0), _tokenIds, liquidityMinted);
+
+        // remove liquidity
+        removeParams = _getRemoveParams(key1, binIds, liquidityMinted);
+
+        // generate modifyLiquidities data
+        bytes[] memory payloadArray = new bytes[](1);
+        bytes memory removeLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.RemoveLiquidity, abi.encode(removeParams)
+            )
+        );
+        payloadArray[0] = removeLiquidityData;
+        bytes memory payload = abi.encode(payloadArray);
+
+        snapStart(
+            "BinFungiblePositionManager_RemoveLiquidityTest#testBatch_RemoveLiquidityWithActiveId_ThreeBins_WithoutCloseCurrency"
+        );
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
+        snapEnd();
+
+        (uint128 amt0, uint128 amt1, uint256[] memory tokenIdsBurnt) =
+            abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[]));
+
+        // check token/nft balance of alice
+        assertEq(amt0, 1 ether);
+        assertEq(amt1, 1 ether);
+        assertEq(token0.balanceOf(alice), amt0);
+        assertEq(token1.balanceOf(alice), amt1);
+        for (uint256 i; i < tokenIdsMinted.length; i++) {
+            assertEq(tokenIdsMinted[i], tokenIdsBurnt[i]);
+            assertEq(binFungiblePositionManager.balanceOf(alice, tokenIdsMinted[i]), 0);
+        }
+    }
+
+    function testBatch_RemoveLiquidityWithActiveId_ThreeBins() public {
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+
+        // Pre-req: Add liquidity, 1 eth on each side
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+        addParams = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
+        (,, uint256[] memory tokenIdsMinted, uint256[] memory liquidityMinted) =
+            binFungiblePositionManager.addLiquidity(addParams);
+
+        // check token/nft balance of alice
+        assertEq(token0.balanceOf(alice), 0);
+        assertEq(token1.balanceOf(alice), 0);
+        for (uint256 i; i < tokenIdsMinted.length; i++) {
+            assertEq(key1.toId().toTokenId(binIds[i]), tokenIdsMinted[i]);
+            assertEq(binFungiblePositionManager.balanceOf(alice, tokenIdsMinted[i]), liquidityMinted[i]);
+            assertGt(liquidityMinted[i], 0);
+        }
+
+        // Expect emitted events
+        uint256[] memory _tokenIds = new uint256[](binIds.length);
+        for (uint256 i; i < binIds.length; i++) {
+            _tokenIds[i] = key1.toId().toTokenId(binIds[i]);
+        }
+        vm.expectEmit();
+        emit TransferBatch(alice, alice, address(0), _tokenIds, liquidityMinted);
+
+        // remove liquidity
+        removeParams = _getRemoveParams(key1, binIds, liquidityMinted);
+
+        // generate modifyLiquidities data
+        bytes[] memory payloadArray = new bytes[](3);
+        bytes memory removeLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.RemoveLiquidity, abi.encode(removeParams)
+            )
+        );
+        payloadArray[0] = removeLiquidityData;
+
+        // set current close data
+        payloadArray[1] = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(key1.currency0)
+            )
+        );
+        payloadArray[2] = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(currency1)
+            )
+        );
+
+        bytes memory payload = abi.encode(payloadArray);
+
+        snapStart("BinFungiblePositionManager_RemoveLiquidityTest#testBatch_RemoveLiquidityWithActiveId_ThreeBins");
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
+        snapEnd();
+
+        (uint128 amt0, uint128 amt1, uint256[] memory tokenIdsBurnt) =
+            abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[]));
+
+        // check token/nft balance of alice
+        assertEq(amt0, 1 ether);
+        assertEq(amt1, 1 ether);
+        assertEq(token0.balanceOf(alice), amt0);
+        assertEq(token1.balanceOf(alice), amt1);
+        for (uint256 i; i < tokenIdsMinted.length; i++) {
+            assertEq(tokenIdsMinted[i], tokenIdsBurnt[i]);
+            assertEq(binFungiblePositionManager.balanceOf(alice, tokenIdsMinted[i]), 0);
+        }
+    }
+
     function testRemoveLiquidity_Half() public {
         vm.startPrank(alice);
         uint24[] memory binIds = getBinIds(activeId, 3);

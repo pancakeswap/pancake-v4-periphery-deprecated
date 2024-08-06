@@ -109,8 +109,6 @@ contract BinFungiblePositionManager is
         (amount0, amount1, tokenIds, liquidityMinted) = abi.decode(
             vault.lock(abi.encode(msg.sender, true, addLiquidityData)), (uint128, uint128, uint256[], uint256[])
         );
-
-        emit TransferBatch(msg.sender, address(0), params.to, tokenIds, liquidityMinted);
     }
 
     /// @inheritdoc IBinFungiblePositionManager
@@ -131,8 +129,6 @@ contract BinFungiblePositionManager is
 
         (amount0, amount1, tokenIds) =
             abi.decode(vault.lock(abi.encode(msg.sender, true, removeLiquidityData)), (uint128, uint128, uint256[]));
-
-        emit TransferBatch(msg.sender, params.from, address(0), tokenIds, params.amounts);
     }
 
     function lockAcquired(bytes calldata rawData) external override returns (bytes memory returnData) {
@@ -249,6 +245,8 @@ contract BinFungiblePositionManager is
             }
         }
 
+        emit TransferBatch(sender, address(0), params.to, tokenIds, mintArray.liquidityMinted);
+
         return abi.encode(uint128(-delta.amount0()), uint128(-delta.amount1()), tokenIds, mintArray.liquidityMinted);
     }
 
@@ -286,6 +284,7 @@ contract BinFungiblePositionManager is
                 ++i;
             }
         }
+        emit TransferBatch(sender, params.from, address(0), tokenIds, params.amounts);
 
         return abi.encode(delta.amount0(), delta.amount1(), tokenIds);
     }
