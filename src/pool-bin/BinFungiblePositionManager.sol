@@ -118,7 +118,6 @@ contract BinFungiblePositionManager is
         override
         checkDeadline(params.deadline)
         returns (
-            // checkApproval(params.from, msg.sender)
             uint128 amount0,
             uint128 amount1,
             uint256[] memory tokenIds
