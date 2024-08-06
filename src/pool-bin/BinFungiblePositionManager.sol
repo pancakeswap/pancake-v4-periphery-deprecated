@@ -292,27 +292,20 @@ contract BinFungiblePositionManager is
     /// @notice Transfer token from user to vault. If the currency is native, assume ETH is on contract
     /// @param user If delta.amt > 0, take amt from user. else if delta.amt < 0, transfer amt to user
     function _settleDeltas(address user, PoolKey memory poolKey, BalanceDelta delta) internal {
-        if (delta.amount0() > 0) {
-            vault.take(poolKey.currency0, user, uint128(delta.amount0()));
-        } else if (delta.amount0() < 0) {
-            if (poolKey.currency0.isNative()) {
-                vault.settle{value: uint256(int256(-delta.amount0()))}(poolKey.currency0);
-            } else {
-                vault.sync(poolKey.currency0);
-                pay(poolKey.currency0, user, address(vault), uint256(int256(-delta.amount0())));
-                vault.settle(poolKey.currency0);
-            }
-        }
+        _settleOrTake(poolKey.currency0, user, delta.amount0());
+        _settleOrTake(poolKey.currency1, user, delta.amount1());
+    }
 
-        if (delta.amount1() > 0) {
-            vault.take(poolKey.currency1, user, uint128(delta.amount1()));
-        } else if (delta.amount1() < 0) {
-            if (poolKey.currency1.isNative()) {
-                vault.settle{value: uint256(int256(-delta.amount1()))}(poolKey.currency1);
+    function _settleOrTake(Currency currency, address sender, int128 amount) internal {
+        if (amount > 0) {
+            vault.take(currency, sender, uint128(amount));
+        } else if (amount < 0) {
+            if (currency.isNative()) {
+                vault.settle{value: uint256(int256(-amount))}(currency);
             } else {
-                vault.sync(poolKey.currency1);
-                pay(poolKey.currency1, user, address(vault), uint256(int256(-delta.amount1())));
-                vault.settle(poolKey.currency1);
+                vault.sync(currency);
+                pay(currency, sender, address(vault), uint256(int256(-amount)));
+                vault.settle(currency);
             }
         }
     }
