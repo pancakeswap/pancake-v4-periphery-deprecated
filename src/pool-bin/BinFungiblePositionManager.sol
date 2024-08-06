@@ -104,8 +104,7 @@ contract BinFungiblePositionManager is
         checkDeadline(params.deadline)
         returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted)
     {
-        bytes memory addLiquidityData =
-            abi.encode(CallbackData(msg.sender, CallbackDataType.AddLiquidity, abi.encode(params)));
+        bytes memory addLiquidityData = abi.encode(CallbackData(CallbackDataType.AddLiquidity, abi.encode(params)));
 
         (amount0, amount1, tokenIds, liquidityMinted) = abi.decode(
             vault.lock(abi.encode(msg.sender, true, addLiquidityData)), (uint128, uint128, uint256[], uint256[])
@@ -128,7 +127,7 @@ contract BinFungiblePositionManager is
         )
     {
         bytes memory removeLiquidityData =
-            abi.encode(CallbackData(msg.sender, CallbackDataType.RemoveLiquidity, abi.encode(params)));
+            abi.encode(CallbackData(CallbackDataType.RemoveLiquidity, abi.encode(params)));
 
         (amount0, amount1, tokenIds) =
             abi.decode(vault.lock(abi.encode(msg.sender, true, removeLiquidityData)), (uint128, uint128, uint256[]));

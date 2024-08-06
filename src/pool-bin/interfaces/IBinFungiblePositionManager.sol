@@ -78,7 +78,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     }
 
     struct CallbackData {
-        address sender;
         CallbackDataType callbackDataType;
         bytes params;
     }
