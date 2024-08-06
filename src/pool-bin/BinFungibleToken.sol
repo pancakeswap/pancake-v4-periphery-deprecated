@@ -22,13 +22,6 @@ abstract contract BinFungibleToken is IBinFungibleToken {
     mapping(address => mapping(address => bool)) public isApprovedForAll;
 
     /// @notice Revert if "spender" is not approved to spend "from" token
-    modifier checkApproval(address from, address spender) {
-        if (!(spender == from || isApprovedForAll[from][spender])) {
-            revert BinFungibleToken_SpenderNotApproved(from, spender);
-        }
-        _;
-    }
-
     function _checkApproval(address from, address spender) internal view {
         if (!(spender == from || isApprovedForAll[from][spender])) {
             revert BinFungibleToken_SpenderNotApproved(from, spender);
