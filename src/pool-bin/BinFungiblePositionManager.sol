@@ -87,6 +87,16 @@ contract BinFungiblePositionManager is
     }
 
     /// @inheritdoc IBinFungiblePositionManager
+    function modifyLiquidities(bytes calldata lockData, uint256 deadline)
+        external
+        payable
+        checkDeadline(deadline)
+        returns (bytes[] memory)
+    {
+        return abi.decode(vault.lock(abi.encode(msg.sender, false, lockData)), (bytes[]));
+    }
+
+    /// @inheritdoc IBinFungiblePositionManager
     function addLiquidity(AddLiquidityParams calldata params)
         external
         payable
@@ -94,20 +104,11 @@ contract BinFungiblePositionManager is
         checkDeadline(params.deadline)
         returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted)
     {
-        if (
-            params.deltaIds.length != params.distributionX.length
-                || params.deltaIds.length != params.distributionY.length
-        ) {
-            revert InputLengthMismatch();
-        }
-
-        if (params.activeIdDesired > type(uint24).max || params.idSlippage > type(uint24).max) {
-            revert AddLiquidityInputActiveIdMismath();
-        }
+        bytes memory addLiquidityData =
+            abi.encode(CallbackData(msg.sender, CallbackDataType.AddLiquidity, abi.encode(params)));
 
         (amount0, amount1, tokenIds, liquidityMinted) = abi.decode(
-            vault.lock(abi.encode(CallbackData(msg.sender, CallbackDataType.AddLiquidity, abi.encode(params)))),
-            (uint128, uint128, uint256[], uint256[])
+            vault.lock(abi.encode(msg.sender, true, addLiquidityData)), (uint128, uint128, uint256[], uint256[])
         );
 
         emit TransferBatch(msg.sender, address(0), params.to, tokenIds, liquidityMinted);
@@ -119,15 +120,18 @@ contract BinFungiblePositionManager is
         payable
         override
         checkDeadline(params.deadline)
-        checkApproval(params.from, msg.sender)
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds)
+        returns (
+            // checkApproval(params.from, msg.sender)
+            uint128 amount0,
+            uint128 amount1,
+            uint256[] memory tokenIds
+        )
     {
-        if (params.ids.length != params.amounts.length) revert InputLengthMismatch();
+        bytes memory removeLiquidityData =
+            abi.encode(CallbackData(msg.sender, CallbackDataType.RemoveLiquidity, abi.encode(params)));
 
-        (amount0, amount1, tokenIds) = abi.decode(
-            vault.lock(abi.encode(CallbackData(msg.sender, CallbackDataType.RemoveLiquidity, abi.encode(params)))),
-            (uint128, uint128, uint256[])
-        );
+        (amount0, amount1, tokenIds) =
+            abi.decode(vault.lock(abi.encode(msg.sender, true, removeLiquidityData)), (uint128, uint128, uint256[]));
 
         emit TransferBatch(msg.sender, params.from, address(0), tokenIds, params.amounts);
     }
@@ -135,100 +139,154 @@ contract BinFungiblePositionManager is
     function lockAcquired(bytes calldata rawData) external override returns (bytes memory returnData) {
         if (msg.sender != address(vault)) revert OnlyVaultCaller();
 
-        CallbackData memory data = abi.decode(rawData, (CallbackData));
-
-        if (data.callbackDataType == CallbackDataType.AddLiquidity) {
-            AddLiquidityParams memory params = abi.decode(data.params, (AddLiquidityParams));
-
-            /// @dev Checks if the activeId is within slippage before calling mint. If user mint to activeId and there
-            //       was a swap in hook.beforeMint() which changes the activeId, user txn will fail
-            (uint24 activeId,,) = poolManager.getSlot0(params.poolKey.toId());
-            if (
-                params.activeIdDesired + params.idSlippage < activeId
-                    || params.activeIdDesired - params.idSlippage > activeId
-            ) {
-                revert IdDesiredOverflows(activeId);
-            }
-
-            bytes32[] memory liquidityConfigs = new bytes32[](params.deltaIds.length);
-            for (uint256 i; i < liquidityConfigs.length;) {
-                int256 _id = int256(uint256(activeId)) + params.deltaIds[i];
-                if (_id < 0 || uint256(_id) > type(uint24).max) revert IdOverflows(_id);
-
-                liquidityConfigs[i] = LiquidityConfigurations.encodeParams(
-                    uint64(params.distributionX[i]), uint64(params.distributionY[i]), uint24(uint256(_id))
-                );
-
-                unchecked {
-                    ++i;
-                }
-            }
-
-            bytes32 amountIn = params.amount0.encode(params.amount1);
-            (BalanceDelta delta, BinPool.MintArrays memory mintArray) = poolManager.mint(
-                params.poolKey,
-                IBinPoolManager.MintParams({liquidityConfigs: liquidityConfigs, amountIn: amountIn, salt: bytes32(0)}),
-                ZERO_BYTES
-            );
-
-            // delta amt0/amt1 will always be negative in mint case
-            if (delta.amount0() > 0 || delta.amount1() > 0) revert IncorrectOutputAmount();
-            if (uint128(-delta.amount0()) < params.amount0Min || uint128(-delta.amount1()) < params.amount1Min) {
-                revert OutputAmountSlippage();
-            }
-
-            _settleDeltas(data.sender, params.poolKey, delta);
-
-            // mint
-            PoolId poolId = cachePoolKey(params.poolKey);
-            uint256[] memory tokenIds = new uint256[](mintArray.ids.length);
-            for (uint256 i; i < mintArray.ids.length;) {
-                uint256 tokenId = poolId.toTokenId(mintArray.ids[i]);
-                _mint(params.to, tokenId, mintArray.liquidityMinted[i]);
-
-                if (_positions[tokenId].binId == 0) {
-                    _positions[tokenId] = TokenPosition({poolId: poolId, binId: uint24(mintArray.ids[i])});
-                }
-
-                tokenIds[i] = tokenId;
-                unchecked {
-                    ++i;
-                }
-            }
-
-            return abi.encode(uint128(-delta.amount0()), uint128(-delta.amount1()), tokenIds, mintArray.liquidityMinted);
-        } else if (data.callbackDataType == CallbackDataType.RemoveLiquidity) {
-            RemoveLiquidityParams memory params = abi.decode(data.params, (RemoveLiquidityParams));
-
-            BalanceDelta delta = poolManager.burn(
-                params.poolKey,
-                IBinPoolManager.BurnParams({ids: params.ids, amountsToBurn: params.amounts, salt: bytes32(0)}),
-                ZERO_BYTES
-            );
-
-            // delta amt0/amt1 will either be 0 or positive in removing liquidity
-            if (delta.amount0() < 0 || delta.amount1() < 0) revert IncorrectOutputAmount();
-            if (uint128(delta.amount0()) < params.amount0Min || uint128(delta.amount1()) < params.amount1Min) {
-                revert OutputAmountSlippage();
-            }
-
-            _settleDeltas(params.to, params.poolKey, delta);
-
-            // Burn NFT
-            PoolId poolId = params.poolKey.toId();
-            uint256[] memory tokenIds = new uint256[](params.ids.length);
-            for (uint256 i; i < params.ids.length;) {
-                uint256 tokenId = poolId.toTokenId(params.ids[i]);
-                _burn(params.from, tokenId, params.amounts[i]);
-
-                tokenIds[i] = tokenId;
-                unchecked {
-                    ++i;
-                }
-            }
-
-            return abi.encode(delta.amount0(), delta.amount1(), tokenIds);
+        (address sender, bool isSingle, bytes memory lockData) = abi.decode(rawData, (address, bool, bytes));
+        if (isSingle) {
+            CallbackData memory data = abi.decode(lockData, (CallbackData));
+            return _handleSingleAction(data, sender, true);
+        } else {
+            bytes[] memory params = abi.decode(lockData, (bytes[]));
+            return _dispatch(params, sender);
         }
+    }
+
+    function _dispatch(bytes[] memory params, address sender) internal returns (bytes memory returnDataArrayBytes) {
+        uint256 length = params.length;
+        bytes[] memory returnData = new bytes[](length);
+        // In order to save gas, we will set the settle flag to true if only one liquidity modification
+        bool shouldSettle = length == 1;
+        for (uint256 i; i < length; i++) {
+            CallbackData memory data = abi.decode(params[i], (CallbackData));
+            returnData[i] = _handleSingleAction(data, sender, shouldSettle);
+        }
+
+        return abi.encode(returnData);
+    }
+
+    function _handleSingleAction(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
+        if (data.callbackDataType == CallbackDataType.AddLiquidity) {
+            return _handleIncreaseLiquidity(data, sender, shouldSettle);
+        } else if (data.callbackDataType == CallbackDataType.RemoveLiquidity) {
+            return _handleDecreaseLiquidity(data, sender, shouldSettle);
+        } else {
+            revert InvalidCalldataType();
+        }
+    }
+
+    function _handleIncreaseLiquidity(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
+        AddLiquidityParams memory params = abi.decode(data.params, (AddLiquidityParams));
+
+        if (
+            params.deltaIds.length != params.distributionX.length
+                || params.deltaIds.length != params.distributionY.length
+        ) {
+            revert InputLengthMismatch();
+        }
+
+        if (params.activeIdDesired > type(uint24).max || params.idSlippage > type(uint24).max) {
+            revert AddLiquidityInputActiveIdMismath();
+        }
+
+        /// @dev Checks if the activeId is within slippage before calling mint. If user mint to activeId and there
+        //       was a swap in hook.beforeMint() which changes the activeId, user txn will fail
+        (uint24 activeId,,) = poolManager.getSlot0(params.poolKey.toId());
+        if (
+            params.activeIdDesired + params.idSlippage < activeId
+                || params.activeIdDesired - params.idSlippage > activeId
+        ) {
+            revert IdDesiredOverflows(activeId);
+        }
+
+        bytes32[] memory liquidityConfigs = new bytes32[](params.deltaIds.length);
+        for (uint256 i; i < liquidityConfigs.length;) {
+            int256 _id = int256(uint256(activeId)) + params.deltaIds[i];
+            if (_id < 0 || uint256(_id) > type(uint24).max) revert IdOverflows(_id);
+
+            liquidityConfigs[i] = LiquidityConfigurations.encodeParams(
+                uint64(params.distributionX[i]), uint64(params.distributionY[i]), uint24(uint256(_id))
+            );
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        bytes32 amountIn = params.amount0.encode(params.amount1);
+        (BalanceDelta delta, BinPool.MintArrays memory mintArray) = poolManager.mint(
+            params.poolKey,
+            IBinPoolManager.MintParams({liquidityConfigs: liquidityConfigs, amountIn: amountIn, salt: bytes32(0)}),
+            ZERO_BYTES
+        );
+
+        // delta amt0/amt1 will always be negative in mint case
+        if (delta.amount0() > 0 || delta.amount1() > 0) revert IncorrectOutputAmount();
+        if (uint128(-delta.amount0()) < params.amount0Min || uint128(-delta.amount1()) < params.amount1Min) {
+            revert OutputAmountSlippage();
+        }
+
+        if (shouldSettle) _settleDeltas(sender, params.poolKey, delta);
+
+        // mint
+        PoolId poolId = cachePoolKey(params.poolKey);
+        uint256[] memory tokenIds = new uint256[](mintArray.ids.length);
+        for (uint256 i; i < mintArray.ids.length;) {
+            uint256 tokenId = poolId.toTokenId(mintArray.ids[i]);
+            _mint(params.to, tokenId, mintArray.liquidityMinted[i]);
+
+            if (_positions[tokenId].binId == 0) {
+                _positions[tokenId] = TokenPosition({poolId: poolId, binId: uint24(mintArray.ids[i])});
+            }
+
+            tokenIds[i] = tokenId;
+            unchecked {
+                ++i;
+            }
+        }
+
+        return abi.encode(uint128(-delta.amount0()), uint128(-delta.amount1()), tokenIds, mintArray.liquidityMinted);
+    }
+
+    function _handleDecreaseLiquidity(CallbackData memory data, address sender, bool shouldSettle)
+        internal
+        returns (bytes memory)
+    {
+        RemoveLiquidityParams memory params = abi.decode(data.params, (RemoveLiquidityParams));
+        if (params.ids.length != params.amounts.length) revert InputLengthMismatch();
+        _checkApproval(params.from, sender);
+
+        BalanceDelta delta = poolManager.burn(
+            params.poolKey,
+            IBinPoolManager.BurnParams({ids: params.ids, amountsToBurn: params.amounts, salt: bytes32(0)}),
+            ZERO_BYTES
+        );
+
+        // delta amt0/amt1 will either be 0 or positive in removing liquidity
+        if (delta.amount0() < 0 || delta.amount1() < 0) revert IncorrectOutputAmount();
+        if (uint128(delta.amount0()) < params.amount0Min || uint128(delta.amount1()) < params.amount1Min) {
+            revert OutputAmountSlippage();
+        }
+
+        if (shouldSettle) _settleDeltas(params.to, params.poolKey, delta);
+
+        // Burn NFT
+        PoolId poolId = params.poolKey.toId();
+        uint256[] memory tokenIds = new uint256[](params.ids.length);
+        for (uint256 i; i < params.ids.length;) {
+            uint256 tokenId = poolId.toTokenId(params.ids[i]);
+            _burn(params.from, tokenId, params.amounts[i]);
+
+            tokenIds[i] = tokenId;
+            unchecked {
+                ++i;
+            }
+        }
+
+        return abi.encode(delta.amount0(), delta.amount1(), tokenIds);
     }
 
     /// @notice Transfer token from user to vault. If the currency is native, assume ETH is on contract

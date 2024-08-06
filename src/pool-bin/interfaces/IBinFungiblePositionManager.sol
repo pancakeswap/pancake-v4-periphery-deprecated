@@ -23,6 +23,7 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     error OutputAmountSlippage();
     error IncorrectOutputAmount();
     error InvalidTokenID();
+    error InvalidCalldataType();
 
     /// @notice AddLiquidityParams
     /// - amount0: Amount to send for token0
@@ -101,6 +102,20 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// @param activeId The active id of the pool
     /// @param hookData Hook data for the pool
     function initialize(PoolKey memory poolKey, uint24 activeId, bytes calldata hookData) external;
+
+    /// @notice Batches many liquidity modification calls to pool manager
+    /// @param payload is an encoding of actions, and parameters for those actions
+    /// @dev The payload is a byte array that represents the encoded form of the CallbackData struct
+    /// for example to add liquidity, the payload would be:
+    /// bytes[] memory payloadArray = new bytes[](1);
+    /// bytes memory addliquidityData = abi.encode(IBinFungiblePositionManager.CallbackData(
+    ///     IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(IBinFungiblePositionManager.AddLiquidityParams({...}))
+    /// ))
+    /// payloadArray[0] = addliquidityData;
+    /// bytes memory payload = abi.encode(payloadArray);
+    /// @param deadline is the deadline for the batched actions to be executed
+    /// @return returnData is the endocing of each actions return information
+    function modifyLiquidities(bytes calldata payload, uint256 deadline) external payable returns (bytes[] memory);
 
     /// @notice Add liquidity, user will receive ERC1155 tokens as receipt of bin share ownership.
     /// @dev The ID of the ERC11155 token is keccak256(abi.encode(poolkey.toId, binId))

@@ -29,6 +29,12 @@ abstract contract BinFungibleToken is IBinFungibleToken {
         _;
     }
 
+    function _checkApproval(address from, address spender) internal view {
+        if (!(spender == from || isApprovedForAll[from][spender])) {
+            revert BinFungibleToken_SpenderNotApproved(from, spender);
+        }
+    }
+
     /*//////////////////////////////////////////////////////////////
                              LOGIC
     //////////////////////////////////////////////////////////////*/
