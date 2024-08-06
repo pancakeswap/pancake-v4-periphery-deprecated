@@ -117,11 +117,7 @@ contract BinFungiblePositionManager is
         payable
         override
         checkDeadline(params.deadline)
-        returns (
-            uint128 amount0,
-            uint128 amount1,
-            uint256[] memory tokenIds
-        )
+        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds)
     {
         bytes memory removeLiquidityData =
             abi.encode(CallbackData(CallbackDataType.RemoveLiquidity, abi.encode(params)));
