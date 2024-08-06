@@ -170,6 +170,8 @@ contract BinFungiblePositionManager is
             return _handleIncreaseLiquidity(data, sender, shouldSettle);
         } else if (data.callbackDataType == CallbackDataType.RemoveLiquidity) {
             return _handleDecreaseLiquidity(data, sender, shouldSettle);
+        } else if (data.callbackDataType == CallbackDataType.CloseCurrency) {
+            return _close(data.params, sender);
         } else {
             revert InvalidCalldataType();
         }
@@ -287,6 +289,24 @@ contract BinFungiblePositionManager is
         }
 
         return abi.encode(delta.amount0(), delta.amount1(), tokenIds);
+    }
+
+    /// @param params is an encoding of the Currency to close
+    /// @param sender is the msg.sender encoded by the `modifyLiquidities` function before the `lockAcquired`.
+    /// @return an encoding of int256 the balance of the currency being settled by this call
+    function _close(bytes memory params, address sender) internal returns (bytes memory) {
+        (Currency currency) = abi.decode(params, (Currency));
+        // this address has applied all deltas on behalf of the user/owner
+        // it is safe to close this entire delta because of slippage checks throughout the batched calls.
+        int256 currencyDelta = vault.currencyDelta(address(this), currency);
+
+        _settleOrTake(currency, sender, int128(currencyDelta));
+        // if there are native tokens left over after settling, return to sender
+        if (address(this).balance > 0 && currency.isNative()) {
+            CurrencyLibrary.NATIVE.transfer(sender, address(this).balance);
+        }
+
+        return abi.encode(currencyDelta);
     }
 
     /// @notice Transfer token from user to vault. If the currency is native, assume ETH is on contract

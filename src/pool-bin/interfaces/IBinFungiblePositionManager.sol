@@ -73,7 +73,8 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
 
     enum CallbackDataType {
         AddLiquidity,
-        RemoveLiquidity
+        RemoveLiquidity,
+        CloseCurrency
     }
 
     struct CallbackData {
