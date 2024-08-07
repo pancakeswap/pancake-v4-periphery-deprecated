@@ -32,8 +32,8 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// - activeIdDesired: Active id that user wants to add liquidity from
     /// - idSlippage: Number of id that are allowed to slip
     /// - deltaIds: List of delta ids to add liquidity (`deltaId = activeId - desiredId`)
-    /// - distributionX: Distribution of tokenX with sum(distributionX) = 100e18 (100%) or 0 (0%)
-    /// - distributionY: Distribution of tokenY with sum(distributionY) = 100e18 (100%) or 0 (0%)
+    /// - distributionX: Distribution of tokenX with sum(distributionX) = 1e18 (100%) or 0 (0%)
+    /// - distributionY: Distribution of tokenY with sum(distributionY) = 1e18 (100%) or 0 (0%)
     /// - to: Address of recipient
     /// - deadline: Deadline of transaction
     struct AddLiquidityParams {
