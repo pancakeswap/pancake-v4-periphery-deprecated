@@ -93,20 +93,15 @@ contract BinFungiblePositionManager is
         checkDeadline(deadline)
         returns (bytes[] memory)
     {
-        return abi.decode(vault.lock(abi.encode(msg.sender, false, lockData)), (bytes[]));
+        return abi.decode(vault.lock(abi.encode(msg.sender, lockData)), (bytes[]));
     }
 
     function lockAcquired(bytes calldata rawData) external override returns (bytes memory returnData) {
         if (msg.sender != address(vault)) revert OnlyVaultCaller();
 
-        (address sender, bool isSingle, bytes memory lockData) = abi.decode(rawData, (address, bool, bytes));
-        if (isSingle) {
-            CallbackData memory data = abi.decode(lockData, (CallbackData));
-            return _handleSingleAction(data, sender, true);
-        } else {
-            bytes[] memory params = abi.decode(lockData, (bytes[]));
-            return _dispatch(params, sender);
-        }
+        (address sender, bytes memory lockData) = abi.decode(rawData, (address, bytes));
+        bytes[] memory params = abi.decode(lockData, (bytes[]));
+        return _dispatch(params, sender);
     }
 
     function _dispatch(bytes[] memory params, address sender) internal returns (bytes memory returnDataArrayBytes) {
