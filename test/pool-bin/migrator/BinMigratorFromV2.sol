@@ -124,7 +124,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         // 3. multicall, combine initialize and migrateFromV2
@@ -212,7 +212,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         // 3. multicall, combine initialize and migrateFromV2
@@ -269,7 +269,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         // 4. migrateFromV2
@@ -354,7 +354,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         // 4. migrate from v2 to v4
@@ -438,7 +438,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         uint256 balance0Before = address(this).balance;
@@ -530,7 +530,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         uint256 balance0Before = address(this).balance;
@@ -640,7 +640,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: distributionX,
             distributionY: distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         uint256 balance0Before = address(this).balance;
@@ -744,7 +744,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: distributionX,
             distributionY: distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         uint256 balance0Before = token0.balanceOf(address(this));
@@ -850,7 +850,7 @@ abstract contract BinMigratorFromV2 is OldVersionHelper, LiquidityParamsHelper, 
             distributionX: params.distributionX,
             distributionY: params.distributionY,
             to: params.to,
-            deadline: params.deadline
+            deadline: block.timestamp + 1
         });
 
         // 3. multicall, combine permit, initialize and migrateFromV2

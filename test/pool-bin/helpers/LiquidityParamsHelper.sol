@@ -65,7 +65,7 @@ contract LiquidityParamsHelper {
         uint128 amountY,
         uint24 activeId,
         address recipient
-    ) internal view returns (IBinFungiblePositionManager.AddLiquidityParams memory params) {
+    ) internal pure returns (IBinFungiblePositionManager.AddLiquidityParams memory params) {
         uint256 totalBins = binIds.length;
 
         uint8 nbBinX; // num of bins to the right
@@ -94,8 +94,7 @@ contract LiquidityParamsHelper {
             deltaIds: convertToRelative(binIds, activeId),
             distributionX: distribX,
             distributionY: distribY,
-            to: recipient,
-            deadline: block.timestamp + 600
+            to: recipient
         });
     }
 }

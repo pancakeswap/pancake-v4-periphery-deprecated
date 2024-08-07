@@ -47,10 +47,10 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
             deltaIds: v4PoolParams.deltaIds,
             distributionX: v4PoolParams.distributionX,
             distributionY: v4PoolParams.distributionY,
-            to: v4PoolParams.to,
-            deadline: v4PoolParams.deadline
+            to: v4PoolParams.to
         });
-        (uint256 amount0Consumed, uint256 amount1Consumed,,) = _addLiquidityToTargetPool(addLiquidityParams);
+        (uint256 amount0Consumed, uint256 amount1Consumed,,) =
+            _addLiquidityToTargetPool(addLiquidityParams, v4PoolParams.deadline);
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
@@ -94,10 +94,10 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
             deltaIds: v4PoolParams.deltaIds,
             distributionX: v4PoolParams.distributionX,
             distributionY: v4PoolParams.distributionY,
-            to: v4PoolParams.to,
-            deadline: v4PoolParams.deadline
+            to: v4PoolParams.to
         });
-        (uint256 amount0Consumed, uint256 amount1Consumed,,) = _addLiquidityToTargetPool(addLiquidityParams);
+        (uint256 amount0Consumed, uint256 amount1Consumed,,) =
+            _addLiquidityToTargetPool(addLiquidityParams, v4PoolParams.deadline);
 
         // refund if necessary, ETH is supported by CurrencyLib
         unchecked {
@@ -112,11 +112,12 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
 
     /// @dev adding liquidity to target bin pool, collect surplus ETH if necessary
     /// @param params  bin position manager add liquidity params
+    /// @param deadline the deadline of the transaction
     /// @return amount0Consumed the actual amount of token0 consumed
     /// @return amount1Consumed the actual amount of token1 consumed
     /// @return tokenIds the list of the id of the position token minted
     /// @return liquidityMinted the list of the amount of the position token minted
-    function _addLiquidityToTargetPool(IBinFungiblePositionManager.AddLiquidityParams memory params)
+    function _addLiquidityToTargetPool(IBinFungiblePositionManager.AddLiquidityParams memory params, uint256 deadline)
         internal
         returns (
             uint128 amount0Consumed,
@@ -132,8 +133,20 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         }
         approveMaxIfNeeded(params.poolKey.currency1, address(binFungiblePositionManager), params.amount1);
 
-        (amount0Consumed, amount1Consumed, tokenIds, liquidityMinted) =
-            binFungiblePositionManager.addLiquidity{value: nativePair ? params.amount0 : 0}(params);
+        bytes memory addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(params)
+            )
+        );
+        bytes[] memory lockData = new bytes[](1);
+        lockData[0] = addLiquidityData;
+
+        (amount0Consumed, amount1Consumed, tokenIds, liquidityMinted) = abi.decode(
+            binFungiblePositionManager.modifyLiquidities{value: nativePair ? params.amount0 : 0}(
+                abi.encode(lockData), deadline
+            )[0],
+            (uint128, uint128, uint256[], uint256[])
+        );
 
         // receive surplus ETH from positionManager
         if (nativePair && params.amount0 > amount0Consumed) {

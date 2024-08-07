@@ -101,16 +101,28 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         vm.stopPrank();
     }
 
+    function addLiquidity(IBinFungiblePositionManager.AddLiquidityParams memory params)
+        internal
+        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted)
+    {
+        // generate modifyLiquidities data
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
+
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
+
+        return abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[], uint256[]));
+    }
+
     function testAddLiquidity_BeforeDeadline() public {
         uint24[] memory binIds = getBinIds(activeId, 3);
 
         vm.warp(1000); // set block.timestamp
         IBinFungiblePositionManager.AddLiquidityParams memory params =
             _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        params.deadline = 900; // set deadline before block.timestamp
 
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, 900);
     }
 
     function testAddLiquidity_IdDesiredOverflow() public {
@@ -120,8 +132,9 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.activeIdDesired = activeId - 1;
 
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.IdDesiredOverflows.selector, activeId));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
     }
 
     function testAddLiquidity_InputActiveIdMismatch(uint256 input) public {
@@ -134,14 +147,16 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         // active id above type(uint24).max
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.activeIdDesired = input;
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.AddLiquidityInputActiveIdMismath.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         // active id normal, but slippage above type(uint24).max
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.idSlippage = input;
+        payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.AddLiquidityInputActiveIdMismath.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
     }
 
     function testAddLiquidity_InputLengthMisMatch() public {
@@ -151,20 +166,23 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         // distributionX mismatch
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.distributionX = new uint256[](0);
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.InputLengthMismatch.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         // distributionY mismatch
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.distributionY = new uint256[](0);
+        payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.InputLengthMismatch.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         // deltaIds mismatch
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.deltaIds = new int256[](0);
+        payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.InputLengthMismatch.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
     }
 
     function testAddLiquidity_AddLiquiditySlippage() public {
@@ -179,20 +197,23 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         // overwrite amount0Min
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.amount0Min = 1.1 ether;
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.OutputAmountSlippage.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         // overwrite amount1Min
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.amount1Min = 1.1 ether;
+        payload = _getModifyLiquiditiesAddPayload(params, false);
         vm.expectRevert(abi.encodeWithSelector(IBinFungiblePositionManager.OutputAmountSlippage.selector));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         // overwrite to 1 eth (expected to not fail)
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
         params.amount0Min = 1 ether;
         params.amount1Min = 1 ether;
-        binFungiblePositionManager.addLiquidity(params);
+        // addLiquidity(params);
+        addLiquidity(params);
     }
 
     function testAddLiquidity_MintToBob() public {
@@ -209,7 +230,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         params.to = bob;
 
         // add liquidity
-        (,,, uint256[] memory _liquidityMinted) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory _liquidityMinted) = addLiquidity(params);
 
         for (uint256 i; i < binIds.length; i++) {
             // verify nft minted to bob
@@ -236,10 +257,10 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
 
         // mint key1 and key2
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        (,,, uint256[] memory _liquidityMinted1) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory _liquidityMinted1) = addLiquidity(params);
 
         params = _getAddParams(key2, binIds, 1 ether, 1 ether, activeId, alice);
-        (,,, uint256[] memory _liquidityMinted2) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory _liquidityMinted2) = addLiquidity(params);
 
         for (uint256 i; i < binIds.length; i++) {
             uint256 balance1 = binFungiblePositionManager.balanceOf(alice, key1.toId().toTokenId(binIds[i])); // key1.toBinToken(binIds[i]));
@@ -266,7 +287,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         uint24[] memory binIds = getBinIds(activeId, 3);
         IBinFungiblePositionManager.AddLiquidityParams memory params;
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        (,, uint256[] memory tokenIds,) = binFungiblePositionManager.addLiquidity(params);
+        (,, uint256[] memory tokenIds,) = addLiquidity(params);
 
         for (uint256 i; i < tokenIds.length; i++) {
             (PoolId poolId, Currency curr0, Currency curr1, uint24 fee, uint24 binId) =
@@ -305,10 +326,115 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         emit TransferBatch(alice, address(0), alice, tokenIds, liquidityMinted);
 
         // amt0, amt1 = total amt0/amt1 from addLiquidity -- 660207 -
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         snapStart("BinFungiblePositionManager_AddLiquidityTest#testAddLiquidityWithActiveId");
-        (uint128 amt0, uint128 amt1, uint256[] memory _tokenIds, uint256[] memory _liquidityMinted) =
-            binFungiblePositionManager.addLiquidity(params);
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
         snapEnd();
+
+        (uint128 amt0, uint128 amt1, uint256[] memory _tokenIds, uint256[] memory _liquidityMinted) =
+            abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[], uint256[]));
+
+        // verify token taken from alice
+        assertEq(amt0, 1 ether);
+        assertEq(amt1, 1 ether);
+        assertEq(token0.balanceOf(alice), 0);
+        assertEq(token1.balanceOf(alice), 0);
+
+        for (uint256 i; i < binIds.length; i++) {
+            // verify nft minted to user
+            uint256 balance = binFungiblePositionManager.balanceOf(alice, tokenIds[i]);
+            assertEq(balance, _liquidityMinted[i]);
+            assertGt(balance, 0);
+
+            // verify return value from addLiquidity
+            assertEq(tokenIds[i], _tokenIds[i]);
+        }
+    }
+
+    function testBatch_AddLiquidityWithActiveId_WithoutCloseCurrency() public {
+        // pre-test, verify alice has 1e18 token0 and token1
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+        assertEq(token0.balanceOf(alice), 1 ether);
+        assertEq(token1.balanceOf(alice), 1 ether);
+
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+        IBinFungiblePositionManager.AddLiquidityParams memory params;
+        params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
+
+        // Expect emitted events
+        uint256[] memory liquidityMinted = new uint256[](binIds.length);
+        bytes32 binReserves = PackedUint128Math.encode(0, 0); // binReserve=0 for new pool
+        liquidityMinted[0] = calculateLiquidityMinted(binReserves, 0 ether, 0.5 ether, binIds[0], 10, 0);
+        liquidityMinted[1] = calculateLiquidityMinted(binReserves, 0.5 ether, 0.5 ether, binIds[1], 10, 0);
+        liquidityMinted[2] = calculateLiquidityMinted(binReserves, 0.5 ether, 0 ether, binIds[2], 10, 0);
+        uint256[] memory tokenIds = new uint256[](binIds.length);
+        for (uint256 i; i < binIds.length; i++) {
+            tokenIds[i] = key1.toId().toTokenId(binIds[i]);
+        }
+        vm.expectEmit();
+        emit TransferBatch(alice, address(0), alice, tokenIds, liquidityMinted);
+
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
+
+        // amt0, amt1 = total amt0/amt1 from addLiquidity -- 660207 -
+        snapStart("BinFungiblePositionManager_AddLiquidityTest#testBatch_AddLiquidityWithActiveId_WithoutCloseCurrency");
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
+        snapEnd();
+        (uint128 amt0, uint128 amt1, uint256[] memory _tokenIds, uint256[] memory _liquidityMinted) =
+            abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[], uint256[]));
+
+        // verify token taken from alice
+        assertEq(amt0, 1 ether);
+        assertEq(amt1, 1 ether);
+        assertEq(token0.balanceOf(alice), 0);
+        assertEq(token1.balanceOf(alice), 0);
+
+        for (uint256 i; i < binIds.length; i++) {
+            // verify nft minted to user
+            uint256 balance = binFungiblePositionManager.balanceOf(alice, tokenIds[i]);
+            assertEq(balance, _liquidityMinted[i]);
+            assertGt(balance, 0);
+
+            // verify return value from addLiquidity
+            assertEq(tokenIds[i], _tokenIds[i]);
+        }
+    }
+
+    function testBatch_AddLiquidityWithActiveId() public {
+        // pre-test, verify alice has 1e18 token0 and token1
+        token0.mint(alice, 1 ether);
+        token1.mint(alice, 1 ether);
+        assertEq(token0.balanceOf(alice), 1 ether);
+        assertEq(token1.balanceOf(alice), 1 ether);
+
+        vm.startPrank(alice);
+        uint24[] memory binIds = getBinIds(activeId, 3);
+        IBinFungiblePositionManager.AddLiquidityParams memory params;
+        params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
+
+        // Expect emitted events
+        uint256[] memory liquidityMinted = new uint256[](binIds.length);
+        bytes32 binReserves = PackedUint128Math.encode(0, 0); // binReserve=0 for new pool
+        liquidityMinted[0] = calculateLiquidityMinted(binReserves, 0 ether, 0.5 ether, binIds[0], 10, 0);
+        liquidityMinted[1] = calculateLiquidityMinted(binReserves, 0.5 ether, 0.5 ether, binIds[1], 10, 0);
+        liquidityMinted[2] = calculateLiquidityMinted(binReserves, 0.5 ether, 0 ether, binIds[2], 10, 0);
+        uint256[] memory tokenIds = new uint256[](binIds.length);
+        for (uint256 i; i < binIds.length; i++) {
+            tokenIds[i] = key1.toId().toTokenId(binIds[i]);
+        }
+        vm.expectEmit();
+        emit TransferBatch(alice, address(0), alice, tokenIds, liquidityMinted);
+
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, true);
+
+        // amt0, amt1 = total amt0/amt1 from addLiquidity -- 660207 -
+        snapStart("BinFungiblePositionManager_AddLiquidityTest#testBatch_AddLiquidityWithActiveId");
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
+        snapEnd();
+        (uint128 amt0, uint128 amt1, uint256[] memory _tokenIds, uint256[] memory _liquidityMinted) =
+            abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[], uint256[]));
 
         // verify token taken from alice
         assertEq(amt0, 1 ether);
@@ -337,10 +463,13 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         IBinFungiblePositionManager.AddLiquidityParams memory params;
         params = _getAddParams(key1, binIds, 0, 1 ether, activeId, alice);
 
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         snapStart("BinFungiblePositionManager_AddLiquidityTest#testAddLiquidityOutsideActiveId_NewId");
-        (uint128 amt0, uint128 amt1,, uint256[] memory _liquidityMinted) =
-            binFungiblePositionManager.addLiquidity(params);
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
         snapEnd();
+
+        (uint128 amt0, uint128 amt1,, uint256[] memory _liquidityMinted) =
+            abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[], uint256[]));
 
         // verify token taken from alice
         assertEq(amt0, 0 ether);
@@ -358,7 +487,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
 
         // re-add existing id, gas should be way cheaper as no ssload
         snapStart("BinFungiblePositionManager_AddLiquidityTest#testAddLiquidityOutsideActiveId_ExistingId");
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
         snapEnd();
     }
 
@@ -389,14 +518,15 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             _getAddParams(key1, binIds, 2 ether, 2 ether, activeId, alice);
 
         // Step 3: add initial liquidity -- beofreMint() wont swap due to pool having 0 liquidity
+        bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
         snapStart("BinFungiblePositionManager_AddLiquidityTest#testAddLiquidityWithActiveId_WithHook");
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
         snapEnd();
 
         // Step 4: add more liquidity - beforeMint() will swap as pool has sufficient liquidity now
         // verify error happens if activeId changes and user happen to add to activeId
         vm.expectRevert(abi.encodeWithSelector(BinHelper.BinHelper__CompositionFactorFlawed.selector, 2 ** 23));
-        binFungiblePositionManager.addLiquidity(params);
+        binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
     }
 
     /// @dev User adding liquidity in this scenario should not produce error
@@ -431,7 +561,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             _getAddParams(key1, binIds, 2 ether, 2 ether, activeId, alice);
 
         // Step 3: add initial liquidity -- beforeMint() wont swap due to pool having 0 liquidity
-        binFungiblePositionManager.addLiquidity(params);
+        addLiquidity(params);
         assertApproxEqAbs(token0.balanceOf(alice), 2 ether, 10); // left with 2 eth on amt0
         assertApproxEqAbs(token1.balanceOf(alice), 2 ether, 10); // left with 2 eth on amt1
 
@@ -440,7 +570,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
         params = _getAddParams(key1, binIds, 0 ether, 2 ether, activeId, alice);
 
         // mint, verify no error and token taken from user
-        binFungiblePositionManager.addLiquidity(params);
+        addLiquidity(params);
         assertApproxEqAbs(token0.balanceOf(alice), 2 ether, 10); // amt0 remain the same
         assertApproxEqAbs(token1.balanceOf(alice), 0 ether, 10); // amt1 taken from step 4
     }
@@ -474,9 +604,9 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             addParams.to = user;
 
             if (user == alice) {
-                (,, aliceTokenIds, aliceLiquidityMinted) = binFungiblePositionManager.addLiquidity(addParams);
+                (,, aliceTokenIds, aliceLiquidityMinted) = addLiquidity(addParams);
             } else {
-                (,, bobTokenIds, bobLiquidityMinted) = binFungiblePositionManager.addLiquidity(addParams);
+                (,, bobTokenIds, bobLiquidityMinted) = addLiquidity(addParams);
             }
 
             for (uint256 j; j < binIds.length; j++) {
@@ -537,8 +667,37 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             deltaIds: convertToRelative(binIds, activeId),
             distributionX: distribX,
             distributionY: distribY,
-            to: alice,
-            deadline: block.timestamp + 600
+            to: alice
         });
+    }
+
+    function _getModifyLiquiditiesAddPayload(
+        IBinFungiblePositionManager.AddLiquidityParams memory params,
+        bool shouldCloseCurrency
+    ) internal pure returns (bytes memory) {
+        // generate modifyLiquidities data
+        bytes memory addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(params)
+            )
+        );
+        uint256 len = shouldCloseCurrency ? 3 : 1;
+        bytes[] memory data = new bytes[](len);
+        data[0] = addLiquidityData;
+
+        if (shouldCloseCurrency) {
+            data[1] = abi.encode(
+                IBinFungiblePositionManager.CallbackData(
+                    IBinFungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(params.poolKey.currency0)
+                )
+            );
+            data[2] = abi.encode(
+                IBinFungiblePositionManager.CallbackData(
+                    IBinFungiblePositionManager.CallbackDataType.CloseCurrency, abi.encode(params.poolKey.currency1)
+                )
+            );
+        }
+
+        return abi.encode(data);
     }
 }

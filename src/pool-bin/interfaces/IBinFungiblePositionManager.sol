@@ -23,6 +23,7 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     error OutputAmountSlippage();
     error IncorrectOutputAmount();
     error InvalidTokenID();
+    error InvalidCalldataType();
 
     /// @notice AddLiquidityParams
     /// - amount0: Amount to send for token0
@@ -35,7 +36,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// - distributionX: Distribution of tokenX with sum(distributionX) = 1e18 (100%) or 0 (0%)
     /// - distributionY: Distribution of tokenY with sum(distributionY) = 1e18 (100%) or 0 (0%)
     /// - to: Address of recipient
-    /// - deadline: Deadline of transaction
     struct AddLiquidityParams {
         PoolKey poolKey;
         uint128 amount0;
@@ -48,7 +48,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
         uint256[] distributionX;
         uint256[] distributionY;
         address to;
-        uint256 deadline;
     }
 
     /// @notice RemoveLiquidityParams
@@ -58,7 +57,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// - amounts: List of share amount to remove for each bin
     /// - from: Address of NFT holder to burn the NFT
     /// - to: Address of recipient for amount0 and amount1 recieved
-    /// - deadline: Deadline of transaction
     struct RemoveLiquidityParams {
         PoolKey poolKey;
         uint128 amount0Min;
@@ -67,16 +65,15 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
         uint256[] amounts;
         address from;
         address to;
-        uint256 deadline;
     }
 
     enum CallbackDataType {
         AddLiquidity,
-        RemoveLiquidity
+        RemoveLiquidity,
+        CloseCurrency
     }
 
     struct CallbackData {
-        address sender;
         CallbackDataType callbackDataType;
         bytes params;
     }
@@ -102,23 +99,17 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// @param hookData Hook data for the pool
     function initialize(PoolKey memory poolKey, uint24 activeId, bytes calldata hookData) external;
 
-    /// @notice Add liquidity, user will receive ERC1155 tokens as receipt of bin share ownership.
-    /// @dev The ID of the ERC11155 token is keccak256(abi.encode(poolkey.toId, binId))
-    /// @return amount0 Amount of token0 added
-    /// @return amount1 Amount of token1 added
-    /// @return tokenIds Ids of token minted
-    /// @return liquidityMinted Amount of liquidity added
-    function addLiquidity(AddLiquidityParams calldata)
-        external
-        payable
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted);
-
-    /// @notice Remove liquidity, burn NFT and retrieve back the ERC20 tokens for the liquidity
-    /// @return amount0 Amount of token0 removed
-    /// @return amount1 Amount of token1 removed
-    /// @return tokenIds Ids of token burnt
-    function removeLiquidity(RemoveLiquidityParams calldata)
-        external
-        payable
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds);
+    /// @notice Batches many liquidity modification calls to pool manager
+    /// @param payload is an encoding of actions, and parameters for those actions
+    /// @dev The payload is a byte array that represents the encoded form of the CallbackData struct
+    /// for example to add liquidity, the payload would be:
+    /// bytes[] memory payloadArray = new bytes[](1);
+    /// bytes memory addliquidityData = abi.encode(IBinFungiblePositionManager.CallbackData(
+    ///     IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(IBinFungiblePositionManager.AddLiquidityParams({...}))
+    /// ))
+    /// payloadArray[0] = addliquidityData;
+    /// bytes memory payload = abi.encode(payloadArray);
+    /// @param deadline is the deadline for the batched actions to be executed
+    /// @return returnData is the endocing of each actions return information
+    function modifyLiquidities(bytes calldata payload, uint256 deadline) external payable returns (bytes[] memory);
 }
