@@ -106,7 +106,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         // generate modifyLiquidities data
         bytes memory payload = _getModifyLiquiditiesAddPayload(params, false);
 
-        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, params.deadline);
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         return abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[], uint256[]));
     }
@@ -118,7 +118,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         // generate modifyLiquidities data
         bytes memory payload = _getModifyLiquiditiesRemovePayload(params, false);
 
-        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, params.deadline);
+        bytes[] memory returnDataArrayBytes = binFungiblePositionManager.modifyLiquidities(payload, block.timestamp + 1);
 
         return abi.decode(returnDataArrayBytes[0], (uint128, uint128, uint256[]));
     }
@@ -136,7 +136,6 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         // Remove liquidity
         vm.warp(1000);
         removeParams = _getRemoveParams(key1, binIds, liquidityMinted);
-        removeParams.deadline = 900; // set deadline before block.timestamp
 
         bytes memory payload = _getModifyLiquiditiesRemovePayload(removeParams, false);
         vm.expectRevert(abi.encodeWithSelector(PeripheryValidation.TransactionTooOld.selector));
@@ -618,8 +617,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
             ids: ids,
             amounts: amounts,
             from: alice,
-            to: alice,
-            deadline: block.timestamp + 600
+            to: alice
         });
     }
 

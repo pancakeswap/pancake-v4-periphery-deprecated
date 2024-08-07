@@ -36,7 +36,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// - distributionX: Distribution of tokenX with sum(distributionX) = 100e18 (100%) or 0 (0%)
     /// - distributionY: Distribution of tokenY with sum(distributionY) = 100e18 (100%) or 0 (0%)
     /// - to: Address of recipient
-    /// - deadline: Deadline of transaction
     struct AddLiquidityParams {
         PoolKey poolKey;
         uint128 amount0;
@@ -49,7 +48,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
         uint256[] distributionX;
         uint256[] distributionY;
         address to;
-        uint256 deadline;
     }
 
     /// @notice RemoveLiquidityParams
@@ -59,7 +57,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// - amounts: List of share amount to remove for each bin
     /// - from: Address of NFT holder to burn the NFT
     /// - to: Address of recipient for amount0 and amount1 recieved
-    /// - deadline: Deadline of transaction
     struct RemoveLiquidityParams {
         PoolKey poolKey;
         uint128 amount0Min;
@@ -68,7 +65,6 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
         uint256[] amounts;
         address from;
         address to;
-        uint256 deadline;
     }
 
     enum CallbackDataType {
