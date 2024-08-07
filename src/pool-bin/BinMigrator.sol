@@ -132,8 +132,20 @@ contract BinMigrator is IBinMigrator, BaseMigrator {
         }
         approveMaxIfNeeded(params.poolKey.currency1, address(binFungiblePositionManager), params.amount1);
 
-        (amount0Consumed, amount1Consumed, tokenIds, liquidityMinted) =
-            binFungiblePositionManager.addLiquidity{value: nativePair ? params.amount0 : 0}(params);
+        bytes memory addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(params)
+            )
+        );
+        bytes[] memory lockData = new bytes[](1);
+        lockData[0] = addLiquidityData;
+
+        (amount0Consumed, amount1Consumed, tokenIds, liquidityMinted) = abi.decode(
+            binFungiblePositionManager.modifyLiquidities{value: nativePair ? params.amount0 : 0}(
+                abi.encode(lockData), params.deadline
+            )[0],
+            (uint128, uint128, uint256[], uint256[])
+        );
 
         // receive surplus ETH from positionManager
         if (nativePair && params.amount0 > amount0Consumed) {
