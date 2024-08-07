@@ -96,36 +96,6 @@ contract BinFungiblePositionManager is
         return abi.decode(vault.lock(abi.encode(msg.sender, false, lockData)), (bytes[]));
     }
 
-    /// @inheritdoc IBinFungiblePositionManager
-    function addLiquidity(AddLiquidityParams calldata params)
-        external
-        payable
-        override
-        checkDeadline(params.deadline)
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted)
-    {
-        bytes memory addLiquidityData = abi.encode(CallbackData(CallbackDataType.AddLiquidity, abi.encode(params)));
-
-        (amount0, amount1, tokenIds, liquidityMinted) = abi.decode(
-            vault.lock(abi.encode(msg.sender, true, addLiquidityData)), (uint128, uint128, uint256[], uint256[])
-        );
-    }
-
-    /// @inheritdoc IBinFungiblePositionManager
-    function removeLiquidity(RemoveLiquidityParams calldata params)
-        external
-        payable
-        override
-        checkDeadline(params.deadline)
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds)
-    {
-        bytes memory removeLiquidityData =
-            abi.encode(CallbackData(CallbackDataType.RemoveLiquidity, abi.encode(params)));
-
-        (amount0, amount1, tokenIds) =
-            abi.decode(vault.lock(abi.encode(msg.sender, true, removeLiquidityData)), (uint128, uint128, uint256[]));
-    }
-
     function lockAcquired(bytes calldata rawData) external override returns (bytes memory returnData) {
         if (msg.sender != address(vault)) revert OnlyVaultCaller();
 

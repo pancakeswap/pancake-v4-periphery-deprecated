@@ -121,15 +121,37 @@ contract BinSwapRouterTest is Test, GasSnapshot, LiquidityParamsHelper {
         uint24[] memory binIds = getBinIds(activeId, 3);
         IBinFungiblePositionManager.AddLiquidityParams memory addParams;
         addParams = _getAddParams(key, binIds, 10 ether, 10 ether, activeId, alice);
-        binFungiblePositionManager.addLiquidity(addParams);
+        // binFungiblePositionManager.addLiquidity(addParams);
+        bytes memory addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(addParams)
+            )
+        );
+        bytes[] memory lockDataArray = new bytes[](1);
+        lockDataArray[0] = addLiquidityData;
+        binFungiblePositionManager.modifyLiquidities(abi.encode(lockDataArray), block.timestamp + 1);
         addParams = _getAddParams(key2, binIds, 10 ether, 10 ether, activeId, alice);
-        binFungiblePositionManager.addLiquidity(addParams);
+
+        addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(addParams)
+            )
+        );
+        lockDataArray[0] = addLiquidityData;
+        binFungiblePositionManager.modifyLiquidities(abi.encode(lockDataArray), block.timestamp + 1);
 
         // add liquidity for ETH-token0 native pool (10 eth each)
         token0.mint(alice, 10 ether);
         vm.deal(alice, 10 ether);
         addParams = _getAddParams(key3, binIds, 10 ether, 10 ether, activeId, alice);
-        binFungiblePositionManager.addLiquidity{value: 10 ether}(addParams);
+
+        addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(addParams)
+            )
+        );
+        lockDataArray[0] = addLiquidityData;
+        binFungiblePositionManager.modifyLiquidities{value: 10 ether}(abi.encode(lockDataArray), block.timestamp + 1);
     }
 
     function testLockAcquired_VaultOnly() public {

@@ -605,9 +605,9 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
             addParams.to = user;
 
             if (user == alice) {
-                (,, aliceTokenIds, aliceLiquidityMinted) = binFungiblePositionManager.addLiquidity(addParams);
+                (,, aliceTokenIds, aliceLiquidityMinted) = addLiquidity(addParams);
             } else {
-                (,, bobTokenIds, bobLiquidityMinted) = binFungiblePositionManager.addLiquidity(addParams);
+                (,, bobTokenIds, bobLiquidityMinted) = addLiquidity(addParams);
             }
 
             for (uint256 j; j < binIds.length; j++) {
@@ -676,7 +676,7 @@ contract BinFungiblePositionManager_AddLiquidityTest is Test, GasSnapshot, Liqui
     function _getModifyLiquiditiesAddPayload(
         IBinFungiblePositionManager.AddLiquidityParams memory params,
         bool shouldCloseCurrency
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         // generate modifyLiquidities data
         bytes memory addLiquidityData = abi.encode(
             IBinFungiblePositionManager.CallbackData(

@@ -245,11 +245,16 @@ contract BinSwapRouterHandler is Test, LiquidityParamsHelper {
         uint24[] memory binIds = getBinIds(activeId, 3);
         IBinFungiblePositionManager.AddLiquidityParams memory addParams;
         addParams = _getAddParams(pk, binIds, amt, amt, activeId, alice);
-        if (isNativePool) {
-            binFungiblePositionManager.addLiquidity{value: amt}(addParams);
-        } else {
-            binFungiblePositionManager.addLiquidity(addParams);
-        }
+        bytes memory addLiquidityData = abi.encode(
+            IBinFungiblePositionManager.CallbackData(
+                IBinFungiblePositionManager.CallbackDataType.AddLiquidity, abi.encode(addParams)
+            )
+        );
+        bytes[] memory lockDataArray = new bytes[](1);
+        lockDataArray[0] = addLiquidityData;
+        binFungiblePositionManager.modifyLiquidities{value: isNativePool ? amt : 0}(
+            abi.encode(lockDataArray), block.timestamp + 1
+        );
         vm.stopPrank();
     }
 }

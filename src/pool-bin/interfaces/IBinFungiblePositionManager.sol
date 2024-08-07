@@ -116,24 +116,4 @@ interface IBinFungiblePositionManager is IBinFungibleToken, IPeripheryPayments, 
     /// @param deadline is the deadline for the batched actions to be executed
     /// @return returnData is the endocing of each actions return information
     function modifyLiquidities(bytes calldata payload, uint256 deadline) external payable returns (bytes[] memory);
-
-    /// @notice Add liquidity, user will receive ERC1155 tokens as receipt of bin share ownership.
-    /// @dev The ID of the ERC11155 token is keccak256(abi.encode(poolkey.toId, binId))
-    /// @return amount0 Amount of token0 added
-    /// @return amount1 Amount of token1 added
-    /// @return tokenIds Ids of token minted
-    /// @return liquidityMinted Amount of liquidity added
-    function addLiquidity(AddLiquidityParams calldata)
-        external
-        payable
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds, uint256[] memory liquidityMinted);
-
-    /// @notice Remove liquidity, burn NFT and retrieve back the ERC20 tokens for the liquidity
-    /// @return amount0 Amount of token0 removed
-    /// @return amount1 Amount of token1 removed
-    /// @return tokenIds Ids of token burnt
-    function removeLiquidity(RemoveLiquidityParams calldata)
-        external
-        payable
-        returns (uint128 amount0, uint128 amount1, uint256[] memory tokenIds);
 }

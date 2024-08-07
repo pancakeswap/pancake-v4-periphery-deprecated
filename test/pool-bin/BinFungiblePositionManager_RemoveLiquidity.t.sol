@@ -450,7 +450,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         token0.mint(alice, 1 ether);
         token1.mint(alice, 1 ether);
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        (,,, uint256[] memory liquidityMinted) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory liquidityMinted) = addLiquidity(params);
 
         // remove more than minted, arithemtic as bal goes into negative
         liquidityMinted[0] = liquidityMinted[0] + 1;
@@ -469,7 +469,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         uint24[] memory binIds = getBinIds(activeId, 3);
         IBinFungiblePositionManager.AddLiquidityParams memory params;
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        (,,, uint256[] memory liquidityMinted) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory liquidityMinted) = addLiquidity(params);
         vm.stopPrank();
 
         assertEq(token0.balanceOf(bob), 0 ether);
@@ -500,7 +500,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         uint24[] memory binIds = getBinIds(activeId, 3);
         IBinFungiblePositionManager.AddLiquidityParams memory params;
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        (,,, uint256[] memory liquidityMinted) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory liquidityMinted) = addLiquidity(params);
         vm.stopPrank();
 
         assertEq(token0.balanceOf(bob), 0 ether);
@@ -529,9 +529,9 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
         token0.mint(alice, 3 ether);
         token1.mint(alice, 3 ether);
         params = _getAddParams(key1, binIds, 1 ether, 1 ether, activeId, alice);
-        (,,, uint256[] memory liquidityMinted1) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory liquidityMinted1) = addLiquidity(params);
         params = _getAddParams(key2, binIds, 2 ether, 2 ether, activeId, alice);
-        (,,, uint256[] memory liquidityMinted2) = binFungiblePositionManager.addLiquidity(params);
+        (,,, uint256[] memory liquidityMinted2) = addLiquidity(params);
 
         assertEq(token0.balanceOf(alice), 0);
         assertEq(token1.balanceOf(alice), 0);
@@ -626,7 +626,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
     function _getModifyLiquiditiesRemovePayload(
         IBinFungiblePositionManager.RemoveLiquidityParams memory params,
         bool shouldCloseCurrency
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         // generate modifyLiquidities data
         bytes memory removeLiquidityData = abi.encode(
             IBinFungiblePositionManager.CallbackData(
@@ -656,7 +656,7 @@ contract BinFungiblePositionManager_RemoveLiquidityTest is Test, GasSnapshot, Li
     function _getModifyLiquiditiesAddPayload(
         IBinFungiblePositionManager.AddLiquidityParams memory params,
         bool shouldCloseCurrency
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         // generate modifyLiquidities data
         bytes memory addLiquidityData = abi.encode(
             IBinFungiblePositionManager.CallbackData(
